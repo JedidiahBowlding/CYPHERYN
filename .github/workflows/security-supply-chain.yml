@@ -58,7 +58,7 @@ jobs:
       - name: Build core images
         run: docker compose build api worker frontend taxii
       - name: Scan API image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: signaltrace-api:latest
           format: sarif
@@ -67,7 +67,7 @@ jobs:
           exit-code: "1"
           trivyignores: .trivyignore
       - name: Generate API SBOM
-        uses: anchore/sbom-action@v0.20.6
+        uses: anchore/sbom-action@v0.24.2
         with:
           image: signaltrace-api:latest
           artifact-name: signaltrace-api.spdx.json
