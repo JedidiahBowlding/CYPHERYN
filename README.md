@@ -1,12 +1,22 @@
-# SignalTrace
+<div align="center">
+  <a href="https://github.com/JedidiahBowlding/SignalTrace">
+    <img src="platform/frontend/public/signaltrace-logo.png" alt="SignalTrace logo" width="220">
+  </a>
 
-### See the exposure. Prove the risk. Track the fix.
+  <h1>SignalTrace</h1>
+  <h3>See the exposure. Prove the risk. Track the fix.</h3>
+
+  <a href="https://github.com/JedidiahBowlding/SignalTrace">Repository</a> ·
+  <a href="https://github.com/JedidiahBowlding/SignalTrace/issues">Issues</a> ·
+  <a href="ROADMAP.md">Roadmap</a> ·
+  <a href="SECURITY_BOUNDARIES.md">Security boundaries</a>
+</div>
 
 SignalTrace is a local-first cyber-intelligence operations platform that turns authorized OSINT, attack-surface observations, threat feeds, identity exposure, source-code intelligence, and vulnerability evidence into investigations your team can verify and act on.
 
 It is more than a scanner. SignalTrace preserves the chain from target authorization to raw observation, normalized entity, relationship, finding, analyst decision, remediation, rescan, and final report.
 
-> The GitHub URL will be added after this working copy is placed in its new repository. Replace `<YOUR-REPOSITORY-URL>` in the clone examples at that time.
+The source, issue tracker, and release history are hosted in the [SignalTrace GitHub repository](https://github.com/JedidiahBowlding/SignalTrace).
 
 ## Why SignalTrace
 
@@ -157,11 +167,11 @@ Ollama is optional for local AI assistance. SpiderFoot and Greenbone remain isol
 
 No paid intelligence-provider account is required to start SignalTrace.
 
-### Clone after the repository is published
+### Clone SignalTrace
 
 ```bash
-git clone <YOUR-REPOSITORY-URL>
-cd signaltrace
+git clone https://github.com/JedidiahBowlding/SignalTrace.git
+cd SignalTrace
 ```
 
 ### macOS Terminal or Windows WSL
