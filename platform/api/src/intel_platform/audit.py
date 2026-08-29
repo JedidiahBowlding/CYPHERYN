@@ -1,5 +1,8 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
 
+from .integrity import seal_audit_event
 from .models import AuditEvent
 
 
@@ -14,8 +17,7 @@ def record_audit(
     decision: str = "allowed",
     reason_code: str = "authorized",
 ) -> None:
-    db.add(
-        AuditEvent(
+    event = AuditEvent(
             organization_id=organization_id,
             actor_id=actor_id,
             action=action,
@@ -23,5 +25,8 @@ def record_audit(
             object_id=object_id,
             decision=decision,
             reason_code=reason_code,
-        )
+            occurred_at=datetime.now(UTC),
     )
+    db.add(event)
+    db.flush()
+    seal_audit_event(db, event)

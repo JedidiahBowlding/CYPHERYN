@@ -14,6 +14,7 @@ from .analysis import build_analysis
 from .audit import record_audit
 from .config import get_settings
 from .database import Base, SessionLocal, engine
+from .integrity import seal_evidence_source
 from .job_events import append_job_event
 from .local_ai import LocalNarrativeError, generate_local_narrative
 from .models import (
@@ -1170,6 +1171,7 @@ def process_one(
                     if re.fullmatch(r"[0-9a-f]{64}", fingerprint)
                     else hashlib.sha256(canonical_payload).hexdigest()
                 )
+                seal_evidence_source(db, source)
                 record_evidence_change(db, source)
                 reconcile_findings(db, source, list(result.metadata.get("finding_candidates", [])))
                 if provider.name == "direct_verifier":

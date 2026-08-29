@@ -17,6 +17,7 @@ platform/.tools/
 platform/frontend/node_modules/
 platform/frontend/.vinext/
 platform/frontend/.wrangler/
+platform/frontend/tsconfig.tsbuildinfo
 
 spiderfoot/static/node_modules/*
 

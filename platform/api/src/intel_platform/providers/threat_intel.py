@@ -44,6 +44,12 @@ class ThreatIntelProvider:
     def build_request(self, context: ProviderContext) -> dict:
         raise NotImplementedError
 
+    def _credential(self, context: ProviderContext, key: str) -> str:
+        value = str(context.credentials.get(key) or "").strip()
+        if not value:
+            raise RuntimeError(f"{self.name} credential '{key}' is required")
+        return value
+
     def _remaining_timeout(self, context: ProviderContext) -> float:
         if context.deadline_at is None:
             return 20.0
@@ -209,7 +215,7 @@ class VirusTotalProvider(ThreatIntelProvider):
         return {
             "method": "GET",
             "url": f"https://www.virustotal.com/api/v3/{kind}/{quote(value, safe='')}",
-            "headers": {"x-apikey": context.credentials["api_key"]},
+            "headers": {"x-apikey": self._credential(context, "api_key")},
         }
 
     def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:
@@ -246,7 +252,7 @@ class ShodanProvider(ThreatIntelProvider):
         return {
             "method": "GET",
             "url": f"https://api.shodan.io/shodan/host/{target}",
-            "params": {"key": context.credentials["api_key"], "minify": "true"},
+            "params": {"key": self._credential(context, "api_key"), "minify": "true"},
         }
 
 
@@ -259,7 +265,7 @@ class GreyNoiseProvider(ThreatIntelProvider):
         return {
             "method": "GET",
             "url": f"https://api.greynoise.io/v3/community/{target}",
-            "headers": {"key": context.credentials["api_key"]},
+            "headers": {"key": self._credential(context, "api_key")},
         }
 
 
@@ -275,7 +281,7 @@ class AlienVaultOtxProvider(ThreatIntelProvider):
         return {
             "method": "GET",
             "url": f"https://otx.alienvault.com/api/v1/indicators/{kind}/{target}/general",
-            "headers": {"X-OTX-API-KEY": context.credentials["api_key"]},
+            "headers": {"X-OTX-API-KEY": self._credential(context, "api_key")},
         }
 
     def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:
@@ -338,7 +344,7 @@ class AbuseIpDbProvider(ThreatIntelProvider):
             "method": "GET",
             "url": "https://api.abuseipdb.com/api/v2/check",
             "params": {"ipAddress": context.target.canonical_value, "maxAgeInDays": "90"},
-            "headers": {"Key": context.credentials["api_key"], "Accept": "application/json"},
+            "headers": {"Key": self._credential(context, "api_key"), "Accept": "application/json"},
         }
 
 
@@ -348,7 +354,11 @@ class CensysProvider(ThreatIntelProvider):
 
     def build_request(self, context: ProviderContext) -> dict:
         target = quote(context.target.canonical_value, safe="")
-        token = context.credentials.get("personal_access_token") or context.credentials["api_id"]
+        token = context.credentials.get("personal_access_token") or context.credentials.get(
+            "api_id"
+        )
+        if not str(token or "").strip():
+            raise RuntimeError("censys personal access token is required")
         return {
             "method": "GET",
             "url": f"https://api.platform.censys.io/v3/global/asset/host/{target}",
@@ -457,7 +467,7 @@ class UrlHausProvider(ThreatIntelProvider):
             "method": "POST",
             "url": f"https://urlhaus-api.abuse.ch/v1/{key}/",
             "data": {key: context.target.canonical_value},
-            "headers": {"Auth-Key": context.credentials["auth_key"]},
+            "headers": {"Auth-Key": self._credential(context, "auth_key")},
         }
 
 
@@ -474,7 +484,7 @@ class AbuseChProvider(ThreatIntelProvider):
                 "search_term": context.target.canonical_value,
                 "exact_match": True,
             },
-            "headers": {"Auth-Key": context.credentials["auth_key"]},
+            "headers": {"Auth-Key": self._credential(context, "auth_key")},
         }
 
     def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:

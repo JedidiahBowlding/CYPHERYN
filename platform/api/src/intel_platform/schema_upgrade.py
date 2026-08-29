@@ -47,20 +47,34 @@ ORGANIZATION_COLUMNS = {
 EVIDENCE_SOURCE_COLUMNS = {
     "provider_version": "VARCHAR(100) NOT NULL DEFAULT 'unknown'",
     "ruleset_version": "VARCHAR(100) NOT NULL DEFAULT 'unknown'",
+    "previous_integrity_hash": "VARCHAR(64)",
+    "integrity_hash": "VARCHAR(64)",
+}
+
+AUDIT_EVENT_COLUMNS = {
+    "previous_integrity_hash": "VARCHAR(64)",
+    "integrity_hash": "VARCHAR(64)",
 }
 
 
-def upgrade_existing_schema() -> None:
+def upgrade_existing_schema(target_engine=engine) -> None:
     """Small additive upgrade path until the project adopts Alembic migrations."""
-    columns = {column["name"] for column in inspect(engine).get_columns("collection_jobs")}
-    finding_columns = {column["name"] for column in inspect(engine).get_columns("findings")}
+    columns = {
+        column["name"] for column in inspect(target_engine).get_columns("collection_jobs")
+    }
+    finding_columns = {
+        column["name"] for column in inspect(target_engine).get_columns("findings")
+    }
     organization_columns = {
-        column["name"] for column in inspect(engine).get_columns("organizations")
+        column["name"] for column in inspect(target_engine).get_columns("organizations")
     }
     evidence_source_columns = {
-        column["name"] for column in inspect(engine).get_columns("evidence_sources")
+        column["name"] for column in inspect(target_engine).get_columns("evidence_sources")
     }
-    with engine.begin() as connection:
+    audit_event_columns = {
+        column["name"] for column in inspect(target_engine).get_columns("audit_events")
+    }
+    with target_engine.begin() as connection:
         for name, definition in JOB_COLUMNS.items():
             if name not in columns:
                 connection.exec_driver_sql(
@@ -78,6 +92,11 @@ def upgrade_existing_schema() -> None:
             if name not in evidence_source_columns:
                 connection.exec_driver_sql(
                     f"ALTER TABLE evidence_sources ADD COLUMN {name} {definition}"
+                )
+        for name, definition in AUDIT_EVENT_COLUMNS.items():
+            if name not in audit_event_columns:
+                connection.exec_driver_sql(
+                    f"ALTER TABLE audit_events ADD COLUMN {name} {definition}"
                 )
         connection.exec_driver_sql(
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_relationship_claim "

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const features = [
   {
@@ -23,7 +24,7 @@ export default function LandingPage() {
     <main className="landing-page">
       <nav className="landing-nav">
         <Link className="landing-brand" href="/">
-          <img src="/signaltrace-logo.png" alt="" />
+          <Image src="/signaltrace-logo.png" alt="" width={1254} height={1254} />
           <span>SignalTrace</span>
         </Link>
         <div>
@@ -70,9 +71,12 @@ export default function LandingPage() {
           <div className="banner-grid" />
           <div className="banner-orbit orbit-one" />
           <div className="banner-orbit orbit-two" />
-          <img
+          <Image
             src="/signaltrace-logo.png"
             alt="SignalTrace radar spider logo"
+            width={1254}
+            height={1254}
+            priority
           />
           <div className="banner-label">
             <span>Signal acquired</span>
@@ -133,7 +137,7 @@ export default function LandingPage() {
       </section>
       <footer className="landing-footer">
         <div className="landing-brand">
-          <img src="/signaltrace-logo.png" alt="" />
+          <Image src="/signaltrace-logo.png" alt="" width={1254} height={1254} />
           <span>SignalTrace</span>
         </div>
         <p>Authorized intelligence. Evidence-grounded decisions.</p>

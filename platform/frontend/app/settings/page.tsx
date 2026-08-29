@@ -30,7 +30,21 @@ type SavedProvider = {
 };
 type Assurance = {
   requirements: Array<{ name: string; status: string; evidence: string }>;
-  providers: Array<{ provider: string; mode: string; version: string; ready: boolean; configuration: string; health: string }>;
+  providers: Array<{
+    provider: string;
+    mode: string;
+    version: string;
+    ready: boolean;
+    supported: boolean;
+    installed: boolean;
+    configured: boolean;
+    healthy: boolean;
+    live_verified: boolean;
+    last_verified_at: string | null;
+    status: "supported" | "installed" | "configured" | "healthy" | "live_verified";
+    configuration: string;
+    health: string;
+  }>;
 };
 const defaults: Controls = {
   enabled: true,
@@ -206,6 +220,38 @@ export default function Page() {
           <p className="assurance-summary">
             {assurance.providers.filter((item) => item.ready).length} of {assurance.providers.length} providers ready. Unready integrations remain unavailable until installed, enabled, and configured.
           </p>
+          <div className="provider-verification-list">
+            {assurance.providers.map((item) => (
+              <article className="provider-verification" key={item.provider}>
+                <header>
+                  <div>
+                    <h3>{item.provider.replaceAll("_", " ")}</h3>
+                    <small>{item.mode} · {item.version}</small>
+                  </div>
+                  <strong>{item.status.replaceAll("_", " ")}</strong>
+                </header>
+                <ol aria-label={`${item.provider} verification status`}>
+                  {[
+                    ["Supported", item.supported],
+                    ["Installed", item.installed],
+                    ["Configured", item.configured],
+                    ["Healthy", item.healthy],
+                    ["Live verified", item.live_verified],
+                  ].map(([label, complete]) => (
+                    <li className={complete ? "complete" : "pending"} key={String(label)}>
+                      <span aria-hidden="true">{complete ? "✓" : "○"}</span>
+                      {String(label)}
+                    </li>
+                  ))}
+                </ol>
+                <p>
+                  {item.last_verified_at
+                    ? `Last successful live collection: ${new Date(item.last_verified_at).toLocaleString()}`
+                    : "No successful live collection has been recorded yet."}
+                </p>
+              </article>
+            ))}
+          </div>
         </section>
       )}
       <section

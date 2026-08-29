@@ -125,7 +125,15 @@ Every active capability remains bounded by recorded authorization. AI assistance
 
 ## Provider architecture
 
-SignalTrace separates a provider being **supported**, **configured**, **enabled**, and **available**:
+SignalTrace displays a verified provider capability ladder:
+
+**Supported → Installed → Configured → Healthy → Live Verified**
+
+- **Supported** means SignalTrace contains a maintained adapter contract.
+- **Installed** means the required executable or service is present in the current runtime.
+- **Configured** means the provider is enabled and its required settings/credentials are stored.
+- **Healthy** means local readiness and circuit-breaker checks currently pass.
+- **Live Verified** means a successful real collection has been recorded, with its timestamp.
 
 - Built-in network providers are enabled through encrypted organization settings.
 - Local tools are automatically available when their executable is installed in that runtime.
@@ -135,7 +143,7 @@ SignalTrace separates a provider being **supported**, **configured**, **enabled*
 
 Supported adapters include VirusTotal, Shodan, Censys, GreyNoise, AlienVault OTX, AbuseIPDB, URLhaus, abuse.ch ThreatFox, TAXII, RDAP, certificate transparency, DNS discovery, domain security, web posture, public identity, Maigret, HIBP, OpenVAS, local service observation, source-code providers, and supply-chain providers.
 
-Optional local-tool contracts include Subfinder, Nuclei, Naabu, ProjectDiscovery HTTPX, Gowitness, DNSX, Katana, ZMap, Nmap, Masscan, DNS Twist, TruffleHog, Semgrep, OSV Scanner, Syft, Trivy, and testssl.sh. Installation and authorization still determine whether an individual tool can run.
+Optional local-tool contracts include Subfinder, Nuclei, Naabu, ProjectDiscovery HTTPX, Katana, Nmap, Masscan, DNS Twist, TruffleHog, Semgrep, OSV Scanner, Syft, Trivy, and testssl.sh. Gowitness, DNSX, and ZMap remain roadmap items rather than implemented platform adapters. Installation and authorization still determine whether an individual tool can run.
 
 ## Architecture
 

@@ -309,6 +309,8 @@ class EvidenceSourceRead(ApiModel):
     raw_response_hash: str | None
     redacted_payload: dict
     redaction_policy: str
+    previous_integrity_hash: str | None
+    integrity_hash: str | None
     retrieved_at: datetime
     retain_until: datetime
 

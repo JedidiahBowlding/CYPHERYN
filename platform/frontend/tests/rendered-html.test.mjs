@@ -22,16 +22,17 @@ test("server-renders the SignalTrace landing page", async () => {
   assert.match(html, /Follow every signal/);
   assert.match(html, /Prove every finding/);
   assert.match(html, /href="\/investigations\/new"/);
-  assert.match(html, /src="\/signaltrace-logo\.png"/);
+  assert.match(html, /\/_next\/image\?url=%2Fsignaltrace-logo\.png(?:&|&amp;)w=/);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 
 test("keeps security guidance and cross-platform scripts in source", async () => {
-  const [help, page, layout, packageJson] = await Promise.all([
+  const [help, page, layout, packageJson, providerSettings] = await Promise.all([
     readFile(new URL("../app/_components/FindingHelp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/settings/page.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(help, /How this could be attacked/i);
   assert.match(help, /How to fix it/i);
@@ -40,4 +41,6 @@ test("keeps security guidance and cross-platform scripts in source", async () =>
   assert.match(layout, /SignalTrace/);
   assert.match(packageJson, /cross-env WRANGLER_LOG_PATH/);
   assert.doesNotMatch(packageJson, /@rolldown\/binding-darwin-x64/);
+  assert.match(providerSettings, /Live verified/);
+  assert.match(providerSettings, /last_verified_at/);
 });

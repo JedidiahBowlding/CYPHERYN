@@ -154,6 +154,8 @@ class AuditEvent(Base):
     object_id: Mapped[str] = mapped_column(String(36), nullable=False)
     decision: Mapped[str] = mapped_column(String(20), nullable=False)
     reason_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    previous_integrity_hash: Mapped[str | None] = mapped_column(String(64))
+    integrity_hash: Mapped[str | None] = mapped_column(String(64), index=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -308,6 +310,8 @@ class EvidenceSource(Base):
     raw_response_hash: Mapped[str | None] = mapped_column(String(64))
     redacted_payload: Mapped[dict] = mapped_column(JSON, default=dict)
     redaction_policy: Mapped[str] = mapped_column(String(80), default="default-v1")
+    previous_integrity_hash: Mapped[str | None] = mapped_column(String(64))
+    integrity_hash: Mapped[str | None] = mapped_column(String(64), index=True)
     retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     retain_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 

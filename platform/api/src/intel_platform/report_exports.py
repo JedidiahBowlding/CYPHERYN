@@ -68,6 +68,7 @@ def timeline_records(
                 "summary": f"Retrieved evidence for {source.query}",
                 "observation_type": "provider",
                 "sha256": source.raw_response_hash or "",
+                "integrity_hash": source.integrity_hash or "",
             }
         )
     for change in changes:
@@ -145,7 +146,7 @@ def json_export(
 ) -> bytes:
     generated = datetime.now(UTC).isoformat()
     body = {
-        "schema": "signaltrace-investigation-export-v1",
+        "schema": "signaltrace-investigation-export-v2",
         "generated_at": generated,
         "investigation": {
             "id": investigation.id,
@@ -166,6 +167,8 @@ def json_export(
                 "query": item.query,
                 "retrieved_at": iso(item.retrieved_at),
                 "raw_response_sha256": item.raw_response_hash,
+                "previous_integrity_hash": item.previous_integrity_hash,
+                "integrity_hash": item.integrity_hash,
                 "redacted_payload": item.redacted_payload,
             }
             for item in sources

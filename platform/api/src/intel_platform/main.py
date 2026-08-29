@@ -18,6 +18,7 @@ from .auth import get_current_user, membership_for, require_writer
 from .config import get_settings
 from .database import Base, engine, get_db
 from .detection_engine import export_suricata, ingest_network_events, parse_sigma
+from .integrity import verify_audit_event, verify_evidence_source
 from .job_events import append_job_event
 from .local_ai import LocalNarrativeError, generate_local_narrative
 from .malware_analysis import correlate_hashes, quarantine_file, scan_clamav, scan_yara
@@ -2198,6 +2199,25 @@ def get_platform_assurance(
                 "mode": "passive" if provider.capabilities.passive_only else "active",
                 "version": provider_version_label(provider),
                 "ready": installed and enabled and credentials_ready,
+                "supported": True,
+                "installed": installed,
+                "configured": enabled and credentials_ready,
+                "healthy": bool(
+                    installed
+                    and enabled
+                    and credentials_ready
+                    and not (runtime and runtime.circuit_open_until)
+                    and (not runtime or runtime.consecutive_failures == 0)
+                ),
+                "live_verified": bool(
+                    runtime
+                    and runtime.last_success_at
+                    and (
+                        not runtime.last_failure_at
+                        or runtime.last_success_at >= runtime.last_failure_at
+                    )
+                ),
+                "last_verified_at": runtime.last_success_at if runtime else None,
                 "configuration": (
                     "ready"
                     if enabled and credentials_ready
@@ -2211,6 +2231,26 @@ def get_platform_assurance(
                     else "healthy"
                     if not runtime or runtime.consecutive_failures == 0
                     else "degraded"
+                ),
+                "status": (
+                    "live_verified"
+                    if runtime
+                    and runtime.last_success_at
+                    and (
+                        not runtime.last_failure_at
+                        or runtime.last_success_at >= runtime.last_failure_at
+                    )
+                    else "healthy"
+                    if installed
+                    and enabled
+                    and credentials_ready
+                    and not (runtime and runtime.circuit_open_until)
+                    and (not runtime or runtime.consecutive_failures == 0)
+                    else "configured"
+                    if enabled and credentials_ready
+                    else "installed"
+                    if installed
+                    else "supported"
                 ),
             }
         )
@@ -2236,12 +2276,23 @@ def get_platform_assurance(
         )
         or 0
     )
+    evidence_sealed = (
+        db.scalar(
+            select(func.count()).select_from(
+                completed_evidence.where(
+                    EvidenceSource.integrity_hash.is_not(None),
+                ).subquery()
+            )
+        )
+        or 0
+    )
     audit_count = (
         db.scalar(
             select(func.count(AuditEvent.id)).where(AuditEvent.organization_id == organization_id)
         )
         or 0
     )
+    integrity = _organization_integrity_report(db, organization_id)
     return {
         "requirements": [
             {
@@ -2268,6 +2319,14 @@ def get_platform_assurance(
                 "name": "Evidence redaction",
                 "status": "enforced",
                 "evidence": "central recursive sanitizer central-default-v2",
+            },
+            {
+                "name": "Evidence integrity",
+                "status": "verified" if integrity["valid"] else "attention",
+                "evidence": (
+                    f"{evidence_sealed}/{evidence_total} completed sources hash-chained; "
+                    f"{integrity['broken_records']} broken record(s)"
+                ),
             },
             {
                 "name": "Durable jobs",
@@ -2306,4 +2365,67 @@ def get_platform_assurance(
             },
         ],
         "providers": provider_status,
+        "integrity": integrity,
     }
+
+
+def _organization_integrity_report(db: Session, organization_id: str) -> dict:
+    investigation_ids = select(Investigation.id).where(
+        Investigation.organization_id == organization_id
+    )
+    sources = list(
+        db.scalars(
+            select(EvidenceSource)
+            .where(EvidenceSource.investigation_id.in_(investigation_ids))
+            .order_by(
+                EvidenceSource.investigation_id,
+                EvidenceSource.retrieved_at,
+                EvidenceSource.id,
+            )
+        )
+    )
+    audits = list(
+        db.scalars(
+            select(AuditEvent)
+            .where(AuditEvent.organization_id == organization_id)
+            .order_by(AuditEvent.occurred_at, AuditEvent.id)
+        )
+    )
+    broken = 0
+    evidence_sealed = 0
+    previous_by_investigation: dict[str, str | None] = {}
+    for source in sources:
+        if not source.integrity_hash:
+            continue
+        evidence_sealed += 1
+        previous = previous_by_investigation.get(source.investigation_id)
+        if source.previous_integrity_hash != previous or not verify_evidence_source(source):
+            broken += 1
+        previous_by_investigation[source.investigation_id] = source.integrity_hash
+    audit_sealed = 0
+    previous_audit: str | None = None
+    for event in audits:
+        if not event.integrity_hash:
+            continue
+        audit_sealed += 1
+        if event.previous_integrity_hash != previous_audit or not verify_audit_event(event):
+            broken += 1
+        previous_audit = event.integrity_hash
+    return {
+        "valid": broken == 0,
+        "broken_records": broken,
+        "evidence_records": len(sources),
+        "evidence_sealed": evidence_sealed,
+        "audit_records": len(audits),
+        "audit_sealed": audit_sealed,
+    }
+
+
+@app.get("/api/v1/organizations/{organization_id}/integrity")
+def get_organization_integrity(
+    organization_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
+    membership_for(db, user.id, organization_id)
+    return _organization_integrity_report(db, organization_id)

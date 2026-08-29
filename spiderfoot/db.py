@@ -351,13 +351,13 @@ class SpiderFootDb:
         with self.dbhLock:
             try:
                 self.dbh.execute('SELECT COUNT(*) FROM tbl_scan_config')
-                self.conn.create_function("REGEXP", 2, __dbregex__)
             except sqlite3.Error:
                 init = True
                 try:
                     self.create()
                 except Exception as e:
                     raise IOError("Tried to set up the SpiderFoot database schema, but failed") from e
+            self.conn.create_function("REGEXP", 2, __dbregex__)
 
             # For users with pre 4.0 databases, add the correlation
             # tables + indexes if they don't exist.

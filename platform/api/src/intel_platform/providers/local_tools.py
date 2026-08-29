@@ -1,7 +1,6 @@
 import hashlib
 import ipaddress
 import json
-import os
 import re
 import shutil
 import socket
@@ -16,6 +15,7 @@ from urllib.parse import urlsplit
 from sqlalchemy import select
 
 from ..models import Entity, Finding, Relationship
+from ..process_isolation import run_isolated_process
 from ..provider_contract import ProviderCapabilities, ProviderContext, ProviderResult
 
 PROJECT_HTTPX = Path(__file__).resolve().parents[4] / ".tools" / "bin" / "httpx"
@@ -77,16 +77,10 @@ class LocalToolProvider:
                 deadline = deadline.replace(tzinfo=UTC)
             timeout = max(1.0, (deadline - datetime.now(UTC)).total_seconds())
         try:
-            result = subprocess.run(  # noqa: S603 - arguments are fixed and targets validated
-                [executable, *arguments],
-                input=stdin,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                check=False,
-                env={**os.environ, "NO_COLOR": "1"},
+            result = run_isolated_process(
+                [executable, *arguments], timeout=timeout, stdin=stdin
             )
-        except subprocess.TimeoutExpired as exc:
+        except TimeoutError as exc:
             raise TimeoutError(f"{self.name} exceeded its time limit") from exc
         if result.returncode not in {0, 1}:
             diagnostic = result.stderr.strip() or result.stdout.strip()

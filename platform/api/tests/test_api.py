@@ -1,5 +1,5 @@
-from datetime import UTC, datetime, timedelta
 import shutil
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from cryptography.fernet import Fernet
@@ -172,10 +172,11 @@ def test_safe_mock_collection_builds_evidence_graph(client: TestClient) -> None:
     source = workspace.json()["evidence_sources"][0]
     assert source["authorization_id"] == authorization["id"]
     assert len(source["raw_response_hash"]) == 64
+    assert len(source["integrity_hash"]) == 64
+    assert source["previous_integrity_hash"] is None
     assert source["redaction_policy"] == "central-default-v2"
     assert source["provider_version"]
     assert source["ruleset_version"]
-
     monitor = client.post(
         f"/api/v1/investigations/{investigation['id']}/monitors",
         json={"target_id": target["id"], "provider": "safe_mock", "interval_minutes": 5},
@@ -758,3 +759,29 @@ def test_provider_kill_switch_blocks_collection(client: TestClient) -> None:
     assert runtime.status_code == 200
     assert runtime.json()["kill_switch"] is True
     assert runtime.json()["consecutive_failures"] == 0
+
+
+def test_provider_assurance_uses_progressive_verification_states(client: TestClient) -> None:
+    organization = create_org(client)
+    response = client.get(
+        f"/api/v1/organizations/{organization['id']}/platform-assurance"
+    )
+    assert response.status_code == 200
+    providers = {item["provider"]: item for item in response.json()["providers"]}
+    safe_mock = providers["safe_mock"]
+    assert safe_mock["supported"] is True
+    assert safe_mock["installed"] is True
+    assert safe_mock["configured"] is True
+    assert safe_mock["healthy"] is True
+    assert safe_mock["live_verified"] is False
+    assert safe_mock["status"] == "healthy"
+    assert all(item["supported"] is True for item in providers.values())
+    assert all(
+        item["status"]
+        in {"supported", "installed", "configured", "healthy", "live_verified"}
+        for item in providers.values()
+    )
+    integrity = client.get(f"/api/v1/organizations/{organization['id']}/integrity")
+    assert integrity.status_code == 200
+    assert integrity.json()["valid"] is True
+    assert integrity.json()["audit_sealed"] >= 1

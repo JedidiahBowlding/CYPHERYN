@@ -74,7 +74,7 @@ class TestSpiderFoot(unittest.TestCase):
         test_string = "@VERSION"
         opt_data = sf.optValueToData(test_string)
         self.assertIsInstance(opt_data, str)
-        self.assertTrue(opt_data.startswith("SpiderFoot"))
+        self.assertTrue(opt_data.startswith("SignalTrace"))
 
     def test_optValueToData_argument_val_invalid_type_should_return_None(self):
         sf = SpiderFoot(self.default_options)
