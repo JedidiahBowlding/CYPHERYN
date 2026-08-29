@@ -17,6 +17,11 @@ from sqlalchemy import select
 from ..models import Entity, Finding, Relationship
 from ..process_isolation import run_isolated_process
 from ..provider_contract import ProviderCapabilities, ProviderContext, ProviderResult
+from ..scanner_isolation import (
+    DisposableScannerRunner,
+    ScannerPolicy,
+    configured_scanner_images,
+)
 
 PROJECT_HTTPX = Path(__file__).resolve().parents[4] / ".tools" / "bin" / "httpx"
 ZAP_EXECUTABLE = Path("/Applications/ZAP.app/Contents/Java/zap.sh")
@@ -40,7 +45,7 @@ class LocalToolProvider:
 
     @cached_property
     def available(self) -> bool:
-        return self.executable is not None
+        return self.executable is not None or self.name in configured_scanner_images()
 
     @cached_property
     def version(self) -> str | None:
@@ -67,19 +72,46 @@ class LocalToolProvider:
         *,
         stdin: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        executable = self.executable
-        if not executable:
-            raise RuntimeError(f"{self.name} is not installed")
         timeout = 20.0
         if context.deadline_at:
             deadline = context.deadline_at
             if deadline.tzinfo is None:
                 deadline = deadline.replace(tzinfo=UTC)
             timeout = max(1.0, (deadline - datetime.now(UTC)).total_seconds())
+        images = configured_scanner_images()
+        image = images.get(self.name)
         try:
-            result = run_isolated_process(
-                [executable, *arguments], timeout=timeout, stdin=stdin
-            )
+            if image:
+                if stdin is not None:
+                    raise RuntimeError(
+                        f"{self.name} container execution does not accept host-provided stdin"
+                    )
+                isolated = DisposableScannerRunner().run(
+                    [self.binary, *arguments],
+                    ScannerPolicy(
+                        image=image,
+                        timeout_seconds=timeout,
+                        network="bridge",
+                    ),
+                    cancel_requested=lambda: self._cancellation_requested(context),
+                )
+                result = subprocess.CompletedProcess(
+                    args=[self.binary, *arguments],
+                    returncode=isolated.returncode,
+                    stdout=isolated.stdout,
+                    stderr=isolated.stderr,
+                )
+            else:
+                executable = self.executable
+                if not executable:
+                    raise RuntimeError(f"{self.name} is not installed")
+                if not self.capabilities.passive_only:
+                    raise RuntimeError(
+                        f"{self.name} requires a configured disposable scanner image"
+                    )
+                result = run_isolated_process(
+                    [executable, *arguments], timeout=timeout, stdin=stdin
+                )
         except TimeoutError as exc:
             raise TimeoutError(f"{self.name} exceeded its time limit") from exc
         if result.returncode not in {0, 1}:
@@ -87,6 +119,11 @@ class LocalToolProvider:
             message = diagnostic.splitlines()[-1] if diagnostic else "failed"
             raise RuntimeError(f"{self.name}: {message[:300]}")
         return result
+
+    @staticmethod
+    def _cancellation_requested(context: ProviderContext) -> bool:
+        context.db.refresh(context.job, attribute_names=["cancellation_requested_at"])
+        return context.job.cancellation_requested_at is not None
 
     @staticmethod
     def _public_target(value: str) -> str:

@@ -57,6 +57,14 @@ from .models import (
 )
 from .normalization import canonicalize_target
 from .notifications import emit_notification, validate_webhook_url
+from .observability import (
+    correlation_id,
+    correlation_id_context,
+    operational_snapshot,
+    prometheus_metrics,
+    structured_log,
+)
+from .provider_certification import contract_tested, provider_tier, verification_freshness
 from .provider_contract import registry
 from .provider_safety import ProviderBlockedError, controls_for, enforce_enqueue
 from .provider_secrets import ProviderSecretError, encrypt_credentials
@@ -161,9 +169,35 @@ if settings.cors_origins:
             "Idempotency-Key",
             "X-Dev-Subject",
             "X-Dev-Email",
+            "X-Correlation-ID",
         ],
-        expose_headers=["Content-Disposition", "Digest", "X-Content-SHA256"],
+        expose_headers=[
+            "Content-Disposition",
+            "Digest",
+            "X-Content-SHA256",
+            "X-Correlation-ID",
+        ],
     )
+
+
+@app.middleware("http")
+async def correlation_middleware(request: Request, call_next):
+    request_correlation_id = correlation_id(request.headers.get("X-Correlation-ID"))
+    token = correlation_id_context.set(request_correlation_id)
+    started = datetime.now(UTC)
+    try:
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = request_correlation_id
+        structured_log(
+            "http.request",
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=round((datetime.now(UTC) - started).total_seconds() * 1000, 3),
+        )
+        return response
+    finally:
+        correlation_id_context.reset(token)
 
 
 @app.get("/health/live", tags=["health"])
@@ -175,6 +209,25 @@ def liveness() -> dict[str, str]:
 def readiness(db: Session = Depends(get_db)) -> dict[str, str]:
     db.execute(select(1))
     return {"status": "ready"}
+
+
+@app.get("/health/workers", tags=["health"])
+def worker_health(db: Session = Depends(get_db)) -> dict:
+    snapshot = operational_snapshot(db)
+    return {
+        "status": "healthy" if snapshot["worker_healthy"] else "degraded",
+        "worker_healthy": snapshot["worker_healthy"],
+        "workers": snapshot["workers"],
+        "queue": snapshot["queue"],
+    }
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics(db: Session = Depends(get_db)) -> Response:
+    return Response(
+        prometheus_metrics(operational_snapshot(db)),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
 
 
 @app.post("/api/v1/organizations", response_model=OrganizationRead, status_code=201)
@@ -1040,6 +1093,7 @@ def request_finding_verification(
             "Explicit, unexpired active authorization is required for direct verification",
         )
     job = CollectionJob(
+        correlation_id=correlation_id_context.get() or correlation_id(),
         investigation_id=investigation.id,
         target_id=direct_target.id,
         requested_by_id=user.id,
@@ -1933,6 +1987,7 @@ def enqueue_collection(
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, str(exc)) from exc
 
     job = CollectionJob(
+        correlation_id=correlation_id_context.get() or correlation_id(),
         investigation_id=investigation_id,
         target_id=target.id,
         requested_by_id=user.id,
@@ -2030,6 +2085,8 @@ def list_provider_descriptors() -> list[dict]:
             "requires_credentials": provider.capabilities.requires_credentials,
             "available": bool(getattr(provider, "available", True)),
             "version": provider_version_label(provider),
+            "tier": provider_tier(provider.name).value,
+            "contract_tested": contract_tested(provider.name),
         }
         for provider in registry.list()
     ]
@@ -2196,10 +2253,12 @@ def get_platform_assurance(
         provider_status.append(
             {
                 "provider": provider.name,
+                "tier": provider_tier(provider.name).value,
+                "contract_tested": contract_tested(provider.name),
                 "mode": "passive" if provider.capabilities.passive_only else "active",
                 "version": provider_version_label(provider),
                 "ready": installed and enabled and credentials_ready,
-                "supported": True,
+                "supported": provider_tier(provider.name).value == "supported",
                 "installed": installed,
                 "configured": enabled and credentials_ready,
                 "healthy": bool(
@@ -2218,6 +2277,9 @@ def get_platform_assurance(
                     )
                 ),
                 "last_verified_at": runtime.last_success_at if runtime else None,
+                "verification_freshness": verification_freshness(
+                    runtime.last_success_at if runtime else None
+                ),
                 "configuration": (
                     "ready"
                     if enabled and credentials_ready
@@ -2250,7 +2312,7 @@ def get_platform_assurance(
                     if enabled and credentials_ready
                     else "installed"
                     if installed
-                    else "supported"
+                    else provider_tier(provider.name).value
                 ),
             }
         )

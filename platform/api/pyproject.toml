@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "signaltrace-api"
-version = "0.1.0"
+version = "0.8.0"
 description = "SignalTrace evidence-grounded defensive intelligence API and worker"
 requires-python = ">=3.12"
 dependencies = [

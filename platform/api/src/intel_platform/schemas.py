@@ -208,6 +208,7 @@ class TargetRead(ApiModel):
 
 class CollectionJobRead(ApiModel):
     id: str
+    correlation_id: str
     investigation_id: str
     target_id: str
     requested_by_id: str | None
@@ -279,6 +280,8 @@ class ProviderDescriptor(BaseModel):
     requires_credentials: bool
     available: bool = True
     version: str | None = None
+    tier: str
+    contract_tested: bool
 
 
 class ProviderRuntimeRead(BaseModel):

@@ -3,6 +3,7 @@ from sqlalchemy import inspect
 from .database import engine
 
 JOB_COLUMNS = {
+    "correlation_id": "VARCHAR(128) NOT NULL DEFAULT 'legacy-unassigned'",
     "requested_by_id": "VARCHAR(36)",
     "attempt": "INTEGER NOT NULL DEFAULT 0",
     "max_attempts": "INTEGER NOT NULL DEFAULT 3",
@@ -59,12 +60,8 @@ AUDIT_EVENT_COLUMNS = {
 
 def upgrade_existing_schema(target_engine=engine) -> None:
     """Small additive upgrade path until the project adopts Alembic migrations."""
-    columns = {
-        column["name"] for column in inspect(target_engine).get_columns("collection_jobs")
-    }
-    finding_columns = {
-        column["name"] for column in inspect(target_engine).get_columns("findings")
-    }
+    columns = {column["name"] for column in inspect(target_engine).get_columns("collection_jobs")}
+    finding_columns = {column["name"] for column in inspect(target_engine).get_columns("findings")}
     organization_columns = {
         column["name"] for column in inspect(target_engine).get_columns("organizations")
     }

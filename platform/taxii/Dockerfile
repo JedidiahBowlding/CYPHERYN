@@ -3,6 +3,12 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
+# Install the security-fixed packages available for the pinned Debian release
+# before the image is scanned and published.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY api/pyproject.toml api/README.md ./api/
 COPY api/src ./api/src

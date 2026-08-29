@@ -74,9 +74,7 @@ def test_priority_provider_normalizers_extract_security_signal() -> None:
         {
             "pulse_info": {
                 "count": 1,
-                "pulses": [
-                    {"id": "pulse-1", "name": "Example", "malware_families": ["TestRat"]}
-                ],
+                "pulses": [{"id": "pulse-1", "name": "Example", "malware_families": ["TestRat"]}],
             }
         }
     )

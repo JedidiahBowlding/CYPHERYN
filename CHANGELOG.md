@@ -1,0 +1,49 @@
+# Changelog
+
+SignalTrace follows [Semantic Versioning](https://semver.org/) before and after `1.0.0`.
+
+## [Unreleased]
+
+### Added
+
+- Disposable scanner-container policy and execution boundary with explicit resource, filesystem, environment, network, deadline, cancellation, and cleanup controls.
+- Worker/queue/provider operational telemetry, structured correlation IDs, worker health, and Prometheus-compatible metrics.
+- Objective provider support tiers and timestamp-based verification freshness.
+- Signed external evidence-chain checkpoints and offline verification.
+- Open-source governance, dependency automation, critical coverage policy, and reproducible release automation.
+
+### Changed
+
+- Active local scanner adapters fail closed unless a disposable scanner image is explicitly configured.
+
+### Security
+
+- Scanner containers receive no application environment, Docker socket, host mounts, or repository access.
+- Integrity signing keys remain external to ordinary application database records.
+
+### Known limitations
+
+- Docker Desktop cannot enforce destination-level scanner egress policy without an additional policy-aware gateway.
+- External anchors are only independent when retained in a separately controlled trust domain.
+
+## [0.8.0] - Unreleased
+
+### Added
+
+- Provider readiness ladder and priority provider contract tests.
+- Linked SHA-256 evidence and audit integrity chains.
+- Hard process-tree termination and bounded output for local tools.
+
+### Fixed
+
+- Frontend rendered-logo test for optimized images.
+- Actionable OpenSSL findings in the API image.
+
+### Security
+
+- Mandatory dependency, secret, CodeQL, container, and SBOM gates.
+
+### Known limitations
+
+- Process groups are not hostile-code sandboxes.
+- Database-local chains are tamper-evident but not independently anchored in `0.8.0`.

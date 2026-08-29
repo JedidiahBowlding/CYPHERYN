@@ -1,0 +1,31 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /platform/api
+    schedule: {interval: weekly}
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 10
+  - package-ecosystem: npm
+    directory: /platform/frontend
+    schedule: {interval: weekly}
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 10
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: docker
+    directory: /platform/api
+    schedule: {interval: weekly}
+  - package-ecosystem: docker
+    directory: /platform/frontend
+    schedule: {interval: weekly}
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule: {interval: weekly}

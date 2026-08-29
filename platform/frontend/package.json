@@ -1,7 +1,7 @@
 {
   "name": "signaltrace-console",
   "description": "SignalTrace defensive intelligence and OSINT investigation console",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"

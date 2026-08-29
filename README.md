@@ -405,6 +405,11 @@ PowerShell uses `py scripts/reset_dev.py`. The utility requires the operator to 
 - Containers use loopback publication, internal networking, non-root users, read-only filesystems, and bounded writable volumes where compatible.
 - AI output is constrained by retrieved evidence and is never the authoritative source.
 - Vulnerability explanations describe plausible abuse paths; they do not claim exploitation occurred.
+- Active local scanners require explicitly configured disposable images and run with bounded CPU, memory, PIDs, output, deadline, temporary storage, and environment.
+- Worker health is distinct from API health at `/health/workers`; dependency-free Prometheus metrics are exposed at `/metrics`.
+- Optional signed evidence checkpoints can be retained in a separately controlled trust domain and verified offline.
+
+Operational metrics, alert conditions, privacy considerations, and troubleshooting are documented in [the observability guide](docs/OBSERVABILITY.md). Scanner isolation, provider certification, critical coverage, integrity anchoring, and release boundaries are detailed in [the engineering maturity release guide](docs/ENGINEERING_MATURITY_RELEASE.md).
 
 For production deployment, disable development identity, configure OIDC, rotate every development secret, apply HTTPS and network controls, establish backup/retention policy, and complete an environment-specific security review.
 

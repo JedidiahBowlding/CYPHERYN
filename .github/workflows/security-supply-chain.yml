@@ -57,7 +57,7 @@ jobs:
         run: python scripts/setup.py --check
       - name: Build core images
         run: docker compose build api worker frontend taxii
-      - name: Scan API image
+      - name: Scan shipped images
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: signaltrace-api:latest
@@ -72,3 +72,48 @@ jobs:
         with:
           image: signaltrace-api:latest
           artifact-name: signaltrace-api.spdx.json
+      - name: Scan worker image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: signaltrace-worker:latest
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          trivyignores: .trivyignore
+          ignore-unfixed: true
+          scanners: vuln
+      - name: Generate worker SBOM
+        uses: anchore/sbom-action@v0.24.2
+        with:
+          image: signaltrace-worker:latest
+          artifact-name: signaltrace-worker.spdx.json
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: signaltrace-frontend:latest
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          trivyignores: .trivyignore
+          ignore-unfixed: true
+          scanners: vuln
+      - name: Generate frontend SBOM
+        uses: anchore/sbom-action@v0.24.2
+        with:
+          image: signaltrace-frontend:latest
+          artifact-name: signaltrace-frontend.spdx.json
+      - name: Scan TAXII image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: signaltrace-taxii:latest
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          trivyignores: .trivyignore
+          ignore-unfixed: true
+          scanners: vuln
+      - name: Generate TAXII SBOM
+        uses: anchore/sbom-action@v0.24.2
+        with:
+          image: signaltrace-taxii:latest
+          artifact-name: signaltrace-taxii.spdx.json

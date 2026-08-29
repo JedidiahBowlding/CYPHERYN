@@ -23,7 +23,11 @@ RUN npm run build
 FROM node:22.14-bookworm-slim AS production
 
 ENV NODE_ENV=production
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
 WORKDIR /app
 COPY --from=build /app ./
 EXPOSE 3000
-CMD ["npm", "run", "start", "--", "--host", "0.0.0.0"]
+CMD ["node", "node_modules/vinext/dist/cli.js", "start", "--host", "0.0.0.0"]

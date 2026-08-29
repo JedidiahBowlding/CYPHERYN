@@ -79,9 +79,7 @@ def test_audit_events_form_an_integrity_chain(tmp_path: Path) -> None:
 
 
 def test_isolated_process_has_bounded_output() -> None:
-    result = run_isolated_process(
-        [sys.executable, "-c", "print('x' * 2100000)"], timeout=5
-    )
+    result = run_isolated_process([sys.executable, "-c", "print('x' * 2100000)"], timeout=5)
     assert result.returncode == 0
     assert len(result.stdout) == MAX_CAPTURE_BYTES
 
@@ -89,9 +87,7 @@ def test_isolated_process_has_bounded_output() -> None:
 def test_isolated_process_is_hard_terminated() -> None:
     started = time.monotonic()
     with pytest.raises(TimeoutError):
-        run_isolated_process(
-            [sys.executable, "-c", "import time; time.sleep(30)"], timeout=0.2
-        )
+        run_isolated_process([sys.executable, "-c", "import time; time.sleep(30)"], timeout=0.2)
     assert time.monotonic() - started < 3
 
 

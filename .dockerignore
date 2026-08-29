@@ -16,3 +16,13 @@ spiderfoot.test.db
 __pycache__
 htmlcov/
 docs/
+
+# Generated SignalTrace frontend/runtime state must never enter the inherited
+# SpiderFoot build context (hundreds of MB locally, and potentially evidence).
+platform/frontend/node_modules/
+platform/frontend/.vinext/
+platform/frontend/dist/
+platform/.runtime/
+platform/data/
+.coverage*
+.pytest_cache/

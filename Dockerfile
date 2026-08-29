@@ -41,11 +41,10 @@ RUN apk add --no-cache gcc git curl python3 python3-dev py3-pip swig tinyxml-dev
  openjpeg-dev zlib-dev cargo rust
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin":$PATH
-COPY $REQUIREMENTS requirements.txt ./
-RUN ls
-RUN echo "$REQUIREMENTS"
+COPY requirements.txt /requirements.txt
+COPY $REQUIREMENTS /selected-requirements.txt
 RUN pip3 install -U pip
-RUN pip3 install -r "$REQUIREMENTS"
+RUN pip3 install -r /selected-requirements.txt
 
 
 

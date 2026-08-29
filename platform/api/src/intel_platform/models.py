@@ -163,6 +163,7 @@ class CollectionJob(Base):
     __tablename__ = "collection_jobs"
     __table_args__ = (Index("ix_job_investigation_created", "investigation_id", "created_at"),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    correlation_id: Mapped[str] = mapped_column(String(128), nullable=False, default=new_id)
     investigation_id: Mapped[str] = mapped_column(ForeignKey("investigations.id"), nullable=False)
     target_id: Mapped[str] = mapped_column(ForeignKey("targets.id"), nullable=False)
     requested_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
@@ -193,6 +194,19 @@ class CollectionJobEvent(Base):
     message: Mapped[str] = mapped_column(String(500), default="")
     details: Mapped[dict] = mapped_column(JSON, default=dict)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class WorkerState(Base):
+    __tablename__ = "worker_states"
+    id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    version: Mapped[str] = mapped_column(String(100), nullable=False, default="unknown")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_heartbeat_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_successful_poll_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_failure_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_failure: Mapped[str | None] = mapped_column(String(500))
+    active_jobs: Mapped[int] = mapped_column(Integer, default=0)
+    version_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
 class ProviderConfiguration(Base):

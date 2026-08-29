@@ -4,6 +4,7 @@ import json
 import os
 import re
 import socket
+import threading
 import time
 from datetime import UTC, datetime, timedelta
 
@@ -40,6 +41,12 @@ from .models import (
     TargetType,
 )
 from .notifications import deliver_pending_notifications, emit_notification
+from .observability import (
+    correlation_id_context,
+    heartbeat_worker,
+    structured_log,
+    worker_heartbeat_loop,
+)
 from .provider_contract import ProviderContext, registry
 from .provider_safety import (
     ProviderBlockedError,
@@ -52,6 +59,7 @@ from .provider_secrets import decrypt_credentials
 from .providers import register_builtin_providers
 from .report_exports import sha256
 from .reporting import build_pdf_report
+from .scanner_isolation import ScannerCancelledError, configured_scanner_images
 from .schema_upgrade import upgrade_existing_schema
 from .security_controls import redact_payload, redact_text
 
@@ -1034,6 +1042,13 @@ def process_one(
         if job is None:
             return None
         job_id = job.id
+        correlation_token = correlation_id_context.set(job.correlation_id)
+        structured_log(
+            "job.claimed",
+            job_id=job.id,
+            provider=job.provider,
+            investigation_id=job.investigation_id,
+        )
         try:
             db.refresh(job)
             if job.cancellation_requested_at:
@@ -1107,6 +1122,34 @@ def process_one(
                 # Persist the attempt before an external tool runs. Keeping this write
                 # transaction open would block cancellation and UI writes in SQLite.
                 db.commit()
+                scanner_image = configured_scanner_images().get(provider.name)
+                if scanner_image and not provider.capabilities.passive_only:
+                    append_job_event(
+                        db,
+                        job,
+                        "scanner_isolation_started",
+                        JobStatus.RUNNING,
+                        from_status=JobStatus.RUNNING,
+                        message="Disposable scanner container launch authorized",
+                        details={
+                            "scanner": provider.name,
+                            "scanner_version": str(getattr(provider, "version", "unknown")),
+                            "image": scanner_image,
+                            "target_id": target.id,
+                            "authorization_id": target.authorization_id,
+                            "execution_policy": {
+                                "read_only": True,
+                                "capabilities": "none",
+                                "cpu": 1.0,
+                                "memory_mb": 512,
+                                "pids": 128,
+                                "network": "bridge",
+                                "timeout_seconds": controls.timeout_seconds,
+                                "output_limit_bytes": 2_000_000,
+                            },
+                        },
+                    )
+                    db.commit()
                 result = provider.collect(
                     ProviderContext(
                         db=db,
@@ -1260,14 +1303,26 @@ def process_one(
                 failed.lease_expires_at = None
                 failed.error_summary = redact_text(str(exc))[:500]
                 failed_investigation = db.get(Investigation, failed.investigation_id)
-                if failed_investigation:
+                cancelled = isinstance(exc, ScannerCancelledError)
+                if failed_investigation and not cancelled:
                     record_failure(
                         db,
                         failed_investigation.organization_id,
                         failed.provider,
                         failed.error_summary,
                     )
-                if failed.attempt >= failed.max_attempts:
+                if cancelled:
+                    failed.status = JobStatus.CANCELLED
+                    failed.ended_at = now_utc()
+                    append_job_event(
+                        db,
+                        failed,
+                        "cancelled",
+                        JobStatus.CANCELLED,
+                        from_status=JobStatus.RUNNING,
+                        message="Disposable scanner container terminated after cancellation",
+                    )
+                elif failed.attempt >= failed.max_attempts:
                     failed.status = JobStatus.FAILED
                     failed.ended_at = now_utc()
                     append_job_event(
@@ -1312,7 +1367,15 @@ def process_one(
                         details={"attempt": failed.attempt},
                     )
                 db.commit()
-        return db.get(CollectionJob, job_id)
+        processed_job = db.get(CollectionJob, job_id)
+        structured_log(
+            "job.finished",
+            job_id=job_id,
+            provider=job.provider,
+            status=processed_job.status.value if processed_job else "missing",
+        )
+        correlation_id_context.reset(correlation_token)
+        return processed_job
 
 
 def generate_due_reports(session_factory=SessionLocal) -> int:
@@ -1404,16 +1467,46 @@ def main() -> None:
     upgrade_existing_schema()
     register_builtin_providers(registry)
     worker_id = os.getenv("WORKER_ID", f"{socket.gethostname()}:{os.getpid()}")
+    worker_version = os.getenv("SIGNALTRACE_VERSION", "development")
+    heartbeat_stop = threading.Event()
+    threading.Thread(
+        target=worker_heartbeat_loop,
+        kwargs={
+            "session_factory": SessionLocal,
+            "worker_id": worker_id,
+            "version": worker_version,
+            "stop": heartbeat_stop,
+        },
+        name="signaltrace-worker-heartbeat",
+        daemon=True,
+    ).start()
     print(f"job worker ready: {worker_id}", flush=True)
     while True:
-        enqueue_due_schedules()
-        enqueue_due_finding_monitors()
-        monitor_job_health()
-        deliver_pending_notifications()
-        generate_due_reports()
-        processed = process_one(worker_id)
-        if processed is None:
-            time.sleep(1)
+        try:
+            enqueue_due_schedules()
+            enqueue_due_finding_monitors()
+            monitor_job_health()
+            deliver_pending_notifications()
+            generate_due_reports()
+            processed = process_one(worker_id)
+            if processed is None:
+                time.sleep(1)
+        except Exception as exc:  # keep the supervisor observable before restart
+            structured_log(
+                "worker.loop_failure",
+                severity="error",
+                worker_id=worker_id,
+                error=str(exc)[:500],
+            )
+            with SessionLocal() as heartbeat_db:
+                heartbeat_worker(
+                    heartbeat_db,
+                    worker_id,
+                    version=worker_version,
+                    active_jobs=0,
+                    failure=str(exc),
+                )
+            raise
 
 
 if __name__ == "__main__":

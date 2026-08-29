@@ -763,22 +763,37 @@ def test_provider_kill_switch_blocks_collection(client: TestClient) -> None:
 
 def test_provider_assurance_uses_progressive_verification_states(client: TestClient) -> None:
     organization = create_org(client)
-    response = client.get(
-        f"/api/v1/organizations/{organization['id']}/platform-assurance"
-    )
+    response = client.get(f"/api/v1/organizations/{organization['id']}/platform-assurance")
     assert response.status_code == 200
     providers = {item["provider"]: item for item in response.json()["providers"]}
     safe_mock = providers["safe_mock"]
-    assert safe_mock["supported"] is True
+    assert safe_mock["supported"] is False
+    assert safe_mock["tier"] == "experimental"
+    assert safe_mock["contract_tested"] is False
     assert safe_mock["installed"] is True
     assert safe_mock["configured"] is True
     assert safe_mock["healthy"] is True
     assert safe_mock["live_verified"] is False
     assert safe_mock["status"] == "healthy"
-    assert all(item["supported"] is True for item in providers.values())
+    assert {name for name, item in providers.items() if item["supported"]} == {
+        "virustotal",
+        "shodan",
+        "alienvault_otx",
+        "censys",
+        "abuse_ch",
+    }
     assert all(
         item["status"]
-        in {"supported", "installed", "configured", "healthy", "live_verified"}
+        in {
+            "supported",
+            "experimental",
+            "adapter_only",
+            "inherited",
+            "installed",
+            "configured",
+            "healthy",
+            "live_verified",
+        }
         for item in providers.values()
     )
     integrity = client.get(f"/api/v1/organizations/{organization['id']}/integrity")
