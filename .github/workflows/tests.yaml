@@ -30,8 +30,7 @@ jobs:
         run: |
           # The inherited tree predates the platform's Ruff policy. Gate fatal
           # Python errors here; platform code is linted strictly by Ruff below.
-          flake8 sf.py spiderfoot modules test \
-            --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 sf.py spiderfoot modules test --select=E9,F63,F7,F82 --show-source --statistics
       - name: Test with pytest
         run: |
           python -m pytest -n auto --dist loadfile test/unit test/integration --ignore=test/integration/modules/ --durations=5 --cov=spiderfoot --cov=modules --cov-report term
