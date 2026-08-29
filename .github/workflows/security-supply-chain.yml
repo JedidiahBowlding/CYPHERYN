@@ -61,8 +61,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: signaltrace-api:latest
-          format: sarif
-          output: trivy-api.sarif
+          format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
           trivyignores: .trivyignore
