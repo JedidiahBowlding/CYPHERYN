@@ -18,6 +18,18 @@ It is more than a scanner. SignalTrace preserves the chain from target authoriza
 
 The source, issue tracker, and release history are hosted in the [SignalTrace GitHub repository](https://github.com/JedidiahBowlding/SignalTrace).
 
+## SignalTrace in action
+
+<p align="center">
+  <img src="docs/images/signaltrace-landing.jpg" alt="SignalTrace landing page" width="100%">
+</p>
+
+| Operations overview | Authorization-first investigation setup |
+| --- | --- |
+| <img src="docs/images/signaltrace-dashboard.jpg" alt="SignalTrace operations dashboard" width="100%"> | <img src="docs/images/signaltrace-new-investigation.jpg" alt="SignalTrace new investigation authorization workflow" width="100%"> |
+
+These screenshots use an empty local workspace and placeholder form text. No provider credentials, private targets, or collected evidence are shown.
+
 ## Why SignalTrace
 
 Traditional OSINT tools return enormous result sets. Vulnerability scanners return isolated snapshots. Threat feeds return indicators without your asset context. SignalTrace brings those signals together and answers the operational questions:

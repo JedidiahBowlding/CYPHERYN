@@ -28,10 +28,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Configure Pages
         uses: actions/configure-pages@v5
+      - name: Assemble project site
+        run: |
+          mkdir -p _site/images
+          cp -R project-site/. _site/
+          cp docs/images/signaltrace-*.jpg _site/images/
       - name: Upload project site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: project-site
+          path: _site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
