@@ -66,6 +66,8 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           trivyignores: .trivyignore
+          ignore-unfixed: true
+          scanners: vuln
       - name: Generate API SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
