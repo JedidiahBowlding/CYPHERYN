@@ -34,7 +34,7 @@ jobs:
             --select=E9,F63,F7,F82 --show-source --statistics
       - name: Test with pytest
         run: |
-          python -m pytest -n auto --dist loadfile --ignore=test/integration/modules/ --durations=5 --cov-report term --cov=. .
+          python -m pytest -n auto --dist loadfile test/unit test/integration --ignore=test/integration/modules/ --durations=5 --cov=spiderfoot --cov=modules --cov-report term
       - uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: false
