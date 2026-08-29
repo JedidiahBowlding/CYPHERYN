@@ -8,6 +8,7 @@
 
   <a href="https://github.com/JedidiahBowlding/SignalTrace">Repository</a> ·
   <a href="https://github.com/JedidiahBowlding/SignalTrace/issues">Issues</a> ·
+  <a href="docs/TUTORIAL.md">Tutorial</a> ·
   <a href="ROADMAP.md">Roadmap</a> ·
   <a href="SECURITY_BOUNDARIES.md">Security boundaries</a>
 </div>
@@ -31,6 +32,8 @@ The source, issue tracker, and release history are hosted in the [SignalTrace Gi
 These screenshots use an empty local workspace and placeholder form text. No provider credentials, private targets, or collected evidence are shown.
 
 ## Why SignalTrace
+
+New to the platform? Follow the [complete SignalTrace tutorial](docs/TUTORIAL.md) to learn authorization, defensive and authorized-offensive concepts, provider collection, evidence analysis, risk scoring, remediation, rescanning, monitoring, and reporting.
 
 Traditional OSINT tools return enormous result sets. Vulnerability scanners return isolated snapshots. Threat feeds return indicators without your asset context. SignalTrace brings those signals together and answers the operational questions:
 
