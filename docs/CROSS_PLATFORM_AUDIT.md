@@ -45,7 +45,15 @@ Core images (`python:3.13-slim`, `node:22.14-bookworm-slim`, `postgres:17-alpine
 
 ## Linux assumptions that remain intentionally
 
-Containers use Linux users, ownership, `/tmp`, `/data`, and Debian-based images. These are internal to Docker Desktop's Linux VM and do not require Linux host paths. The legacy SpiderFoot and Greenbone shell utilities remain available for macOS or WSL users but are not part of the Windows PowerShell quick start.
+Containers use Linux users, ownership, `/tmp`, `/data`, and Debian-based images. These remain inside the container or named volumes—whether Docker runs natively on Linux or in Docker Desktop's Linux VM—and do not require matching host paths. The legacy SpiderFoot and Greenbone shell utilities remain available for Linux, macOS, or WSL users but are not part of the Windows PowerShell quick start.
+
+## Native Linux host support
+
+The canonical `compose.yaml` also runs directly on a 64-bit Linux host with Docker Engine and the Compose v2 plugin; Docker Desktop is not required. The bootstrap and doctor utilities use Python and platform-neutral path/process APIs. Named volumes avoid SELinux bind-mount labeling and host path-separator issues in the core stack.
+
+Ubuntu is covered by the CI matrix for API tests, frontend lint/build/tests, utility compilation, and Compose validation. A live clean-host installation was not performed on Debian, Fedora, RHEL, or an ARM Linux machine in the available environment, so those systems are documented as expected-compatible rather than hardware-tested. Third-party optional stacks retain their upstream Linux and architecture constraints.
+
+The Compose file publishes the frontend, API, and TAXII ports on the host. A workstation can access these through `localhost`; a remote Linux deployment must add firewall restrictions or an authenticated TLS reverse proxy rather than expose the development endpoints directly to the Internet.
 
 ## Verification performed
 

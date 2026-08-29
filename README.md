@@ -172,7 +172,7 @@ Ollama is optional for local AI assistance. SpiderFoot and Greenbone remain isol
 
 ### Requirements
 
-- Docker Desktop with Docker Compose v2
+- Docker Engine or Docker Desktop with Docker Compose v2
 - Python 3.12+ for the safe cross-platform bootstrap and diagnostic tools
 - Git when cloning from GitHub
 - 8 GB or more available RAM recommended
@@ -186,7 +186,7 @@ git clone https://github.com/JedidiahBowlding/SignalTrace.git
 cd SignalTrace
 ```
 
-### macOS Terminal or Windows WSL
+### macOS Terminal, Linux, or Windows WSL
 
 ```bash
 python3 scripts/setup.py --start
@@ -274,6 +274,71 @@ Core generated values:
 - `TAXII_TOKEN`
 
 Optional configuration includes host ports, OIDC, Ollama, and SMTP notifications. Never commit `.env`, provider keys, tokens, investigation databases, reports, or collected samples.
+
+## Installation — Linux
+
+SignalTrace supports 64-bit Linux hosts through Docker Engine and the Compose v2 plugin. The core application is continuously checked on Ubuntu in CI; Debian, Fedora, and RHEL-family systems are expected to work with a current Docker installation but are not all exercised by this project’s runners.
+
+### Linux prerequisites
+
+- Git
+- Python 3.12 or newer
+- Docker Engine
+- Docker Compose v2 (`docker compose`, not the legacy `docker-compose` command)
+- 8 GB RAM minimum; 16 GB recommended when optional analysis services are enabled
+- At least 20 GB of free disk space for images, evidence, and database volumes
+
+Install Docker from the official instructions for your distribution:
+
+- [Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+- [Debian](https://docs.docker.com/engine/install/debian/)
+- [Fedora](https://docs.docker.com/engine/install/fedora/)
+- [RHEL](https://docs.docker.com/engine/install/rhel/)
+- [Other supported Linux distributions](https://docs.docker.com/engine/install/)
+
+Install the [Docker Compose plugin](https://docs.docker.com/compose/install/linux/) if it was not included with Docker Engine.
+
+Verify the host before cloning SignalTrace:
+
+```bash
+git --version
+python3 --version
+docker version
+docker compose version
+docker run --rm hello-world
+```
+
+Docker commands require access to the Docker daemon. You may use `sudo`, configure [non-root Docker access](https://docs.docker.com/engine/install/linux-postinstall/), or use [rootless mode](https://docs.docker.com/engine/security/rootless/). Membership in the `docker` group grants root-equivalent control of the host; only grant it to trusted users.
+
+### Install and start
+
+```bash
+git clone https://github.com/JedidiahBowlding/SignalTrace.git
+cd SignalTrace
+python3 scripts/setup.py --start
+```
+
+The setup utility creates `.env`, generates development secrets, validates Compose, builds the images, and starts the core services. It does not display the generated secrets.
+
+### Verify Linux installation
+
+```bash
+docker compose ps
+curl --fail http://localhost:8000/health/ready
+python3 scripts/doctor.py
+```
+
+A healthy API returns:
+
+```json
+{"status":"ready"}
+```
+
+Open [http://localhost:3000](http://localhost:3000). API documentation is available at [http://localhost:8000/api/docs](http://localhost:8000/api/docs).
+
+The default host ports are `3000`, `8000`, and `9000`. They can be changed in `.env`. On a remote or shared Linux server, do not expose these development services directly to the public Internet; restrict them with the host firewall or place an authenticated TLS reverse proxy in front of the application.
+
+Core images support standard `amd64` and `arm64` Linux hosts without forced emulation. Optional inherited SpiderFoot, Greenbone, ZAP, and other third-party tools can have their own architecture, memory, kernel-capability, or image limitations and are not required for the core installation.
 
 ## macOS and Windows
 
