@@ -1,0 +1,40 @@
+services:
+  api:
+    build: ./api
+    environment:
+      PLATFORM_ENVIRONMENT: development
+      PLATFORM_DATABASE_URL: postgresql+psycopg://platform:${PLATFORM_DB_PASSWORD:?set PLATFORM_DB_PASSWORD}@postgres:5432/platform
+      PLATFORM_OIDC_ISSUER: ${PLATFORM_OIDC_ISSUER:-}
+      PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:-defensive-intel-platform}
+      PLATFORM_OIDC_JWKS_URL: ${PLATFORM_OIDC_JWKS_URL:-}
+      PLATFORM_ALLOW_DEV_IDENTITY: ${PLATFORM_ALLOW_DEV_IDENTITY:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: platform
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: ${PLATFORM_DB_PASSWORD:?set PLATFORM_DB_PASSWORD}
+    volumes:
+      - platform-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform -d platform"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    expose:
+      - "5432"
+
+volumes:
+  platform-postgres:
+

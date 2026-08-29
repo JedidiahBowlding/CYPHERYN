@@ -1,0 +1,16 @@
+{
+  "mitre_attack": {
+    "status": "updated",
+    "objects": 1743
+  },
+  "cisa_kev": {
+    "status": "updated",
+    "objects": 1685
+  },
+  "urlhaus": {
+    "status": "updated",
+    "objects": 1200
+  },
+  "updated_at": "2026-08-28T20:05:55.266532Z",
+  "total_objects": 4628
+}

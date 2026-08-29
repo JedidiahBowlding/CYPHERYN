@@ -1,0 +1,285 @@
+.finding-records {
+  width: 100%;
+  max-width: 1180px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.finding-record {
+  padding: 20px;
+  border: 1px solid #2a3443;
+  border-left: 3px solid #f0b45d;
+  border-radius: 10px;
+  background: #0d141d;
+}
+.finding-record.high,
+.finding-record.critical {
+  border-left-color: #ff6577;
+}
+.finding-record > header,
+.finding-record > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.finding-record > header span {
+  color: #f0b45d;
+  font: 800 9px var(--font-geist-mono);
+  text-transform: uppercase;
+}
+.finding-record > header b {
+  padding: 4px 7px;
+  border-radius: 8px;
+  background: #18342f;
+  color: #69d4c2;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+.finding-record h2 {
+  margin: 20px 0 7px;
+  color: #e0e8ef;
+  font-size: 16px;
+}
+.finding-record > strong {
+  color: #9badbd;
+  font: 600 11px var(--font-geist-mono);
+}
+.finding-record > p {
+  margin: 12px 0 20px;
+  color: #7d8a9b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.finding-record > footer {
+  padding-top: 13px;
+  border-top: 1px solid #202b38;
+  color: #667587;
+  font-size: 9px;
+}
+.finding-record a {
+  color: #6ed7c7;
+  text-decoration: none;
+}
+@media (max-width: 760px) {
+  .finding-records {
+    grid-template-columns: 1fr;
+  }
+}
+.finding-actions {
+  display: flex;
+  gap: 7px;
+  padding: 0 15px 14px;
+}
+.finding-actions button {
+  border: 1px solid #2b3a4c;
+  border-radius: 6px;
+  background: #101923;
+  color: #93a3b4;
+  padding: 6px 8px;
+  font-size: 8px;
+}
+.finding-actions button:hover {
+  border-color: #3a8178;
+  color: #c9fff7;
+}
+.finding-lifecycle {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.verification-verdict {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 12px;
+  padding: 11px 13px;
+  border: 1px solid #2b3a4c;
+  border-radius: 7px;
+  background: #0a1118;
+  color: #9eacb8;
+  font-size: 13px;
+}
+.verification-verdict strong {
+  text-transform: capitalize;
+  color: #d4dfe5;
+}
+.verification-verdict.confirmed {
+  border-color: #a34d4d;
+}
+.verification-verdict.confirmed strong {
+  color: #ff9b91;
+}
+.verification-verdict.fixed,
+.verification-verdict.fixed_pending_confirmation {
+  border-color: #3b887d;
+}
+.verification-verdict.fixed strong,
+.verification-verdict.fixed_pending_confirmation strong {
+  color: #8ae5d7;
+}
+.verification-verdict.stale,
+.verification-verdict.inconclusive {
+  border-color: #8b7337;
+}
+.verification-verdict.stale strong,
+.verification-verdict.inconclusive strong {
+  color: #e5c56f;
+}
+.verification-history {
+  margin: 0 0 16px;
+  border: 1px solid #253443;
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: #aebdc8;
+  font-size: 13px;
+}
+.verification-history summary {
+  cursor: pointer;
+  color: #bcd0db;
+}
+.verification-history > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid #202b38;
+}
+.verification-history > div:first-of-type {
+  margin-top: 8px;
+}
+.verification-history span {
+  color: #8192a0;
+}
+.finding-lifecycle > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px;
+  border: 1px solid #253443;
+  border-radius: 7px;
+  background: #0a1118;
+}
+.finding-lifecycle span {
+  color: #738493;
+  font-size: 11px;
+}
+.finding-lifecycle strong {
+  color: #c0cdd6;
+  font-size: 12px;
+}
+.remediation-fields {
+  display: grid;
+  grid-template-columns: 0.55fr 1.45fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.remediation-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #8fa0ae;
+  font-size: 12px;
+}
+.remediation-fields input,
+.remediation-fields textarea {
+  width: 100%;
+  border: 1px solid #2a3b4b;
+  border-radius: 7px;
+  background: #091018;
+  color: #d6e2e8;
+  padding: 9px 10px;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.exception-summary {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.9rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--amber) 9%, transparent);
+  font-size: 0.95rem;
+}
+
+.exception-summary strong {
+  text-transform: capitalize;
+}
+.finding-actions .verify-button {
+  border-color: #3b887d;
+  background: #133d37;
+  color: #a8f1e5;
+}
+.finding-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.finding-title-row h2 { margin-right: auto; }
+.finding-help {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+.finding-help > button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #428f84;
+  border-radius: 50%;
+  background: #133b36;
+  color: #aaf3e7;
+  font-size: 17px;
+  font-weight: 800;
+  cursor: help;
+}
+.finding-help-card {
+  position: absolute;
+  z-index: 30;
+  top: 39px;
+  right: 0;
+  display: grid;
+  gap: 8px;
+  width: min(420px, 80vw);
+  padding: 16px;
+  border: 1px solid #3c625e;
+  border-radius: 10px;
+  background: #081219;
+  box-shadow: 0 16px 42px rgb(0 0 0 / 48%);
+  color: #cbd9df;
+  font-size: 13px;
+  line-height: 1.55;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-5px);
+  transition: opacity 140ms ease, transform 140ms ease, visibility 140ms;
+}
+.finding-help-card strong { color: #77ddcc; font-size: 13px; }
+.finding-help-card small {
+  margin-top: 5px;
+  padding-top: 9px;
+  border-top: 1px solid #213139;
+  color: #7f919d;
+}
+.finding-help:hover .finding-help-card,
+.finding-help:focus-within .finding-help-card {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.finding-help > button:focus-visible {
+  outline: 3px solid rgb(80 205 187 / 35%);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .finding-lifecycle,
+  .remediation-fields {
+    grid-template-columns: 1fr;
+  }
+}

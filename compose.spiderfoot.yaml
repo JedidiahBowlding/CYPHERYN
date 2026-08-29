@@ -1,0 +1,15 @@
+# Legacy standalone SpiderFoot stack.
+# SignalTrace users should use the root compose.yaml instead.
+services:
+  spiderfoot:
+    build:
+      context: ./
+    volumes:
+      - spiderfoot-data:/var/lib/spiderfoot
+    image: spiderfoot
+    ports:
+      - "127.0.0.1:${SPIDERFOOT_PORT:-5001}:5001"
+    restart: unless-stopped
+
+volumes:
+  spiderfoot-data:

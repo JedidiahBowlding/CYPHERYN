@@ -1,0 +1,14 @@
+.service-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.service-pills span {
+  padding: 7px 10px;
+  border: 1px solid #3b5065;
+  border-radius: 7px;
+  background: #101a24;
+  color: #c9d5df;
+  font: 600 13px var(--font-geist-mono);
+}

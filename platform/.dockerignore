@@ -1,0 +1,11 @@
+frontend/node_modules
+frontend/.vinext
+frontend/.next
+frontend/dist
+api/.venv
+tools/*-venv
+.runtime
+quarantine
+clamav-db
+**/__pycache__
+*.pyc

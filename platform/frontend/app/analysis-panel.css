@@ -1,0 +1,237 @@
+.analysis-panel {
+  margin-bottom: 14px;
+}
+.analysis-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid #1b2633;
+}
+.analysis-panel > header p {
+  margin: 5px 0 0;
+  color: #637184;
+  font-size: 8px;
+}
+.analysis-panel > header button {
+  border: 1px solid #715ea0;
+  border-radius: 6px;
+  background: #30254d;
+  color: #dfd5ff;
+  padding: 8px 11px;
+  font-size: 8px;
+}
+.analysis-empty {
+  padding: 28px;
+  text-align: center;
+}
+.analysis-empty strong {
+  font-size: 10px;
+}
+.analysis-empty p {
+  color: #637184;
+  font-size: 8px;
+}
+.risk-summary {
+  display: grid;
+  grid-template-columns: 105px 1fr;
+  gap: 20px;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #1b2633;
+}
+.risk-score {
+  height: 86px;
+  display: grid;
+  place-content: center;
+  grid-template-columns: auto auto;
+  border: 1px solid #2f4053;
+  border-radius: 12px;
+  background: #0a121b;
+  text-align: center;
+}
+.risk-score strong {
+  font: 700 29px var(--font-geist-mono);
+}
+.risk-score span {
+  align-self: end;
+  margin-bottom: 6px;
+  color: #647488;
+  font-size: 9px;
+}
+.risk-score b {
+  grid-column: 1/-1;
+  color: #5fd2c2;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+.risk-score.medium b {
+  color: #f5b94c;
+}
+.risk-score.high b,
+.risk-score.critical b {
+  color: #ff6879;
+}
+.risk-summary h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.risk-summary p {
+  margin: 0 0 8px;
+  color: #8190a2;
+  font-size: 9px;
+  line-height: 1.6;
+}
+.risk-summary small {
+  color: #536174;
+  font-size: 7px;
+}
+.analysis-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.analysis-columns > article {
+  padding: 16px;
+}
+.analysis-columns > article + article {
+  border-left: 1px solid #1b2633;
+}
+.analysis-columns h3 {
+  margin: 0 0 10px;
+  color: #6d7c90;
+  font: 700 8px var(--font-geist-mono);
+  text-transform: uppercase;
+}
+.analysis-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 9px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid #182536;
+}
+.analysis-item > span {
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: #172535;
+  color: #78b7d7;
+  font-size: 6px;
+  text-transform: uppercase;
+}
+.analysis-item p {
+  margin: 0;
+  color: #aebbc9;
+  font-size: 8px;
+  line-height: 1.5;
+}
+.analysis-item p small {
+  display: block;
+  margin-top: 4px;
+  color: #59687a;
+}
+.analysis-item > b {
+  color: #63cfbd;
+  font: 700 7px var(--font-geist-mono);
+}
+.analysis-none {
+  color: #5e6d7f;
+  font-size: 8px;
+}
+.correlation-note {
+  margin: 0 16px 16px;
+  padding: 12px;
+  border: 1px solid #38304f;
+  border-radius: 8px;
+  background: #161324;
+}
+.correlation-note strong {
+  color: #b9a4ef;
+  font-size: 7px;
+}
+.correlation-note p {
+  margin: 7px 0;
+  color: #aab4c2;
+  font-size: 8px;
+}
+.correlation-note small {
+  color: #777087;
+  font-size: 7px;
+}
+@media (max-width: 760px) {
+  .analysis-columns {
+    grid-template-columns: 1fr;
+  }
+  .analysis-columns > article + article {
+    border-left: 0;
+    border-top: 1px solid #1b2633;
+  }
+  .risk-summary {
+    grid-template-columns: 1fr;
+  }
+  .risk-score {
+    width: 105px;
+  }
+}
+.analysis-stale {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 17px;
+  border-bottom: 1px solid #765b29;
+  background: #2b2110;
+  color: #e8c878;
+}
+.analysis-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 17px;
+  border-bottom: 1px solid #27554e;
+  background: #10241f;
+  color: #a9e8dd;
+  font-size: 13px;
+}
+.analysis-progress i {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #39766d;
+  border-top-color: #78dfce;
+  border-radius: 50%;
+  animation: analysis-spin 0.8s linear infinite;
+}
+.analysis-progress span {
+  font-weight: 650;
+}
+@keyframes analysis-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.analysis-stale strong {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.analysis-stale span {
+  color: #c5ad7a;
+  font-size: 12px;
+}
+.analysis-stale button {
+  margin-left: auto;
+  padding: 8px 12px;
+  border: 1px solid #9b7937;
+  border-radius: 7px;
+  background: #4a3716;
+  color: #ffe2a0;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .analysis-stale {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .analysis-stale button {
+    margin-left: 0;
+  }
+}

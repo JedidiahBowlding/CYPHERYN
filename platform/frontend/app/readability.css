@@ -1,0 +1,148 @@
+/* Application-wide accessibility scale. The first visual draft used display-sized
+   microtype (6-10px); these rules establish a readable UI floor everywhere. */
+html {
+  font-size: 16px;
+}
+body {
+  line-height: 1.5;
+}
+
+main
+  :where(
+    p,
+    small,
+    time,
+    label,
+    button,
+    input,
+    select,
+    textarea,
+    dt,
+    dd,
+    li,
+    td,
+    th
+  ),
+.sidebar :where(small, button),
+.topbar :where(input, kbd),
+.detail-top nav,
+.workflow-top > a,
+.workflow-top > p,
+.list-top nav a {
+  font-size: 14px !important;
+  line-height: 1.5;
+}
+
+main :where(a:not(.workflow-brand):not(.investigation-row)),
+.section-nav nav a,
+.nav-item {
+  font-size: 14px !important;
+}
+
+.eyebrow,
+.nav-label,
+.investigation-table > header,
+.section-grid article > span,
+.detail-state,
+.scope-panel header > span,
+.provider-control-head > span,
+.provider-controls header > span,
+.queue-live,
+.job-row > b,
+.finding > div span,
+.finding footer,
+.trend {
+  font-size: 12px !important;
+  line-height: 1.4;
+}
+
+.panel h2,
+.detail-panel h2,
+.form-section-title h2,
+.section-grid h2,
+.provider-controls h2 {
+  font-size: 17px !important;
+  line-height: 1.35;
+}
+
+.metric-card > p,
+.metric-card small,
+.micro-row,
+.change-row p,
+.change-row time,
+.finding p,
+.finding time,
+.finding footer button,
+.target-card small,
+.target-card > b,
+.empty-state strong,
+.evidence-empty strong,
+.job-row strong,
+.job-row small,
+.job-event strong,
+.job-event small,
+.job-event time,
+.entity-card strong,
+.entity-card small,
+.entity-card > b,
+.relationship-row strong,
+.relationship-row span,
+.relationship-row b,
+.graph-actions span,
+.graph-filter button,
+.graph-inspector .inspector-type,
+.graph-inspector h3,
+.graph-inspector dt,
+.graph-inspector dd,
+.section-main > footer,
+.section-grid p,
+.control-message {
+  font-size: 13px !important;
+  line-height: 1.5;
+}
+
+.profile strong,
+.profile small,
+.scope strong,
+.change-row strong,
+.finding h3,
+.investigation-row,
+.investigation-row strong,
+.investigation-row small,
+.investigation-row b {
+  font-size: 14px !important;
+}
+
+.evidence-graph > g > g > text,
+.evidence-graph .node-type,
+.evidence-graph .node-label {
+  font-size: 11px !important;
+}
+
+button,
+input,
+select,
+textarea {
+  min-height: 40px;
+}
+
+@media (max-width: 760px) {
+  main
+    :where(
+      p,
+      small,
+      time,
+      label,
+      button,
+      input,
+      select,
+      textarea,
+      dt,
+      dd,
+      li,
+      td,
+      th
+    ) {
+    font-size: 15px !important;
+  }
+}

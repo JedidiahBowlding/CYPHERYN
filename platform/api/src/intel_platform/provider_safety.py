@@ -1,0 +1,123 @@
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from .models import CollectionJob, Investigation, ProviderConfiguration, ProviderRuntimeState
+
+
+class ProviderBlockedError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class ProviderControls:
+    enabled: bool = True
+    kill_switch: bool = False
+    jobs_per_hour: int = 60
+    timeout_seconds: int = 20
+    failure_threshold: int = 3
+    cooldown_seconds: int = 300
+
+
+def controls_for(db: Session, organization_id: str, provider: str) -> ProviderControls:
+    configuration = db.scalar(
+        select(ProviderConfiguration).where(
+            ProviderConfiguration.organization_id == organization_id,
+            ProviderConfiguration.provider == provider,
+        )
+    )
+    if configuration is None:
+        return ProviderControls(
+            enabled=True,
+            timeout_seconds=300 if provider == "openvas" else 180 if provider == "maigret" else 20,
+        )
+    values = configuration.settings or {}
+    return ProviderControls(
+        enabled=configuration.enabled,
+        kill_switch=bool(values.get("kill_switch", False)),
+        jobs_per_hour=max(1, min(int(values.get("jobs_per_hour", 60)), 10000)),
+        timeout_seconds=max(1, min(int(values.get("timeout_seconds", 20)), 300)),
+        failure_threshold=max(1, min(int(values.get("failure_threshold", 3)), 20)),
+        cooldown_seconds=max(1, min(int(values.get("cooldown_seconds", 300)), 86400)),
+    )
+
+
+def runtime_state(db: Session, organization_id: str, provider: str) -> ProviderRuntimeState:
+    state = db.scalar(
+        select(ProviderRuntimeState).where(
+            ProviderRuntimeState.organization_id == organization_id,
+            ProviderRuntimeState.provider == provider,
+        )
+    )
+    if state is None:
+        state = ProviderRuntimeState(organization_id=organization_id, provider=provider)
+        db.add(state)
+        db.flush()
+    return state
+
+
+def enforce_enqueue(db: Session, investigation: Investigation, provider: str) -> ProviderControls:
+    controls = controls_for(db, investigation.organization_id, provider)
+    if not controls.enabled:
+        raise ProviderBlockedError("Provider is disabled")
+    if controls.kill_switch:
+        raise ProviderBlockedError("Provider kill switch is active")
+    state = runtime_state(db, investigation.organization_id, provider)
+    now = datetime.now(UTC)
+    circuit_until = state.circuit_open_until
+    if circuit_until and circuit_until.tzinfo is None:
+        circuit_until = circuit_until.replace(tzinfo=UTC)
+    if circuit_until and circuit_until > now:
+        raise ProviderBlockedError("Provider circuit breaker is open")
+    since = now - timedelta(hours=1)
+    recent_jobs = db.scalar(
+        select(func.count(CollectionJob.id))
+        .join(Investigation, Investigation.id == CollectionJob.investigation_id)
+        .where(
+            Investigation.organization_id == investigation.organization_id,
+            CollectionJob.provider == provider,
+            CollectionJob.created_at >= since,
+        )
+    )
+    if (recent_jobs or 0) >= controls.jobs_per_hour:
+        raise ProviderBlockedError("Provider hourly quota exceeded")
+    return controls
+
+
+def enforce_execution(db: Session, investigation: Investigation, provider: str) -> ProviderControls:
+    controls = controls_for(db, investigation.organization_id, provider)
+    if not controls.enabled:
+        raise ProviderBlockedError("Provider is disabled")
+    if controls.kill_switch:
+        raise ProviderBlockedError("Provider kill switch is active")
+    state = runtime_state(db, investigation.organization_id, provider)
+    now = datetime.now(UTC)
+    circuit_until = state.circuit_open_until
+    if circuit_until and circuit_until.tzinfo is None:
+        circuit_until = circuit_until.replace(tzinfo=UTC)
+    if circuit_until and circuit_until > now:
+        raise ProviderBlockedError("Provider circuit breaker is open")
+    return controls
+
+
+def record_success(db: Session, organization_id: str, provider: str) -> None:
+    state = runtime_state(db, organization_id, provider)
+    state.consecutive_failures = 0
+    state.circuit_open_until = None
+    state.last_error = None
+    state.last_success_at = datetime.now(UTC)
+    state.updated_at = state.last_success_at
+
+
+def record_failure(db: Session, organization_id: str, provider: str, error: str) -> None:
+    controls = controls_for(db, organization_id, provider)
+    state = runtime_state(db, organization_id, provider)
+    now = datetime.now(UTC)
+    state.consecutive_failures += 1
+    state.last_failure_at = now
+    state.last_error = error[:500]
+    state.updated_at = now
+    if state.consecutive_failures >= controls.failure_threshold:
+        state.circuit_open_until = now + timedelta(seconds=controls.cooldown_seconds)

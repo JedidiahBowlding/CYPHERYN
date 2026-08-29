@@ -1,0 +1,164 @@
+name: signaltrace
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-signaltrace}
+      POSTGRES_USER: ${POSTGRES_USER:-signaltrace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env and set POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  api:
+    build:
+      context: ./platform/api
+    restart: unless-stopped
+    environment: &api-environment
+      PLATFORM_ENVIRONMENT: development
+      PLATFORM_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-signaltrace}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-signaltrace}
+      PLATFORM_ALLOW_DEV_IDENTITY: ${PLATFORM_ALLOW_DEV_IDENTITY:-true}
+      PLATFORM_OIDC_ISSUER: ${PLATFORM_OIDC_ISSUER:-}
+      PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:-signaltrace}
+      PLATFORM_OIDC_JWKS_URL: ${PLATFORM_OIDC_JWKS_URL:-}
+      PLATFORM_CORS_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3000}"]'
+      PLATFORM_PROVIDER_ENCRYPTION_KEY: ${PLATFORM_PROVIDER_ENCRYPTION_KEY:?Run python scripts/setup.py to generate PLATFORM_PROVIDER_ENCRYPTION_KEY}
+      PLATFORM_LOCAL_AI_URL: ${PLATFORM_LOCAL_AI_URL:-http://host.docker.internal:11434}
+      PLATFORM_LOCAL_AI_MODEL: ${PLATFORM_LOCAL_AI_MODEL:-qwen2.5-coder:7b}
+      PLATFORM_LOCAL_AI_TIMEOUT_SECONDS: ${PLATFORM_LOCAL_AI_TIMEOUT_SECONDS:-120}
+      PLATFORM_QUARANTINE_DIR: /data/quarantine
+      PLATFORM_CLAMAV_DATABASE_DIR: /data/clamav-db
+      PLATFORM_SMTP_HOST: ${PLATFORM_SMTP_HOST:-}
+      PLATFORM_SMTP_PORT: ${PLATFORM_SMTP_PORT:-587}
+      PLATFORM_SMTP_USERNAME: ${PLATFORM_SMTP_USERNAME:-}
+      PLATFORM_SMTP_PASSWORD: ${PLATFORM_SMTP_PASSWORD:-}
+      PLATFORM_SMTP_FROM: ${PLATFORM_SMTP_FROM:-}
+      PLATFORM_SMTP_USE_TLS: ${PLATFORM_SMTP_USE_TLS:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    volumes:
+      - quarantine-data:/data/quarantine
+      - clamav-data:/data/clamav-db
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+    networks: [backend, edge]
+
+  worker:
+    build:
+      context: ./platform/api
+    command: ["python", "-m", "intel_platform.worker"]
+    restart: unless-stopped
+    environment: *api-environment
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - quarantine-data:/data/quarantine
+      - clamav-data:/data/clamav-db
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks: [backend]
+
+  frontend:
+    build:
+      context: ./platform/frontend
+      target: production
+      args:
+        NEXT_PUBLIC_PLATFORM_API_URL: http://localhost:${API_PORT:-8000}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+    networks: [edge]
+
+  taxii:
+    build:
+      context: ./platform
+      dockerfile: taxii/Dockerfile
+    restart: unless-stopped
+    environment:
+      TAXII_TOKEN: ${TAXII_TOKEN:?Run python scripts/setup.py to generate TAXII_TOKEN}
+    command:
+      - python
+      - taxii/server.py
+      - --host
+      - 0.0.0.0
+      - --port
+      - "9000"
+      - --public-base-url
+      - http://localhost:${TAXII_PORT:-9000}
+      - --data-file
+      - /data/objects.json
+      - --seed-data-file
+      - /app/taxii/data/objects.json
+    ports:
+      - "127.0.0.1:${TAXII_PORT:-9000}:9000"
+    volumes:
+      - taxii-data:/data
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/health', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+    networks: [backend, edge]
+
+  spiderfoot:
+    profiles: [spiderfoot]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${SPIDERFOOT_PORT:-5001}:5001"
+    volumes:
+      - spiderfoot-data:/var/lib/spiderfoot
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 20
+    networks: [edge]
+
+volumes:
+  postgres-data:
+  quarantine-data:
+  clamav-data:
+  taxii-data:
+  spiderfoot-data:
+
+networks:
+  backend:
+    internal: true
+  edge:

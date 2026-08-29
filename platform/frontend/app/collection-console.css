@@ -1,0 +1,317 @@
+.collection-console {
+  margin-bottom: 14px;
+  border-color: #27564f;
+  background: linear-gradient(145deg, #101d22, #0c151d);
+}
+.collection-console > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid #1d3438;
+}
+.collection-console > header h2 {
+  font-size: 13px;
+}
+.collection-console > header p {
+  margin: 5px 0 0;
+  color: #6f8290;
+  font-size: 9px;
+}
+.collection-console > header > span {
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: #15352f;
+  color: #62d1ba;
+  font-size: 7px;
+  text-transform: uppercase;
+}
+.collection-fields {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  gap: 13px;
+  align-items: end;
+  padding: 18px;
+}
+.collection-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #8ea0ae;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+.collection-fields select {
+  height: 39px;
+  width: 100%;
+  border: 1px solid #31505a;
+  border-radius: 7px;
+  background: #09131a;
+  color: #d8e5e9;
+  padding: 0 11px;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.collection-buttons {
+  display: flex;
+  gap: 8px;
+}
+.collection-buttons button {
+  height: 39px;
+  border: 1px solid #3a8178;
+  border-radius: 7px;
+  background: #17584f;
+  color: #dffef9;
+  padding: 0 14px;
+  font-size: 9px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.collection-buttons .queue-all-button {
+  border-color: #514a78;
+  background: #292443;
+  color: #ddd7ff;
+}
+.collection-buttons button:disabled {
+  opacity: 0.5;
+}
+.collection-fields .active-attack-approval {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #8f4b43;
+  border-radius: 8px;
+  background: #2b1716;
+  color: #f0b0a8;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.active-attack-approval input {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+.collection-console > footer {
+  padding: 11px 18px;
+  border-top: 1px solid #1d3438;
+  color: #718493;
+  font-size: 8px;
+}
+.collection-console > footer strong {
+  color: #e3b965;
+}
+.collection-console > footer b {
+  color: #b9c8d2;
+  font-family: var(--font-geist-mono);
+}
+@media (max-width: 900px) {
+  .collection-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .collection-buttons {
+    grid-column: 1/-1;
+  }
+  .collection-console > footer {
+    line-height: 1.6;
+  }
+}
+@media (max-width: 600px) {
+  .collection-fields {
+    grid-template-columns: 1fr;
+  }
+  .collection-buttons {
+    grid-column: 1;
+    flex-direction: column;
+  }
+  .collection-console > header {
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+/* Readable controls and immediate collection feedback. */
+.collection-console > header {
+  padding: 20px 22px;
+}
+.collection-console > header h2 {
+  font-size: 18px;
+}
+.collection-console > header p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.collection-console > header > span {
+  padding: 7px 10px;
+  font-size: 11px;
+}
+.collection-fields {
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+  gap: 16px;
+  padding: 22px;
+}
+.collection-fields label {
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.collection-fields select {
+  height: 46px;
+  padding: 0 13px;
+  font-size: 14px;
+}
+.collection-buttons {
+  gap: 9px;
+}
+.collection-buttons button {
+  height: 46px;
+  padding: 0 17px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.collection-buttons button:hover {
+  filter: brightness(1.14);
+}
+.collection-console > footer {
+  padding: 14px 22px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.collection-feedback {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #347d70;
+  border-radius: 8px;
+  background: #102b27;
+  color: #bff8ee;
+}
+.collection-feedback > span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #42c5ad;
+  color: #061512;
+  font-weight: 900;
+}
+.collection-feedback > b {
+  font-family: inherit;
+  font-size: 13px;
+}
+.collection-feedback > a {
+  margin-left: auto;
+  color: #83e5d5;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* The original dashboard mockup used 7-9px text. Keep workspace UI readable. */
+.detail-page .detail-wrap p,
+.detail-page .detail-wrap small,
+.detail-page .detail-wrap time,
+.detail-page .detail-wrap label,
+.detail-page .detail-wrap button,
+.detail-page .detail-wrap select,
+.detail-page .detail-wrap input,
+.detail-page .detail-wrap textarea,
+.detail-page .detail-wrap dt,
+.detail-page .detail-wrap dd {
+  font-size: max(12px, 1em);
+}
+.detail-page .detail-panel h2 {
+  font-size: 15px;
+}
+.detail-page .detail-tabs a {
+  font-size: 12px;
+}
+@media (max-width: 1050px) {
+  .collection-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .collection-buttons {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 700px) {
+  .collection-fields {
+    grid-template-columns: 1fr;
+  }
+  .collection-buttons {
+    grid-column: 1;
+    flex-direction: column;
+  }
+  .collection-feedback {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .collection-feedback > a {
+    width: 100%;
+    margin-left: 32px;
+  }
+}
+
+/* Each workspace area has a real route instead of extending one long page. */
+.section-overview > .monitoring-panel,
+.section-overview > .graph-workspace,
+.section-overview > .evidence-panel,
+.section-overview > .relationship-panel,
+.section-overview .job-panel {
+  display: none;
+}
+.section-graph > :not(.detail-title):not(.detail-tabs):not(.graph-workspace),
+.section-entities > :not(.detail-title):not(.detail-tabs):not(.evidence-panel),
+.section-relationships
+  > :not(.detail-title):not(.detail-tabs):not(.relationship-panel),
+.section-monitoring
+  > :not(.detail-title):not(.detail-tabs):not(.monitoring-panel),
+.section-jobs > :not(.detail-title):not(.detail-tabs):not(.detail-grid) {
+  display: none;
+}
+.section-jobs .scope-panel {
+  display: none;
+}
+.section-jobs .detail-grid {
+  grid-template-columns: 1fr;
+}
+.section-jobs .job-list {
+  max-height: none;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-top: 1px solid #20303e;
+  background: #0a1119;
+}
+.pagination span {
+  color: #93a2b1;
+  font-size: 12px;
+}
+.pagination button {
+  min-width: 100px;
+  padding: 9px 12px;
+  border: 1px solid #345c59;
+  border-radius: 7px;
+  background: #12312e;
+  color: #9de6dc;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pagination button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

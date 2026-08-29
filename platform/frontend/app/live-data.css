@@ -1,0 +1,220 @@
+.section-main {
+  padding: 48px clamp(24px, 4vw, 64px);
+}
+.section-header,
+.live-metrics,
+.record-grid,
+.truth-table,
+.truth-state,
+.data-footnote {
+  width: 100%;
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.section-header {
+  align-items: center !important;
+  margin-bottom: 32px !important;
+}
+.section-heading {
+  min-width: 0;
+}
+.section-heading h1 {
+  margin: 6px 0 10px;
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+.section-description {
+  max-width: 700px !important;
+  margin: 0 !important;
+  color: #8290a2 !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+.section-header .new-button {
+  flex: 0 0 auto;
+  min-width: 170px;
+  justify-content: center;
+  margin-left: 28px;
+  font-size: 13px;
+}
+.section-nav nav a {
+  padding: 12px;
+  font-size: 13px;
+}
+.live-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.live-metrics article,
+.record-grid article {
+  border: 1px solid #243142;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #111923, #0d141d);
+}
+.live-metrics article {
+  padding: 24px;
+}
+.live-metrics strong {
+  display: block;
+  color: #edf4fa;
+  font: 650 30px var(--font-geist-mono);
+}
+.live-metrics span {
+  display: block;
+  margin-top: 8px;
+  color: #8996a7;
+  font-size: 13px;
+}
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.record-grid article {
+  padding: 24px;
+}
+.record-grid article > span {
+  color: #63d5c4;
+  font: 700 11px var(--font-geist-mono);
+  text-transform: uppercase;
+}
+.record-grid h2 {
+  margin: 18px 0 8px;
+  color: #e1e8ef;
+  font-size: 17px;
+}
+.record-grid p {
+  min-height: 34px;
+  margin: 0 0 18px;
+  color: #7e8b9c;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.record-grid a,
+.record-grid button {
+  border: 0;
+  background: none;
+  color: #74dfcf;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 0;
+}
+.record-actions {
+  display: flex;
+  gap: 22px;
+}
+.record-actions button {
+  cursor: pointer;
+}
+.truth-state {
+  padding: 64px 32px;
+  border: 1px solid #243142;
+  border-radius: 12px;
+  background: #0d141d;
+  text-align: center;
+}
+.truth-state h2 {
+  margin: 0 0 10px;
+  color: #dce5ed;
+  font-size: 18px;
+}
+.truth-state p {
+  max-width: 620px;
+  margin: auto;
+  color: #8290a2;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.truth-table {
+  border: 1px solid #243142;
+  border-radius: 12px;
+  background: #0d141d;
+  overflow: hidden;
+}
+.truth-row {
+  display: grid;
+  grid-template-columns: 0.7fr 1.5fr 1fr 1fr;
+  gap: 18px;
+  align-items: center;
+  min-height: 64px;
+  padding: 13px 18px;
+  border-bottom: 1px solid #202c3a;
+  color: #9aa6b5;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.truth-row:last-child {
+  border: 0;
+}
+.truth-row strong {
+  overflow-wrap: anywhere;
+  color: #e0e7ee;
+  font: 550 12px var(--font-geist-mono);
+}
+.truth-row a {
+  color: #71daca;
+  text-decoration: none;
+}
+.truth-row time {
+  color: #7b899a;
+}
+.truth-head {
+  min-height: 44px;
+  color: #6e7c8e;
+  font: 700 10px var(--font-geist-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.provider-table .truth-row {
+  grid-template-columns: 1fr 0.55fr 1.5fr 1.05fr 1.25fr;
+}
+.data-footnote {
+  margin-top: 18px;
+  color: #718095;
+  font-size: 11px;
+  text-align: right;
+}
+@media (max-width: 900px) {
+  .live-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .provider-table {
+    overflow-x: auto;
+  }
+  .provider-table .truth-row {
+    min-width: 800px;
+  }
+}
+@media (max-width: 760px) {
+  .section-main {
+    padding: 28px 18px;
+  }
+  .section-header {
+    align-items: flex-start !important;
+  }
+  .section-heading h1 {
+    font-size: 27px;
+  }
+  .section-description {
+    font-size: 13px !important;
+  }
+  .section-header .new-button {
+    display: none;
+  }
+  .record-grid {
+    grid-template-columns: 1fr;
+  }
+  .truth-table {
+    overflow-x: auto;
+  }
+  .truth-row {
+    min-width: 680px;
+  }
+  .section-nav nav a {
+    font-size: 12px;
+  }
+}
