@@ -7,7 +7,6 @@ import argparse
 import shutil
 import socket
 import subprocess
-import sys
 import time
 from pathlib import Path
 from urllib.error import URLError
@@ -128,6 +127,22 @@ def main() -> int:
             "Optional SpiderFoot",
             "profile running" if port_open(spiderfoot_port) else "profile disabled",
         )
+        if compose:
+            running = subprocess.run(
+                ["docker", "compose", "ps", "--status", "running", "--services"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            ).stdout.splitlines()
+            enabled = "scanner-orchestrator" in running
+            result(
+                "PASS" if enabled else "WARN",
+                "Trusted scanner orchestrator",
+                "profile running; worker has no Docker socket"
+                if enabled
+                else "profile disabled",
+            )
     print(f"\nResult: {'healthy' if failures == 0 else f'{failures} required check(s) failed'}")
     return 0 if failures == 0 else 1
 

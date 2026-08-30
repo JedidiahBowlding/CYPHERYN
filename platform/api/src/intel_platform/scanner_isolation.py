@@ -185,6 +185,7 @@ class DisposableScannerRunner:
             "--read-only",
             "--cap-drop=ALL",
             "--security-opt=no-new-privileges:true",
+            "--label=signaltrace.scanner.managed=true",
             f"--cpus={policy.cpu_limit}",
             f"--memory={policy.memory_mb}m",
             f"--pids-limit={policy.pids_limit}",
@@ -194,6 +195,43 @@ class DisposableScannerRunner:
         for key, value in sorted(policy.environment.items()):
             result.extend(["--env", f"{key}={value}"])
         return [*result, policy.image, *command]
+
+    def cleanup_managed(self) -> int:
+        """Remove scanner containers orphaned by an orchestrator restart."""
+        if not self.docker:
+            raise ScannerUnavailableError("Docker is required for scanner cleanup")
+        discovered = subprocess.run(  # noqa: S603 - fixed Docker command
+            [
+                str(self.docker),
+                "ps",
+                "-aq",
+                "--filter",
+                "label=signaltrace.scanner.managed=true",
+            ],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+            env=self._docker_environment(),
+        )
+        container_ids = [
+            value
+            for value in discovered.stdout.splitlines()
+            if re.fullmatch(r"[a-f0-9]{12,64}", value)
+        ]
+        if not container_ids:
+            return 0
+        subprocess.run(  # noqa: S603 - fixed Docker command and validated IDs
+            [str(self.docker), "rm", "-f", *container_ids],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=30,
+            check=False,
+            env=self._docker_environment(),
+        )
+        return len(container_ids)
 
     @staticmethod
     def _docker_environment() -> dict[str, str]:

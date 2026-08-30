@@ -24,18 +24,25 @@ def generated_values() -> dict[str, str]:
             secrets.token_bytes(32)
         ).decode(),
         "TAXII_TOKEN": secrets.token_hex(32),
+        "SCANNER_ORCHESTRATOR_TOKEN": secrets.token_urlsafe(48),
     }
 
 
 def prepare_env() -> tuple[bool, str]:
     if ENV_FILE.exists():
         content = ENV_FILE.read_text(encoding="utf-8")
-        if PLACEHOLDER not in content:
-            return False, ".env already exists; existing values were preserved."
+        changed = False
         for key, value in generated_values().items():
-            content = content.replace(f"{key}={PLACEHOLDER}", f"{key}={value}")
+            if f"{key}={PLACEHOLDER}" in content:
+                content = content.replace(f"{key}={PLACEHOLDER}", f"{key}={value}")
+                changed = True
+            elif not any(line.startswith(f"{key}=") for line in content.splitlines()):
+                content = f"{content.rstrip()}\n{key}={value}\n"
+                changed = True
+        if not changed:
+            return False, ".env already exists; existing values were preserved."
         ENV_FILE.write_text(content, encoding="utf-8", newline="\n")
-        return True, "Replaced placeholder values; all configured values were preserved."
+        return True, "Added missing generated values; all configured values were preserved."
     if not EXAMPLE.exists():
         raise RuntimeError(".env.example is missing from the repository root.")
     content = EXAMPLE.read_text(encoding="utf-8")

@@ -4,7 +4,7 @@ This milestone proves and hardens existing behavior. It does not expand the prov
 
 ## Scanner isolation architecture
 
-High-risk local adapters fail closed unless `PLATFORM_SCANNER_IMAGES` maps the provider name to an explicit versioned image or digest. One job launches one short-lived container. The trusted runner applies a read-only root, dropped Linux capabilities, `no-new-privileges`, bounded CPU/memory/PIDs/output/deadline/tmpfs, a reduced Docker-client environment, no host mounts, and no Docker socket inside the scanner. Timeout and cancellation forcibly remove the container, and cleanup repeats after every outcome.
+High-risk local adapters fail closed unless `PLATFORM_SCANNER_IMAGES` maps the provider name to an explicit versioned image or digest. One job launches one short-lived container. The separately trusted orchestrator applies a read-only root, dropped Linux capabilities, `no-new-privileges`, bounded CPU/memory/PIDs/output/deadline/tmpfs, an empty scanner environment, no host mounts, and no Docker socket inside the scanner. Timeout and cancellation forcibly remove the container, and namespaced cleanup runs during execution, shutdown, and startup.
 
 Authorization remains checked immediately before provider execution. If authorization expires after a scan has begun, the current execution is terminated only when cancellation/deadline/policy requests it; expiration always prevents a new execution or retry. Scanner audit events must record provider/version/image, target and authorization identifiers, timing, outcome, limits, and policy—not secrets or raw credentials.
 
@@ -57,7 +57,7 @@ Recommended `main` protection must be configured by the repository owner: requir
 ## Known limitations
 
 - Scanner isolation depends on the Docker daemon and configured, reviewed scanner images.
-- The default Compose worker is intentionally denied the Docker socket, so configured disposable scanner images require a separately trusted host runner/orchestrator deployment; active adapters otherwise fail closed.
+- The default Compose worker is intentionally denied the Docker socket. The optional `scanner` Compose profile now deploys the authenticated, backend-only trusted orchestrator; active adapters fail closed when it is disabled or unhealthy.
 - Container network destination enforcement needs an environment-specific gateway for strong egress policy.
 - Scanner image signatures/digests should be required operationally even though explicit version tags are accepted for local development.
 - Signed anchors only add independence when exported outside the application administrator's trust domain.

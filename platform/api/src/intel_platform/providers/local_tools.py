@@ -1,6 +1,7 @@
 import hashlib
 import ipaddress
 import json
+import os
 import re
 import shutil
 import socket
@@ -17,11 +18,8 @@ from sqlalchemy import select
 from ..models import Entity, Finding, Relationship
 from ..process_isolation import run_isolated_process
 from ..provider_contract import ProviderCapabilities, ProviderContext, ProviderResult
-from ..scanner_isolation import (
-    DisposableScannerRunner,
-    ScannerPolicy,
-    configured_scanner_images,
-)
+from ..scanner_isolation import ScannerPolicy, configured_scanner_images
+from ..scanner_orchestrator_client import ScannerOrchestratorClient
 
 PROJECT_HTTPX = Path(__file__).resolve().parents[4] / ".tools" / "bin" / "httpx"
 ZAP_EXECUTABLE = Path("/Applications/ZAP.app/Contents/Java/zap.sh")
@@ -86,13 +84,20 @@ class LocalToolProvider:
                     raise RuntimeError(
                         f"{self.name} container execution does not accept host-provided stdin"
                     )
-                isolated = DisposableScannerRunner().run(
+                isolated = ScannerOrchestratorClient(
+                    os.environ.get("PLATFORM_SCANNER_ORCHESTRATOR_URL", ""),
+                    os.environ.get("PLATFORM_SCANNER_ORCHESTRATOR_TOKEN", ""),
+                ).run(
+                    self.name,
                     [self.binary, *arguments],
                     ScannerPolicy(
                         image=image,
                         timeout_seconds=timeout,
                         network="bridge",
                     ),
+                    job_id=context.job.id,
+                    target_id=context.target.id,
+                    authorization_id=context.target.authorization_id,
                     cancel_requested=lambda: self._cancellation_requested(context),
                 )
                 result = subprocess.CompletedProcess(

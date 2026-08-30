@@ -38,10 +38,10 @@ jobs:
       - name: Build shipped images
         run: |
           python scripts/setup.py --check
-          docker compose build api worker frontend taxii
+          docker compose build api worker frontend taxii scanner-orchestrator
       - name: Scan shipped images
         run: |
-          for image in signaltrace-api:latest signaltrace-worker:latest signaltrace-frontend:latest signaltrace-taxii:latest; do
+          for image in signaltrace-api:latest signaltrace-worker:latest signaltrace-frontend:latest signaltrace-taxii:latest signaltrace-scanner-orchestrator:latest; do
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$PWD:/workspace" aquasec/trivy:0.68.2 image \
               --severity HIGH,CRITICAL --ignore-unfixed --ignorefile /workspace/.trivyignore \
@@ -69,6 +69,11 @@ jobs:
         with:
           image: signaltrace-taxii:latest
           output-file: dist/signaltrace-taxii.spdx.json
+      - name: Generate scanner orchestrator SBOM
+        uses: anchore/sbom-action@v0.24.2
+        with:
+          image: signaltrace-scanner-orchestrator:latest
+          output-file: dist/signaltrace-scanner-orchestrator.spdx.json
       - name: Package source and checksums
         run: |
           git archive --format=tar.gz --prefix="SignalTrace-${GITHUB_REF_NAME}/" \

@@ -157,17 +157,20 @@ Browser ──→ SignalTrace Console ──→ SignalTrace API ──→ Postgr
                                             │               ↑
                                             ↓               │
                                       Durable Worker ───────┘
-                                            │
+                                            │ no Docker access
                  ┌──────────────────────────┼──────────────────────────┐
                  ↓                          ↓                          ↓
-          Passive providers          Local TAXII/STIX          Authorized tools
+          Passive providers          Local TAXII/STIX       Trusted Orchestrator
+                                                                       │
+                                                                       ↓
+                                                               Authorized tools
                  │                          │                          │
                  └──────────────────────────┴──────────────────────────┘
                                             ↓
                              Evidence · Graph · Findings · Reports
 ```
 
-The default Docker stack contains:
+The core Docker stack contains; the scanner orchestrator is an explicit optional profile:
 
 | Service | Role | Public port |
 | --- | --- | --- |
@@ -176,6 +179,7 @@ The default Docker stack contains:
 | `worker` | Durable collection, monitoring, comparison, and report jobs | Internal only |
 | `postgres` | System of record | Internal only |
 | `taxii` | Private local TAXII 2.1/STIX collection | `9000` |
+| `scanner-orchestrator` | Optional trusted disposable-scanner control plane | Internal only |
 
 Ollama is optional for local AI assistance. SpiderFoot and Greenbone remain isolated optional capabilities. SignalTrace core does not require Redis or IntelOwl.
 
@@ -406,6 +410,7 @@ PowerShell uses `py scripts/reset_dev.py`. The utility requires the operator to 
 - AI output is constrained by retrieved evidence and is never the authoritative source.
 - Vulnerability explanations describe plausible abuse paths; they do not claim exploitation occurred.
 - Active local scanners require explicitly configured disposable images and run with bounded CPU, memory, PIDs, output, deadline, temporary storage, and environment.
+- The normal worker never mounts the Docker socket. The optional, backend-only [trusted scanner orchestrator](docs/TRUSTED_SCANNER_ORCHESTRATOR.md) exclusively owns container launch and cancellation.
 - Worker health is distinct from API health at `/health/workers`; dependency-free Prometheus metrics are exposed at `/metrics`.
 - Optional signed evidence checkpoints can be retained in a separately controlled trust domain and verified offline.
 

@@ -68,7 +68,10 @@ services:
       context: ./platform/api
     command: ["python", "-m", "intel_platform.worker"]
     restart: unless-stopped
-    environment: *api-environment
+    environment:
+      <<: *api-environment
+      PLATFORM_SCANNER_ORCHESTRATOR_URL: ${PLATFORM_SCANNER_ORCHESTRATOR_URL:-http://scanner-orchestrator:8010}
+      PLATFORM_SCANNER_ORCHESTRATOR_TOKEN: ${SCANNER_ORCHESTRATOR_TOKEN:-}
     depends_on:
       api:
         condition: service_healthy
@@ -80,6 +83,29 @@ services:
     security_opt: [no-new-privileges:true]
     extra_hosts:
       - host.docker.internal:host-gateway
+    networks: [backend]
+
+  scanner-orchestrator:
+    profiles: [scanner]
+    build:
+      context: ./platform/api
+      dockerfile: Dockerfile.orchestrator
+    restart: unless-stopped
+    environment:
+      SCANNER_ORCHESTRATOR_TOKEN: ${SCANNER_ORCHESTRATOR_TOKEN:?Run python scripts/setup.py to generate SCANNER_ORCHESTRATOR_TOKEN}
+      SCANNER_ORCHESTRATOR_NAMESPACE: ${COMPOSE_PROJECT_NAME:-signaltrace}
+      PLATFORM_SCANNER_IMAGES: ${PLATFORM_SCANNER_IMAGES:-{}}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
     networks: [backend]
 
   frontend:

@@ -56,7 +56,7 @@ jobs:
       - name: Generate non-secret CI environment
         run: python scripts/setup.py --check
       - name: Build core images
-        run: docker compose build api worker frontend taxii
+        run: docker compose build api worker frontend taxii scanner-orchestrator
       - name: Scan shipped images
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -117,3 +117,18 @@ jobs:
         with:
           image: signaltrace-taxii:latest
           artifact-name: signaltrace-taxii.spdx.json
+      - name: Scan scanner orchestrator image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: signaltrace-scanner-orchestrator:latest
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          trivyignores: .trivyignore
+          ignore-unfixed: true
+          scanners: vuln
+      - name: Generate scanner orchestrator SBOM
+        uses: anchore/sbom-action@v0.24.2
+        with:
+          image: signaltrace-scanner-orchestrator:latest
+          artifact-name: signaltrace-scanner-orchestrator.spdx.json

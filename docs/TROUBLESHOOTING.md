@@ -14,6 +14,16 @@ Use `py scripts/doctor.py` in Windows PowerShell.
 
 Install/start Docker Desktop and confirm `docker version` and `docker compose version`. On Windows confirm `wsl --status`; use `wsl --install` in an elevated PowerShell if WSL2 is absent, then reboot if Windows requests it.
 
+## Trusted scanner orchestrator is unavailable
+
+The core platform works without active scanner containers. To enable them, first run
+`python3 scripts/setup.py --check`, configure explicit images in `PLATFORM_SCANNER_IMAGES`, and
+start `docker compose --profile scanner up -d --build`. Diagnose with
+`docker compose --profile scanner ps` and
+`docker compose --profile scanner logs scanner-orchestrator`. A missing token, unavailable Docker
+socket, unsupported provider, unpinned image, excessive execution policy, or disabled profile fails
+closed. Never solve this by mounting the Docker socket into `worker`.
+
 ## Port already in use
 
 Change `FRONTEND_PORT`, `API_PORT`, `TAXII_PORT`, or `SPIDERFOOT_PORT` in `.env`, then run `docker compose up -d`. On macOS/WSL inspect with `lsof -nP -iTCP:3000`; on PowerShell use `Get-NetTCPConnection -LocalPort 3000`.

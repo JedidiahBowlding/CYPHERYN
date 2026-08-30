@@ -53,6 +53,7 @@ def test_scanner_command_has_hard_resource_and_filesystem_limits(tmp_path: Path)
     assert "--read-only" in command
     assert "--cap-drop=ALL" in command
     assert "--security-opt=no-new-privileges:true" in command
+    assert "--label=signaltrace.scanner.managed=true" in command
     assert "--pids-limit=128" in command
     assert "--network=signaltrace-scanner-egress" in command
     assert not any("docker.sock" in item for item in command)
@@ -106,6 +107,27 @@ def test_scanner_output_is_bounded_and_resource_exit_is_preserved(monkeypatch) -
     assert result.returncode == 137
     assert result.output_truncated is True
     assert len(result.stdout) == 1024
+
+
+def test_scanner_orchestrator_cleanup_removes_only_valid_managed_container_ids(
+    monkeypatch,
+) -> None:
+    commands: list[list[str]] = []
+
+    def fake_run(command, **kwargs):
+        commands.append(command)
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout="a" * 64 + "\nnot-a-container-id\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    removed = DisposableScannerRunner("docker").cleanup_managed()
+    assert removed == 1
+    assert "label=signaltrace.scanner.managed=true" in commands[0]
+    assert commands[1][-1] == "a" * 64
 
 
 def test_provider_certification_and_freshness_are_truthful() -> None:

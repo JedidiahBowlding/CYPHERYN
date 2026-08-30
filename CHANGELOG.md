@@ -6,6 +6,7 @@ SignalTrace follows [Semantic Versioning](https://semver.org/) before and after 
 
 ### Added
 
+- Separately trusted, authenticated scanner orchestrator with server-side image/binary allowlists, job-scoped execution, hard policy ceilings, cancellation, and an optional Compose deployment profile.
 - Critical-path regression coverage for worker lease recovery and lifecycle transitions, detection ingestion, target normalization, report integrity exports, notification transport handling, and malware-analysis safety behavior.
 - Disposable scanner-container policy and execution boundary with explicit resource, filesystem, environment, network, deadline, cancellation, and cleanup controls.
 - Worker/queue/provider operational telemetry, structured correlation IDs, worker health, and Prometheus-compatible metrics.

@@ -74,7 +74,7 @@ jobs:
       - name: Generate CI configuration and validate Compose
         run: python scripts/setup.py --check
       - name: Build core images
-        run: docker compose build api worker frontend taxii
+        run: docker compose build api worker frontend taxii scanner-orchestrator
       - name: Start and verify core services
         run: |
           docker compose up -d --wait --wait-timeout 180
