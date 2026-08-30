@@ -12,28 +12,34 @@ app.cypheryn.com {
 		-Server
 	}
 
-	handle /oauth2/* {
-		reverse_proxy oauth2-proxy:4180
-	}
+	route {
+		handle /oauth2/* {
+			reverse_proxy oauth2-proxy:4180
+		}
 
-	forward_auth oauth2-proxy:4180 {
-		uri /oauth2/auth
-		copy_headers Authorization X-Auth-Request-User X-Auth-Request-Email
-		@unauthorized status 401
-		handle_response @unauthorized {
-			redir * /oauth2/start?rd={scheme}://{host}{uri}
+		forward_auth oauth2-proxy:4180 {
+			uri /oauth2/auth
+			copy_headers Authorization X-Auth-Request-User X-Auth-Request-Email
+			@unauthorized status 401
+			handle_response @unauthorized {
+				redir * /oauth2/start?rd={scheme}://{host}{uri}
+			}
+		}
+
+		@api path /api/* /health/* /metrics
+		handle @api {
+			reverse_proxy api:8000 {
+				header_up -X-Dev-Subject
+				header_up -X-Dev-Email
+			}
+		}
+
+		handle {
+			reverse_proxy frontend:3000
 		}
 	}
+}
 
-	@api path /api/* /health/* /metrics
-	handle @api {
-		reverse_proxy api:8000 {
-			header_up -X-Dev-Subject
-			header_up -X-Dev-Email
-		}
-	}
-
-	handle {
-		reverse_proxy frontend:3000
-	}
+cypheryn.com {
+	redir https://app.cypheryn.com{uri} permanent
 }
