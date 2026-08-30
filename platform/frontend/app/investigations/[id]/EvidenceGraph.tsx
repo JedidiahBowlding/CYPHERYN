@@ -41,8 +41,8 @@ export type ClaimObservation = {
 };
 
 const palette: Record<string, string> = {
-  domain: "#40d9c2",
-  subdomain: "#72a7ff",
+  domain: "#25d9ff",
+  subdomain: "#6f8cff",
   ip_address: "#f5b94c",
   certificate: "#b58af5",
 };

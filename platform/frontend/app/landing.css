@@ -1,8 +1,8 @@
 .landing-page {
   min-height: 100vh;
   overflow: hidden;
-  background: #070b11;
-  color: #edf5f7;
+  background: #050816;
+  color: #f3f6ff;
 }
 .landing-nav {
   position: relative;
@@ -13,13 +13,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #1b2933;
+  border-bottom: 1px solid #222d50;
 }
 .landing-brand {
   display: flex;
   align-items: center;
   gap: 11px;
-  color: #edf7f8;
+  color: #f3f6ff;
   text-decoration: none;
   font-size: 17px;
   font-weight: 750;
@@ -35,16 +35,16 @@
   gap: 28px;
 }
 .landing-nav > div > a {
-  color: #8c9ba6;
+  color: #99a7c7;
   text-decoration: none;
   font-size: 13px;
 }
 .landing-nav .landing-login {
   padding: 11px 16px;
-  border: 1px solid #347d73;
+  border: 1px solid #425ab0;
   border-radius: 8px;
-  background: #102c28;
-  color: #baf6eb;
+  background: #17275d;
+  color: #dff6ff;
 }
 .landing-hero {
   position: relative;
@@ -65,7 +65,7 @@
   height: 850px;
   background: radial-gradient(
     circle,
-    rgba(44, 211, 188, 0.11),
+    rgba(37, 217, 255, 0.13),
     transparent 65%
   );
   pointer-events: none;
@@ -80,7 +80,7 @@
   align-items: center;
   gap: 10px;
   margin: 0;
-  color: #58d8c5;
+  color: #25d9ff;
   font: 700 12px var(--font-geist-mono);
   letter-spacing: 1.3px;
   text-transform: uppercase;
@@ -89,8 +89,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #55dbc5;
-  box-shadow: 0 0 12px #55dbc5;
+  background: #2dd8ff;
+  box-shadow: 0 0 12px #2dd8ff;
 }
 .hero-copy h1 {
   max-width: 720px;
@@ -102,7 +102,7 @@
 }
 .hero-copy h1 span {
   display: block;
-  color: #6de0d0;
+  color: #9a7cff;
 }
 .hero-lede {
   max-width: 610px;
@@ -125,9 +125,9 @@
   font-size: 14px;
 }
 .hero-actions a:first-child {
-  border: 1px solid #3d9a8e;
-  background: linear-gradient(180deg, #1b756a, #15574f);
-  color: #edfffc;
+  border: 1px solid #5578ff;
+  background: linear-gradient(135deg, #245be8, #713ee7);
+  color: #f7f8ff;
   font-weight: 750;
 }
 .hero-copy dl {
@@ -155,24 +155,24 @@
 .logo-banner {
   position: relative;
   min-height: 570px;
-  border: 1px solid #1f3b43;
+  border: 1px solid #2f3f75;
   border-radius: 24px;
   overflow: hidden;
   background:
     radial-gradient(
       circle at 50% 46%,
-      rgba(26, 116, 123, 0.36),
+      rgba(37, 217, 255, 0.21),
       transparent 44%
     ),
-    linear-gradient(145deg, #0b1720, #081018);
+    linear-gradient(145deg, #0b1430, #070b1b);
   box-shadow: 0 35px 100px rgba(0, 0, 0, 0.45);
 }
 .banner-grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(70, 202, 190, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(70, 202, 190, 0.055) 1px, transparent 1px);
+    linear-gradient(rgba(92, 119, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 217, 255, 0.07) 1px, transparent 1px);
   background-size: 34px 34px;
   mask-image: radial-gradient(circle, #000, transparent 75%);
 }
@@ -183,13 +183,13 @@
   top: 47%;
   width: min(78%, 470px);
   transform: translate(-50%, -50%);
-  filter: drop-shadow(0 22px 34px rgba(11, 219, 204, 0.18));
+  filter: drop-shadow(0 22px 42px rgba(76, 94, 255, 0.28));
 }
 .banner-orbit {
   position: absolute;
   left: 50%;
   top: 47%;
-  border: 1px solid rgba(78, 219, 202, 0.18);
+  border: 1px solid rgba(80, 183, 255, 0.24);
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
@@ -252,7 +252,7 @@
   padding: 27px;
   border: 1px solid #1d303a;
   border-radius: 13px;
-  background: linear-gradient(145deg, #0e1820, #0a1118);
+  background: linear-gradient(145deg, #0e1820, #070b18);
 }
 .landing-features article > span {
   color: #4ed5c0;
@@ -272,7 +272,7 @@
   display: grid;
   grid-template-columns: 0.8fr 1.2fr;
   gap: 90px;
-  border-top: 1px solid #1b2933;
+  border-top: 1px solid #222d50;
 }
 .landing-workflow ol {
   list-style: none;
@@ -284,7 +284,7 @@
   grid-template-columns: 50px 1fr;
   gap: 20px;
   padding: 23px 0;
-  border-bottom: 1px solid #1b2933;
+  border-bottom: 1px solid #222d50;
 }
 .landing-workflow li b {
   color: #55d8c4;
@@ -305,7 +305,7 @@
   width: min(1240px, calc(100% - 48px));
   margin: auto;
   padding: 32px 0 46px;
-  border-top: 1px solid #1b2933;
+  border-top: 1px solid #222d50;
   display: flex;
   align-items: center;
   gap: 30px;

@@ -11,7 +11,7 @@
   border: 1px solid #2a3443;
   border-left: 3px solid #f0b45d;
   border-radius: 10px;
-  background: #0d141d;
+  background: #0c1328;
 }
 .finding-record.high,
 .finding-record.critical {
@@ -73,7 +73,7 @@
   padding: 0 15px 14px;
 }
 .finding-actions button {
-  border: 1px solid #2b3a4c;
+  border: 1px solid #35476f;
   border-radius: 6px;
   background: #101923;
   color: #93a3b4;
@@ -81,7 +81,7 @@
   font-size: 8px;
 }
 .finding-actions button:hover {
-  border-color: #3a8178;
+  border-color: #435cb5;
   color: #c9fff7;
 }
 .finding-lifecycle {
@@ -96,9 +96,9 @@
   justify-content: space-between;
   margin: 0 0 12px;
   padding: 11px 13px;
-  border: 1px solid #2b3a4c;
+  border: 1px solid #35476f;
   border-radius: 7px;
-  background: #0a1118;
+  background: #070b18;
   color: #9eacb8;
   font-size: 13px;
 }
@@ -160,7 +160,7 @@
   padding: 11px;
   border: 1px solid #253443;
   border-radius: 7px;
-  background: #0a1118;
+  background: #070b18;
 }
 .finding-lifecycle span {
   color: #738493;

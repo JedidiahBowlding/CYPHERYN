@@ -21,8 +21,8 @@
 .collection-console > header > span {
   padding: 5px 8px;
   border-radius: 10px;
-  background: #15352f;
-  color: #62d1ba;
+  background: #182b62;
+  color: #2dd8ff;
   font-size: 7px;
   text-transform: uppercase;
 }
@@ -60,10 +60,10 @@
 }
 .collection-buttons button {
   height: 39px;
-  border: 1px solid #3a8178;
+  border: 1px solid #435cb5;
   border-radius: 7px;
-  background: #17584f;
-  color: #dffef9;
+  background: #233d92;
+  color: #f0f5ff;
   padding: 0 14px;
   font-size: 9px;
   font-weight: 650;
@@ -295,7 +295,7 @@
   gap: 14px;
   padding: 14px 16px;
   border-top: 1px solid #20303e;
-  background: #0a1119;
+  background: #070b18;
 }
 .pagination span {
   color: #93a2b1;
@@ -306,7 +306,7 @@
   padding: 9px 12px;
   border: 1px solid #345c59;
   border-radius: 7px;
-  background: #12312e;
+  background: #162653;
   color: #9de6dc;
   font-size: 12px;
   cursor: pointer;

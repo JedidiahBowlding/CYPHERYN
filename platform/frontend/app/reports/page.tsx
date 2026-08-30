@@ -17,7 +17,7 @@ export default function ReportsPage() {
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
   const [message, setMessage] = useState("");
   const [brandTitle, setBrandTitle] = useState("CYPHERYN");
-  const [brandAccent, setBrandAccent] = useState("#147d72");
+  const [brandAccent, setBrandAccent] = useState("#7c3aed");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
 
   useEffect(() => {

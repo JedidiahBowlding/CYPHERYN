@@ -51,9 +51,9 @@
 }
 .live-metrics article,
 .record-grid article {
-  border: 1px solid #243142;
+  border: 1px solid #2d3b62;
   border-radius: 12px;
-  background: linear-gradient(145deg, #111923, #0d141d);
+  background: linear-gradient(145deg, #101a36, #0c1328);
 }
 .live-metrics article {
   padding: 24px;
@@ -112,9 +112,9 @@
 }
 .truth-state {
   padding: 64px 32px;
-  border: 1px solid #243142;
+  border: 1px solid #2d3b62;
   border-radius: 12px;
-  background: #0d141d;
+  background: #0c1328;
   text-align: center;
 }
 .truth-state h2 {
@@ -130,9 +130,9 @@
   line-height: 1.65;
 }
 .truth-table {
-  border: 1px solid #243142;
+  border: 1px solid #2d3b62;
   border-radius: 12px;
-  background: #0d141d;
+  background: #0c1328;
   overflow: hidden;
 }
 .truth-row {
@@ -142,7 +142,7 @@
   align-items: center;
   min-height: 64px;
   padding: 13px 18px;
-  border-bottom: 1px solid #202c3a;
+  border-bottom: 1px solid #29375c;
   color: #9aa6b5;
   font-size: 12px;
   line-height: 1.4;
@@ -174,7 +174,7 @@
 }
 .data-footnote {
   margin-top: 18px;
-  color: #718095;
+  color: #91a0c4;
   font-size: 11px;
   text-align: right;
 }
