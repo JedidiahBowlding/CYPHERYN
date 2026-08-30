@@ -31,7 +31,10 @@ THRESHOLDS = {
 
 
 def check(report: dict) -> list[str]:
-    measured = report.get("files", {})
+    measured = {
+        str(path).replace("\\", "/"): value
+        for path, value in report.get("files", {}).items()
+    }
     failures = []
     for suffix, threshold in THRESHOLDS.items():
         matches = [value for path, value in measured.items() if path.endswith(suffix)]
