@@ -17,9 +17,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'SignalTrace'
-copyright = '2026, SignalTrace contributors; inherited SpiderFoot copyright 2012, Steve Micallef'
-author = 'SignalTrace contributors'
+project = 'CYPHERYN'
+copyright = '2026, CYPHERYN contributors; inherited SpiderFoot copyright 2012, Steve Micallef'
+author = 'CYPHERYN contributors'
 
 
 # -- General configuration ---------------------------------------------------

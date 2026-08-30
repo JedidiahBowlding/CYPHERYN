@@ -1,5 +1,5 @@
 # Legacy standalone SpiderFoot stack.
-# SignalTrace users should use the root compose.yaml instead.
+# CYPHERYN users should use the root compose.yaml instead.
 services:
   spiderfoot:
     build:

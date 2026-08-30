@@ -32,7 +32,7 @@ class DockerApiScannerRunner:
     ) -> None:
         self.socket_path = socket_path
         self.transport = transport or httpx.HTTPTransport(uds=socket_path)
-        self.namespace = os.environ.get("SCANNER_ORCHESTRATOR_NAMESPACE", "signaltrace")
+        self.namespace = os.environ.get("SCANNER_ORCHESTRATOR_NAMESPACE", "cypheryn")
         if not NAMESPACE.fullmatch(self.namespace):
             raise ScannerIsolationError("Scanner orchestrator namespace is invalid")
 
@@ -71,11 +71,11 @@ class DockerApiScannerRunner:
         timed_out = False
         cancelled = False
         with self._client() as client:
-            if policy.network.startswith("signaltrace-egress-"):
+            if policy.network.startswith("cypheryn-egress-"):
                 network = client.get(f"/networks/{policy.network}")
                 self._require(network, "inspect scanner egress network")
                 labels = network.json().get("Labels") or {}
-                if labels.get("signaltrace.egress-policy") != "enforced":
+                if labels.get("cypheryn.egress-policy") != "enforced":
                     raise ScannerIsolationError(
                         "Scanner egress network is missing the enforced-policy label"
                     )
@@ -89,8 +89,8 @@ class DockerApiScannerRunner:
                     "AttachStderr": True,
                     "Tty": False,
                     "Labels": {
-                        "signaltrace.scanner.managed": "true",
-                        "signaltrace.scanner.namespace": self.namespace,
+                        "cypheryn.scanner.managed": "true",
+                        "cypheryn.scanner.namespace": self.namespace,
                     },
                     "HostConfig": {
                         "ReadonlyRootfs": True,
@@ -162,8 +162,8 @@ class DockerApiScannerRunner:
         filters = json.dumps(
             {
                 "label": [
-                    "signaltrace.scanner.managed=true",
-                    f"signaltrace.scanner.namespace={self.namespace}",
+                    "cypheryn.scanner.managed=true",
+                    f"cypheryn.scanner.namespace={self.namespace}",
                 ]
             }
         )

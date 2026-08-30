@@ -1,6 +1,6 @@
 # Critical-Path Coverage Milestone
 
-This `v0.9.0` milestone increases verification depth without expanding SignalTrace's provider catalog or feature surface.
+This `v0.9.0` milestone increases verification depth without expanding CYPHERYN's provider catalog or feature surface.
 
 ## Measured improvement
 

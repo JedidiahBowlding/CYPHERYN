@@ -134,7 +134,7 @@ def _deliver_email(notification: AlertNotification, preference: NotificationPref
     if not settings.smtp_host or not settings.smtp_from:
         raise RuntimeError("SMTP is not configured")
     message = EmailMessage()
-    message["Subject"] = f"[SignalTrace] {notification.title}"
+    message["Subject"] = f"[CYPHERYN] {notification.title}"
     message["From"] = settings.smtp_from
     message["To"] = preference.email_to
     message.set_content(notification.message)
@@ -159,7 +159,7 @@ def _deliver_webhook(notification: AlertNotification, preference: NotificationPr
         "occurred_at": notification.created_at.isoformat(),
     }
     encoded = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
-    headers = {"Content-Type": "application/json", "User-Agent": "SignalTrace-Alerts/1.0"}
+    headers = {"Content-Type": "application/json", "User-Agent": "CYPHERYN-Alerts/1.0"}
     if preference.encrypted_webhook_secret:
         settings = get_settings()
         try:
@@ -169,7 +169,7 @@ def _deliver_webhook(notification: AlertNotification, preference: NotificationPr
         except ProviderSecretError as exc:
             raise RuntimeError("Webhook signing secret could not be decrypted") from exc
         if secret:
-            headers["X-SignalTrace-Signature"] = (
+            headers["X-CYPHERYN-Signature"] = (
                 "sha256=" + hmac.new(secret.encode(), encoded, hashlib.sha256).hexdigest()
             )
     response = httpx.post(url, content=encoded, headers=headers, timeout=20, follow_redirects=False)

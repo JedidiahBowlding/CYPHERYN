@@ -1,4 +1,4 @@
-"""Minimal JSON bridge between SignalTrace and the local Greenbone GMP socket."""
+"""Minimal JSON bridge between CYPHERYN and the local Greenbone GMP socket."""
 
 from __future__ import annotations
 

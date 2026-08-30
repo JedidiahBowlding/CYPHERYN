@@ -1,7 +1,7 @@
-SignalTrace overview
+CYPHERYN overview
 ====================
 
-SignalTrace turns authorized OSINT, attack-surface observations, identity and
+CYPHERYN turns authorized OSINT, attack-surface observations, identity and
 source-code intelligence, vulnerability evidence, and threat feeds into a
 durable investigation record.
 
@@ -26,6 +26,6 @@ or WSL and ``py scripts/setup.py --start`` in Windows PowerShell.
 Security boundary
 -----------------
 
-SignalTrace is for asset owners and explicitly authorized assessments. Active
+CYPHERYN is for asset owners and explicitly authorized assessments. Active
 providers may run only inside recorded scope. Provider credentials are encrypted
 at rest, and AI-generated narrative never replaces the underlying evidence.

@@ -1,4 +1,4 @@
-# SignalTrace Security Policy
+# CYPHERYN Security Policy
 
 ## Supported versions
 
@@ -18,6 +18,6 @@ Maintainers aim to acknowledge a private report within seven calendar days, prov
 
 ## Scope and safe testing
 
-SignalTrace application code, authorization boundaries, credential handling, scanner isolation, evidence integrity, release artifacts, and official container images are in scope. Test only systems you own or are explicitly authorized to assess. Do not run active scanning against unrelated public infrastructure, degrade third-party services, access other users' data, or use AI to expand target scope.
+CYPHERYN application code, authorization boundaries, credential handling, scanner isolation, evidence integrity, release artifacts, and official container images are in scope. Test only systems you own or are explicitly authorized to assess. Do not run active scanning against unrelated public infrastructure, degrade third-party services, access other users' data, or use AI to expand target scope.
 
-Inherited SpiderFoot behavior and external provider availability may be upstream concerns, but SignalTrace wrappers and security claims remain in scope.
+Inherited SpiderFoot behavior and external provider availability may be upstream concerns, but CYPHERYN wrappers and security claims remain in scope.

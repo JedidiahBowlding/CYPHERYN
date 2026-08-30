@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import SectionPage from "../_components/SectionPage";
 
 const API = process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
-const headers = { "X-Dev-Subject": "local-analyst", "X-Dev-Email": "analyst@signaltrace.local" };
+const headers = { "X-Dev-Subject": "local-analyst", "X-Dev-Email": "analyst@cypheryn.local" };
 type Organization = { id: string; name: string };
 type Investigation = { id: string; name: string };
 type Rule = { id: string; title: string; rule_id: string; level: string; logsource: Record<string, string>; tags: string[]; updated_at: string };
@@ -81,7 +81,7 @@ export default function DetectionsPage() {
     const url = URL.createObjectURL(await response.blob());
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = format === "sigma" ? "signaltrace-sigma-rules.yml" : "signaltrace-stix.rules";
+    anchor.download = format === "sigma" ? "cypheryn-sigma-rules.yml" : "cypheryn-stix.rules";
     anchor.click();
     URL.revokeObjectURL(url);
   }

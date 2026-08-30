@@ -29,7 +29,7 @@ class HibpProvider:
             raise RuntimeError("HIBP API key must be a 32-character subscription key")
         headers = {
             "hibp-api-key": key,
-            "user-agent": "SignalTrace-Defensive-Identity/1.0",
+            "user-agent": "CYPHERYN-Defensive-Identity/1.0",
             "accept": "application/json",
         }
         with httpx.Client(headers=headers, timeout=20, follow_redirects=False) as client:

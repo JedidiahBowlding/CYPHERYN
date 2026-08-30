@@ -1,7 +1,7 @@
 # Architecture Audit
 
 **Audit date:** 2026-08-25  
-**Repository:** SignalTrace working tree  
+**Repository:** CYPHERYN working tree
 **Revision:** `0f815a20` (`master`, `v4.0-138-g0f815a20`)  
 **Scope:** Read-only assessment. No product code was changed.
 

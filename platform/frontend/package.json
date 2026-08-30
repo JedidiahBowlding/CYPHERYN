@@ -1,6 +1,6 @@
 {
-  "name": "signaltrace-console",
-  "description": "SignalTrace defensive intelligence and OSINT investigation console",
+  "name": "cypheryn-console",
+  "description": "CYPHERYN defensive intelligence and OSINT investigation console",
   "version": "0.8.0",
   "private": true,
   "engines": {

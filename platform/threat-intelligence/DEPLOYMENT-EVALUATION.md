@@ -16,7 +16,7 @@ or defining mutually exclusive Greenbone/MISP operating profiles.
 
 ## Implemented interoperability layer
 
-SignalTrace now stores normalized STIX 2.1 objects independently of either product.
+CYPHERYN now stores normalized STIX 2.1 objects independently of either product.
 The importer supports indicators, malware, campaigns, threat actors, infrastructure,
 attack patterns, tools, vulnerabilities, identities, locations, and relationships.
 

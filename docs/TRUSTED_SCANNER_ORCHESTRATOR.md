@@ -1,6 +1,6 @@
 # Trusted scanner orchestrator
 
-SignalTrace active scanners can run through a separately trusted service that owns Docker
+CYPHERYN active scanners can run through a separately trusted service that owns Docker
 access. The API and normal worker do not mount the Docker socket. This boundary limits a
 compromised scanner process and prevents ordinary collection code from directly controlling
 the host container runtime.
@@ -44,24 +44,24 @@ Configure explicit scanner images in `.env`. The orchestrator accepts only known
 and it resolves the image server-side. Never use `latest`.
 
 ```env
-PLATFORM_SCANNER_IMAGES={"nmap":"your-registry/signaltrace-nmap:1.0.0"}
+PLATFORM_SCANNER_IMAGES={"nmap":"your-registry/cypheryn-nmap:1.0.0"}
 ```
 
-The image must contain the expected scanner executable. SignalTrace does not publish or silently
+The image must contain the expected scanner executable. CYPHERYN does not publish or silently
 download third-party scanner images. Review, pin, scan, and license each image before enabling it.
 
 Production mode is deliberately stricter. Every image must use an immutable digest, the unrestricted
-Docker `bridge` network is rejected, and active scanners must use a `signaltrace-egress-*` network
-whose Docker metadata asserts `signaltrace.egress-policy=enforced`:
+Docker `bridge` network is rejected, and active scanners must use a `cypheryn-egress-*` network
+whose Docker metadata asserts `cypheryn.egress-policy=enforced`:
 
 ```env
 PLATFORM_ENVIRONMENT=production
-PLATFORM_SCANNER_IMAGES={"nmap":"registry.example/signaltrace-nmap@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+PLATFORM_SCANNER_IMAGES={"nmap":"registry.example/cypheryn-nmap@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 ```
 
 The label is a fail-closed deployment assertion, not an egress firewall. Create and label that
 network only after an external gateway or dedicated scanner node actually enforces the authorized
-destination policy. SignalTrace refuses an absent, inaccessible, or unlabeled managed network.
+destination policy. CYPHERYN refuses an absent, inaccessible, or unlabeled managed network.
 
 The initial remote-execution allowlist covers output-stream-compatible adapters: Subfinder,
 ProjectDiscovery HTTPX, Naabu, Nmap, RustScan, Masscan, Nuclei, Katana, and DNS Twist. Adapters that
@@ -102,8 +102,8 @@ the provider, image, command, authorization, or policy.
 ## Verify socket separation
 
 ```bash
-docker inspect signaltrace-worker --format '{{json .Mounts}}'
-docker inspect signaltrace-scanner-orchestrator --format '{{json .Mounts}}'
+docker inspect cypheryn-worker --format '{{json .Mounts}}'
+docker inspect cypheryn-scanner-orchestrator --format '{{json .Mounts}}'
 ```
 
 Only `scanner-orchestrator` should show `/var/run/docker.sock`. Scanner child containers never
@@ -117,7 +117,7 @@ restricted. Do not publish its port, share its token, or place unrelated workloa
 container.
 
 The bearer token authenticates the trusted worker; it does not independently prove the end user's
-authorization. SignalTrace revalidates the persisted target authorization immediately before the
+authorization. CYPHERYN revalidates the persisted target authorization immediately before the
 worker submits an active execution and sends the resulting authorization ID for correlation.
 
 Docker Desktop and a plain Docker bridge cannot enforce destination-level egress policy. Production

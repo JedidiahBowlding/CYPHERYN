@@ -1,6 +1,6 @@
 # Supported Provider Certification
 
-SignalTrace uses `SUPPORTED` as a test-backed engineering claim, not as a synonym for
+CYPHERYN uses `SUPPORTED` as a test-backed engineering claim, not as a synonym for
 "an adapter exists." The five providers in the supported set are VirusTotal, Shodan,
 AlienVault OTX, Censys, and abuse.ch ThreatFox.
 

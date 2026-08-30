@@ -1,4 +1,4 @@
-"""Small, local-only TAXII 2.1 read server for SignalTrace."""
+"""Small, local-only TAXII 2.1 read server for CYPHERYN."""
 
 from __future__ import annotations
 
@@ -12,11 +12,11 @@ from urllib.parse import parse_qs, urlsplit
 
 TAXII = "application/taxii+json;version=2.1"
 STIX = "application/stix+json;version=2.1"
-COLLECTION_ID = "signaltrace-local"
+COLLECTION_ID = "cypheryn-local"
 
 
 class TaxiiHandler(BaseHTTPRequestHandler):
-    server_version = "SignalTraceTAXII/1.0"
+    server_version = "CYPHERYNTAXII/1.0"
 
     def _write(self, status: int, payload: dict, media_type: str = TAXII) -> None:
         body = json.dumps(payload, separators=(",", ":")).encode()
@@ -43,12 +43,12 @@ class TaxiiHandler(BaseHTTPRequestHandler):
             return
         base = f"{self.server.public_base_url.rstrip('/')}/taxii2/"
         if request.path == "/.well-known/taxii2/":
-            self._write(200, {"title": "SignalTrace Local TAXII", "api_roots": [base]})
+            self._write(200, {"title": "CYPHERYN Local TAXII", "api_roots": [base]})
         elif request.path == "/taxii2/":
             self._write(
                 200,
                 {
-                    "title": "SignalTrace Local Threat Intelligence",
+                    "title": "CYPHERYN Local Threat Intelligence",
                     "description": "Locally managed STIX 2.1 intelligence",
                     "versions": ["application/taxii+json;version=2.1"],
                     "max_content_length": 10485760,
@@ -74,7 +74,7 @@ class TaxiiHandler(BaseHTTPRequestHandler):
     def _collection(base: str) -> dict:
         return {
             "id": COLLECTION_ID,
-            "title": "SignalTrace Local Collection",
+            "title": "CYPHERYN Local Collection",
             "description": "User-managed local CTI collection",
             "can_read": True,
             "can_write": False,

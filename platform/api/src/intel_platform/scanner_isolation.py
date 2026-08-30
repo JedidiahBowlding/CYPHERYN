@@ -63,9 +63,9 @@ class ScannerPolicy:
             raise ScannerIsolationError("Scanner output limit is outside the permitted range")
         if not 16 <= self.tmpfs_mb <= 4096:
             raise ScannerIsolationError("Scanner temporary filesystem limit is invalid")
-        if self.network not in {"none", "bridge"} and not self.network.startswith("signaltrace-"):
+        if self.network not in {"none", "bridge"} and not self.network.startswith("cypheryn-"):
             raise ScannerIsolationError(
-                "Scanner network must be none, bridge, or SignalTrace-managed"
+                "Scanner network must be none, bridge, or CYPHERYN-managed"
             )
         if production and self.network == "bridge":
             raise ScannerIsolationError("The unrestricted Docker bridge is forbidden in production")
@@ -123,7 +123,7 @@ class DisposableScannerRunner:
         if not self.docker:
             raise ScannerUnavailableError("Docker is required for isolated scanner execution")
         started_at = time.time()
-        with tempfile.TemporaryDirectory(prefix="signaltrace-scanner-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="cypheryn-scanner-") as temporary:
             cidfile = Path(temporary) / "container.id"
             docker_command = self._docker_command(command, policy, cidfile)
             process = subprocess.Popen(  # noqa: S603 - fixed Docker executable, array arguments
@@ -193,7 +193,7 @@ class DisposableScannerRunner:
             "--read-only",
             "--cap-drop=ALL",
             "--security-opt=no-new-privileges:true",
-            "--label=signaltrace.scanner.managed=true",
+            "--label=cypheryn.scanner.managed=true",
             f"--cpus={policy.cpu_limit}",
             f"--memory={policy.memory_mb}m",
             f"--pids-limit={policy.pids_limit}",
@@ -214,7 +214,7 @@ class DisposableScannerRunner:
                 "ps",
                 "-aq",
                 "--filter",
-                "label=signaltrace.scanner.managed=true",
+                "label=cypheryn.scanner.managed=true",
             ],
             stdin=subprocess.DEVNULL,
             capture_output=True,

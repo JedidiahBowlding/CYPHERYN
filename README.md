@@ -1,41 +1,42 @@
 <div align="center">
-  <a href="https://github.com/JedidiahBowlding/SignalTrace">
-    <img src="platform/frontend/public/signaltrace-logo.png" alt="SignalTrace logo" width="220">
+  <a href="https://github.com/JedidiahBowlding/CYPHERYN">
+    <img src="platform/frontend/public/cypheryn-logo.png" alt="CYPHERYN logo" width="220">
   </a>
 
-  <h1>SignalTrace</h1>
+  <h1>CYPHERYN</h1>
   <h3>See the exposure. Prove the risk. Track the fix.</h3>
 
-  <a href="https://github.com/JedidiahBowlding/SignalTrace">Repository</a> ·
-  <a href="https://github.com/JedidiahBowlding/SignalTrace/issues">Issues</a> ·
+  <a href="https://github.com/JedidiahBowlding/CYPHERYN">Repository</a> ·
+  <a href="https://cypheryn.com">Website</a> ·
+  <a href="https://github.com/JedidiahBowlding/CYPHERYN/issues">Issues</a> ·
   <a href="docs/TUTORIAL.md">Tutorial</a> ·
   <a href="ROADMAP.md">Roadmap</a> ·
   <a href="SECURITY_BOUNDARIES.md">Security boundaries</a>
 </div>
 
-SignalTrace is a local-first cyber-intelligence operations platform that turns authorized OSINT, attack-surface observations, threat feeds, identity exposure, source-code intelligence, and vulnerability evidence into investigations your team can verify and act on.
+CYPHERYN is a local-first cyber-intelligence operations platform that turns authorized OSINT, attack-surface observations, threat feeds, identity exposure, source-code intelligence, and vulnerability evidence into investigations your team can verify and act on.
 
-It is more than a scanner. SignalTrace preserves the chain from target authorization to raw observation, normalized entity, relationship, finding, analyst decision, remediation, rescan, and final report.
+It is more than a scanner. CYPHERYN preserves the chain from target authorization to raw observation, normalized entity, relationship, finding, analyst decision, remediation, rescan, and final report.
 
-The source, issue tracker, and release history are hosted in the [SignalTrace GitHub repository](https://github.com/JedidiahBowlding/SignalTrace).
+The source, issue tracker, and release history are hosted in the [CYPHERYN GitHub repository](https://github.com/JedidiahBowlding/CYPHERYN).
 
-## SignalTrace in action
+## CYPHERYN in action
 
 <p align="center">
-  <img src="docs/images/signaltrace-landing.jpg" alt="SignalTrace landing page" width="100%">
+  <img src="docs/images/cypheryn-landing.jpg" alt="CYPHERYN landing page" width="100%">
 </p>
 
 | Operations overview | Authorization-first investigation setup |
 | --- | --- |
-| <img src="docs/images/signaltrace-dashboard.jpg" alt="SignalTrace operations dashboard" width="100%"> | <img src="docs/images/signaltrace-new-investigation.jpg" alt="SignalTrace new investigation authorization workflow" width="100%"> |
+| <img src="docs/images/cypheryn-dashboard.jpg" alt="CYPHERYN operations dashboard" width="100%"> | <img src="docs/images/cypheryn-new-investigation.jpg" alt="CYPHERYN new investigation authorization workflow" width="100%"> |
 
 These screenshots use an empty local workspace and placeholder form text. No provider credentials, private targets, or collected evidence are shown.
 
-## Why SignalTrace
+## Why CYPHERYN
 
-New to the platform? Follow the [complete SignalTrace tutorial](docs/TUTORIAL.md) to learn authorization, defensive and authorized-offensive concepts, provider collection, evidence analysis, risk scoring, remediation, rescanning, monitoring, and reporting.
+New to the platform? Follow the [complete CYPHERYN tutorial](docs/TUTORIAL.md) to learn authorization, defensive and authorized-offensive concepts, provider collection, evidence analysis, risk scoring, remediation, rescanning, monitoring, and reporting.
 
-Traditional OSINT tools return enormous result sets. Vulnerability scanners return isolated snapshots. Threat feeds return indicators without your asset context. SignalTrace brings those signals together and answers the operational questions:
+Traditional OSINT tools return enormous result sets. Vulnerability scanners return isolated snapshots. Threat feeds return indicators without your asset context. CYPHERYN brings those signals together and answers the operational questions:
 
 - What is exposed right now?
 - Which domains, hosts, services, identities, repositories, packages, certificates, and indicators are connected?
@@ -45,7 +46,7 @@ Traditional OSINT tools return enormous result sets. Vulnerability scanners retu
 - What changed since the previous scan?
 - Which findings are new, recurring, resolved, accepted, or awaiting review?
 
-## The SignalTrace operating loop
+## The CYPHERYN operating loop
 
 ```text
 Authorize scope
@@ -65,7 +66,7 @@ Generate evidence-grounded reports and exports
 
 Every active capability remains bounded by recorded authorization. AI assistance is advisory and cannot silently expand scope or replace source evidence.
 
-## What SignalTrace can do
+## What CYPHERYN can do
 
 ### Attack-surface discovery
 
@@ -125,11 +126,11 @@ Every active capability remains bounded by recorded authorization. AI assistance
 
 ## Provider architecture
 
-SignalTrace displays a verified provider capability ladder:
+CYPHERYN displays a verified provider capability ladder:
 
 **Supported → Installed → Configured → Healthy → Live Verified**
 
-- **Supported** means SignalTrace contains a maintained adapter contract.
+- **Supported** means CYPHERYN contains a maintained adapter contract.
 - **Installed** means the required executable or service is present in the current runtime.
 - **Configured** means the provider is enabled and its required settings/credentials are stored.
 - **Healthy** means local readiness and circuit-breaker checks currently pass.
@@ -153,7 +154,7 @@ Optional local-tool contracts include Subfinder, Nuclei, Naabu, ProjectDiscovery
                                   │ credentials/policy │
                                   └─────────┬──────────┘
                                             │
-Browser ──→ SignalTrace Console ──→ SignalTrace API ──→ PostgreSQL
+Browser ──→ CYPHERYN Console ──→ CYPHERYN API ──→ PostgreSQL
                                             │               ↑
                                             ↓               │
                                       Durable Worker ───────┘
@@ -174,14 +175,14 @@ The core Docker stack contains; the scanner orchestrator is an explicit optional
 
 | Service | Role | Public port |
 | --- | --- | --- |
-| `frontend` | SignalTrace web console | `3000` |
+| `frontend` | CYPHERYN web console | `3000` |
 | `api` | Authorization, investigations, evidence, reporting, provider control | `8000` |
 | `worker` | Durable collection, monitoring, comparison, and report jobs | Internal only |
 | `postgres` | System of record | Internal only |
 | `taxii` | Private local TAXII 2.1/STIX collection | `9000` |
 | `scanner-orchestrator` | Optional trusted disposable-scanner control plane | Internal only |
 
-Ollama is optional for local AI assistance. SpiderFoot and Greenbone remain isolated optional capabilities. SignalTrace core does not require Redis or IntelOwl.
+Ollama is optional for local AI assistance. SpiderFoot and Greenbone remain isolated optional capabilities. CYPHERYN core does not require Redis or IntelOwl.
 
 ## Quick start
 
@@ -192,13 +193,13 @@ Ollama is optional for local AI assistance. SpiderFoot and Greenbone remain isol
 - Git when cloning from GitHub
 - 8 GB or more available RAM recommended
 
-No paid intelligence-provider account is required to start SignalTrace.
+No paid intelligence-provider account is required to start CYPHERYN.
 
-### Clone SignalTrace
+### Clone CYPHERYN
 
 ```bash
-git clone https://github.com/JedidiahBowlding/SignalTrace.git
-cd SignalTrace
+git clone https://github.com/JedidiahBowlding/CYPHERYN.git
+cd CYPHERYN
 ```
 
 ### macOS Terminal, Linux, or Windows WSL
@@ -221,7 +222,7 @@ The setup utility:
 2. Generates unique database, encryption, and TAXII secrets.
 3. Preserves all configured values on later runs.
 4. Validates Docker and Compose.
-5. Builds and starts SignalTrace.
+5. Builds and starts CYPHERYN.
 6. Never prints secret values.
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -230,7 +231,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Endpoint | Default URL | Healthy result |
 | --- | --- | --- |
-| SignalTrace | `http://localhost:3000` | Landing page |
+| CYPHERYN | `http://localhost:3000` | Landing page |
 | API readiness | `http://localhost:8000/health/ready` | `{"status":"ready"}` |
 | API documentation | `http://localhost:8000/api/docs` | Interactive OpenAPI UI |
 | Local TAXII | `http://localhost:9000/health` | HTTP 200 JSON |
@@ -280,7 +281,7 @@ docker compose --profile spiderfoot up -d spiderfoot
 
 ## Configuration and credentials
 
-The root [.env.example](.env.example) contains only host/runtime configuration. Provider API keys belong in SignalTrace Settings, not in `.env`.
+The root [.env.example](.env.example) contains only host/runtime configuration. Provider API keys belong in CYPHERYN Settings, not in `.env`.
 
 Core generated values:
 
@@ -292,7 +293,7 @@ Optional configuration includes host ports, OIDC, Ollama, and SMTP notifications
 
 ## Installation — Linux
 
-SignalTrace supports 64-bit Linux hosts through Docker Engine and the Compose v2 plugin. The core application is continuously checked on Ubuntu in CI; Debian, Fedora, and RHEL-family systems are expected to work with a current Docker installation but are not all exercised by this project’s runners.
+CYPHERYN supports 64-bit Linux hosts through Docker Engine and the Compose v2 plugin. The core application is continuously checked on Ubuntu in CI; Debian, Fedora, and RHEL-family systems are expected to work with a current Docker installation but are not all exercised by this project’s runners.
 
 ### Linux prerequisites
 
@@ -313,7 +314,7 @@ Install Docker from the official instructions for your distribution:
 
 Install the [Docker Compose plugin](https://docs.docker.com/compose/install/linux/) if it was not included with Docker Engine.
 
-Verify the host before cloning SignalTrace:
+Verify the host before cloning CYPHERYN:
 
 ```bash
 git --version
@@ -328,8 +329,8 @@ Docker commands require access to the Docker daemon. You may use `sudo`, configu
 ### Install and start
 
 ```bash
-git clone https://github.com/JedidiahBowlding/SignalTrace.git
-cd SignalTrace
+git clone https://github.com/JedidiahBowlding/CYPHERYN.git
+cd CYPHERYN
 python3 scripts/setup.py --start
 ```
 
@@ -390,7 +391,7 @@ docker compose up -d --build
 python3 scripts/doctor.py
 ```
 
-SignalTrace upgrades its application schema during API startup. Never reset volumes as part of a normal update.
+CYPHERYN upgrades its application schema during API startup. Never reset volumes as part of a normal update.
 
 ## Resetting local development data
 
@@ -420,7 +421,7 @@ For production deployment, disable development identity, configure OIDC, rotate 
 
 ## Authorized use
 
-SignalTrace is for defensive security, asset owners, and explicitly authorized assessments. Passive OSINT and active testing have different legal and operational effects. Do not scan third-party systems merely because they are reachable from the Internet.
+CYPHERYN is for defensive security, asset owners, and explicitly authorized assessments. Passive OSINT and active testing have different legal and operational effects. Do not scan third-party systems merely because they are reachable from the Internet.
 
 ## Upstream heritage and attribution
 
@@ -434,4 +435,4 @@ See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for Docker, port collisio
 
 ## Contributing
 
-Fork the published repository, clone your fork, create a feature branch, start SignalTrace, run the affected tests, and open a pull request. Contributors do not need paid providers. Never place credentials or customer evidence in fixtures, screenshots, logs, issues, or commits.
+Fork the published repository, clone your fork, create a feature branch, start CYPHERYN, run the affected tests, and open a pull request. Contributors do not need paid providers. Never place credentials or customer evidence in fixtures, screenshots, logs, issues, or commits.

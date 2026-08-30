@@ -59,7 +59,7 @@ def _transaction_lock(db: Session, scope: str) -> None:
     if db.bind is not None and db.bind.dialect.name == "postgresql":
         db.execute(
             text("SELECT pg_advisory_xact_lock(hashtext(:scope))"),
-            {"scope": f"signaltrace-integrity:{scope}"},
+            {"scope": f"cypheryn-integrity:{scope}"},
         )
 
 

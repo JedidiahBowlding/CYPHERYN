@@ -84,7 +84,7 @@ class OpenVasProvider(LocalToolProvider):
                     "-T",
                     "gvm-tools",
                     "python3",
-                    "/opt/signaltrace/gmp_bridge.py",
+                    "/opt/cypheryn/gmp_bridge.py",
                 ],
                 input=json.dumps(payload),
                 capture_output=True,
@@ -116,7 +116,7 @@ class OpenVasProvider(LocalToolProvider):
             "password": password,
             "target": target,
             "task_name": (
-                f"SignalTrace-{context.job.investigation_id}-{context.target.id}-{context.job.id}"
+                f"CYPHERYN-{context.job.investigation_id}-{context.target.id}-{context.job.id}"
             ),
         }
         while True:

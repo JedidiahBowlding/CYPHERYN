@@ -39,7 +39,7 @@ def build_pdf_report(
     sources: list[EvidenceSource],
     style: str,
     narrative: NarrativeSnapshot | None = None,
-    brand_name: str = "SignalTrace",
+    brand_name: str = "CYPHERYN",
     brand_accent: str = "#147d72",
     brand_logo: bytes | None = None,
     integrity_anchor: dict | None = None,
@@ -53,7 +53,7 @@ def build_pdf_report(
         topMargin=0.7 * inch,
         bottomMargin=0.65 * inch,
         title=snapshot.title,
-        author="SignalTrace",
+        author="CYPHERYN",
     )
     styles = getSampleStyleSheet()
     styles.add(
@@ -329,6 +329,6 @@ def _footer(canvas, document) -> None:
     canvas.line(0.65 * inch, 0.48 * inch, 7.85 * inch, 0.48 * inch)
     canvas.setFillColor(MUTED)
     canvas.setFont("Helvetica", 7)
-    canvas.drawString(0.65 * inch, 0.3 * inch, "SignalTrace - Authorized defensive intelligence")
+    canvas.drawString(0.65 * inch, 0.3 * inch, "CYPHERYN - Authorized defensive intelligence")
     canvas.drawRightString(7.85 * inch, 0.3 * inch, f"Page {document.page}")
     canvas.restoreState()

@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from .integrity import _serialize_evidence, verify_evidence_source
 from .models import EvidenceSource, Investigation
 
-CHECKPOINT_VERSION = "signaltrace-checkpoint-v1"
+CHECKPOINT_VERSION = "cypheryn-checkpoint-v1"
 HASH_ALGORITHM = "sha256"
 
 
@@ -192,7 +192,7 @@ def sign_checkpoint(checkpoint: IntegrityCheckpoint, private_key: Ed25519Private
     public_key = private_key.public_key()
     public_raw = public_key.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
     return {
-        "anchor_version": "signaltrace-anchor-v1",
+        "anchor_version": "cypheryn-anchor-v1",
         "checkpoint": payload,
         "checkpoint_sha256": hashlib.sha256(encoded).hexdigest(),
         "signing_key_id": signing_key_id(public_key),
@@ -203,7 +203,7 @@ def sign_checkpoint(checkpoint: IntegrityCheckpoint, private_key: Ed25519Private
 
 def export_chain(records: list[dict], checkpoint: IntegrityCheckpoint) -> dict:
     return {
-        "export_version": "signaltrace-integrity-export-v1",
+        "export_version": "cypheryn-integrity-export-v1",
         "scope_type": checkpoint.scope_type,
         "scope_id": checkpoint.scope_id,
         "records": records,
@@ -353,7 +353,7 @@ def verify_export_anchor(export: dict, anchor: dict, *, expected_key_id: str | N
 
 
 def _main() -> int:
-    parser = argparse.ArgumentParser(description="Generate keys or verify SignalTrace anchors")
+    parser = argparse.ArgumentParser(description="Generate keys or verify CYPHERYN anchors")
     subparsers = parser.add_subparsers(dest="command", required=True)
     key_parser = subparsers.add_parser("generate-key")
     key_parser.add_argument("path", type=Path)

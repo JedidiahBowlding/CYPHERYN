@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enforce measured coverage on SignalTrace-owned security and integrity modules."""
+"""Enforce measured coverage on CYPHERYN-owned security and integrity modules."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 # Local Greenbone / OpenVAS
 
 This directory contains the official Greenbone Community Containers deployment used by
-SignalTrace Phase 8. The web interface is published only on the local machine at
+CYPHERYN Phase 8. The web interface is published only on the local machine at
 `https://127.0.0.1`.
 
 ## Commands
@@ -18,9 +18,9 @@ Do not remove the Docker volumes unless you intentionally want to erase feeds, s
 tasks, reports, and Greenbone accounts.
 
 Run `secure-default-account.py` once after the first successful startup. It replaces the
-factory password with a random credential and saves that credential through SignalTrace's
+factory password with a random credential and saves that credential through CYPHERYN's
 encrypted provider configuration API. The generated password is never printed or written in
 plain text.
 
-Only scan systems for which you have explicit authorization. SignalTrace applies its active
+Only scan systems for which you have explicit authorization. CYPHERYN applies its active
 authorization policy before it queues an OpenVAS scan.

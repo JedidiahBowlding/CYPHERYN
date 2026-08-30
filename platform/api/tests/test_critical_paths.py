@@ -86,8 +86,8 @@ def session_factory(tmp_path: Path):
         (TargetType.CONTAINER_IMAGE, "GHCR.IO/ORG/APP:1.2.3", "ghcr.io/org/app:1.2.3"),
         (
             TargetType.REPOSITORY,
-            "https://github.com/Example/SignalTrace",
-            "https://github.com/Example/SignalTrace.git",
+            "https://github.com/Example/CYPHERYN",
+            "https://github.com/Example/CYPHERYN.git",
         ),
     ],
 )
@@ -182,9 +182,9 @@ def test_network_ingest_normalizes_and_correlates_suricata_and_zeek(session_fact
 def test_malware_quarantine_hashes_permissions_and_scanner_outcomes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    sample, hashes = quarantine_file(b"signaltrace", str(tmp_path / "quarantine"))
-    assert hashes["sha256"] == "e2d2dc42afbcd589d38625e313e26fe3fbb74037d1622dc00abf49737ea272d9"
-    assert sample.read_bytes() == b"signaltrace"
+    sample, hashes = quarantine_file(b"cypheryn", str(tmp_path / "quarantine"))
+    assert hashes["sha256"] == "bf85914b9dcf2e710edc322fb97cd7fe2a6afb059bd00c40c5a6b3d867ce65e9"
+    assert sample.read_bytes() == b"cypheryn"
     if os.name == "posix":
         assert os.stat(sample).st_mode & 0o777 == 0o600
     monkeypatch.setattr("intel_platform.malware_analysis.shutil.which", lambda name: None)
@@ -359,7 +359,7 @@ def test_email_and_webhook_delivery_apply_transport_controls(
     settings = SimpleNamespace(
         smtp_host="smtp.example.test",
         smtp_port=587,
-        smtp_from="signaltrace@example.test",
+        smtp_from="cypheryn@example.test",
         smtp_use_tls=True,
         smtp_username="mailer",
         smtp_password=transport_password,

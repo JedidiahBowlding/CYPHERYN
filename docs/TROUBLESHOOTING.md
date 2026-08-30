@@ -1,4 +1,4 @@
-# SignalTrace troubleshooting
+# CYPHERYN troubleshooting
 
 Start with:
 
@@ -42,11 +42,11 @@ Run `docker compose logs taxii` and open `http://localhost:9000/health`. Confirm
 
 ## Redis fails
 
-SignalTrace core does not use Redis. A Redis error belongs to the optional Greenbone stack; diagnose it from `platform/greenbone` with that stack's Compose logs.
+CYPHERYN core does not use Redis. A Redis error belongs to the optional Greenbone stack; diagnose it from `platform/greenbone` with that stack's Compose logs.
 
 ## SpiderFoot unavailable
 
-SpiderFoot is disabled by default and is not called by SignalTrace. Start it only when needed with `docker compose --profile spiderfoot up -d spiderfoot`, then inspect `docker compose logs spiderfoot`.
+SpiderFoot is disabled by default and is not called by CYPHERYN. Start it only when needed with `docker compose --profile spiderfoot up -d spiderfoot`, then inspect `docker compose logs spiderfoot`.
 
 ## IntelOwl unavailable
 
@@ -62,7 +62,7 @@ Run `docker image inspect IMAGE --format '{{.Architecture}}'`. Core images are m
 
 ## WSL2 or Windows bind-mount slowness
 
-The core stack uses named volumes. If doing native/advanced development with source bind mounts, cloning inside the WSL filesystem (for example `~/projects/signaltrace`) usually improves Linux-container file I/O. Keep Docker Desktop's WSL integration enabled for that distribution.
+The core stack uses named volumes. If doing native/advanced development with source bind mounts, cloning inside the WSL filesystem (for example `~/projects/cypheryn`) usually improves Linux-container file I/O. Keep Docker Desktop's WSL integration enabled for that distribution.
 
 ## Permissions or CRLF errors
 

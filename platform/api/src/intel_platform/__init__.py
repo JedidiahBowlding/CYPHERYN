@@ -1,1 +1,1 @@
-"""SignalTrace defensive intelligence API and durable collection runtime."""
+"""CYPHERYN defensive intelligence API and durable collection runtime."""

@@ -1,4 +1,4 @@
-# SignalTrace Engineering Maturity Audit
+# CYPHERYN Engineering Maturity Audit
 
 Audit date: 2026-08-29  
 Release candidate: `v0.8.0`  
@@ -6,7 +6,7 @@ Audit target: the commit containing this document. Resolve the immutable identif
 
 ## Executive result
 
-SignalTrace's owned application code passes its API and frontend test suites, dependency audits, static checks, Compose smoke test, secret scan, and fixable High/Critical scans of all four shipped images. This release adds a materially stronger scanner-execution design, durable worker health, provider/queue telemetry, focused security coverage gates, independently signed integrity checkpoints, and public-project governance.
+CYPHERYN's owned application code passes its API and frontend test suites, dependency audits, static checks, Compose smoke test, secret scan, and fixable High/Critical scans of all four shipped images. This release adds a materially stronger scanner-execution design, durable worker health, provider/queue telemetry, focused security coverage gates, independently signed integrity checkpoints, and public-project governance.
 
 The release is not scored as production-complete. The default Compose worker intentionally has no Docker socket and therefore cannot launch configured disposable scanner images; production active scanning still needs a separately trusted orchestrator deployment. Critical orchestration modules also remain below their long-term coverage targets. Provider certification is strongest for the five priority providers but several contract requirements are proven across shared controls rather than by twenty provider-specific tests each.
 
@@ -21,7 +21,7 @@ The release is not scored as production-complete. The default Compose worker int
 
 | Area | Result | Evidence |
 | --- | --- | --- |
-| SignalTrace API tests | PASS | 55 passed, 0 failed |
+| CYPHERYN API tests | PASS | 55 passed, 0 failed |
 | Frontend rendered tests | PASS | 2 passed, 0 failed |
 | Frontend lint | PASS | ESLint clean |
 | TypeScript | PASS | `tsc --noEmit` clean |
@@ -38,7 +38,7 @@ The release is not scored as production-complete. The default Compose worker int
 | Workflow syntax | PASS | all workflow YAML parsed |
 | Inherited SpiderFoot tests | ENVIRONMENT-LIMITED | 1,612 passed, 6 network-fixture failures, 214 skipped in legacy Python 3.8 container |
 
-The six inherited failures depend on mutable public blocklists/DNS: EasyList no longer matches the old fixture, DNS for Family/OpenNIC resolution differs, and the live StevenBlack file format changed. SignalTrace-owned code is not involved. These results are reported, not suppressed. A previously verified modern-host baseline had 1,584 inherited passes and 35 skips.
+The six inherited failures depend on mutable public blocklists/DNS: EasyList no longer matches the old fixture, DNS for Family/OpenNIC resolution differs, and the live StevenBlack file format changed. CYPHERYN-owned code is not involved. These results are reported, not suppressed. A previously verified modern-host baseline had 1,584 inherited passes and 35 skips.
 
 ## Coverage
 
@@ -62,7 +62,7 @@ The focused gates pass. `worker.py` (46%), detection (15%), normalization (21%),
 
 Verified controls include explicit non-floating images, one disposable container per execution, read-only root, dropped capabilities, `no-new-privileges`, CPU/memory/PID/deadline/output/tmpfs limits, reduced environment, no host mounts, no repository mount, no scanner Docker socket, cancellation and timeout force-removal, and bounded output. Active tools fail closed when an isolated image is not configured. Existing tests continue to verify missing, future, expired, revoked, cross-organization, target-mismatch, and per-run active authorization behavior.
 
-Network policy defaults to `none`; `bridge` or a named `signaltrace-*` network must be explicit. Docker bridges cannot enforce target-specific egress by themselves. The trusted runner needs Docker control, but the shipped worker is not granted that control. A production deployment must place the runner in a separate trusted orchestration service or isolated worker node with policy-aware egress. This is a deployment boundary, not a hostile-code sandbox claim.
+Network policy defaults to `none`; `bridge` or a named `cypheryn-*` network must be explicit. Docker bridges cannot enforce target-specific egress by themselves. The trusted runner needs Docker control, but the shipped worker is not granted that control. A production deployment must place the runner in a separate trusted orchestration service or isolated worker node with policy-aware egress. This is a deployment boundary, not a hostile-code sandbox claim.
 
 ## Provider certification matrix
 
@@ -77,7 +77,7 @@ Runtime readiness remains independent of support tier: Supported â†’ Installed â
 | ThreatFox / abuse.ch | Supported | Present | Priority contract suite | Runtime-derived |
 | SpiderFoot | Inherited | Present | Upstream behavior | Runtime-derived |
 | Active local scanners | Adapter-only | Varies | Isolation/shared controls | Runtime-derived |
-| Other SignalTrace-native adapters | Experimental | Present | Partial/shared contracts | Runtime-derived |
+| Other CYPHERYN-native adapters | Experimental | Present | Partial/shared contracts | Runtime-derived |
 
 The deterministic priority suite proves request construction, credential absence, 401/403/429 handling, malformed response and timeout propagation, security-signal normalization, and secret-free URLs. Shared worker/provider tests prove evidence hashing/provenance, circuit-breaker behavior, and successful-collection timestamp semantics. Ordinary CI makes no live third-party calls. A future certification revision should make every one of the twenty requirements directly parameterized for every Supported provider; until then the matrix is credible but not exhaustive.
 

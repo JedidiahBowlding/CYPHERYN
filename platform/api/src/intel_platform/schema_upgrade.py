@@ -39,7 +39,7 @@ FINDING_COLUMNS = {
 }
 
 ORGANIZATION_COLUMNS = {
-    "report_title": "VARCHAR(200) NOT NULL DEFAULT 'SignalTrace'",
+    "report_title": "VARCHAR(200) NOT NULL DEFAULT 'CYPHERYN'",
     "report_accent": "VARCHAR(7) NOT NULL DEFAULT '#147d72'",
     "report_logo": "BLOB",
     "report_logo_mime": "VARCHAR(30) NOT NULL DEFAULT ''",

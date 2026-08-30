@@ -37,7 +37,7 @@ def main() -> None:
                 "enabled": True,
                 "credentials": {"token": token},
                 "settings": {
-                    "collection_url": "http://127.0.0.1:9000/taxii2/collections/signaltrace-local/objects/",
+                    "collection_url": "http://127.0.0.1:9000/taxii2/collections/cypheryn-local/objects/",
                     "default_ttl_days": 90,
                     "jobs_per_hour": 60,
                     "timeout_seconds": 20,
@@ -46,7 +46,7 @@ def main() -> None:
                 },
             },
         )
-    print("Local TAXII connected to SignalTrace.")
+    print("Local TAXII connected to CYPHERYN.")
 
 
 if __name__ == "__main__":

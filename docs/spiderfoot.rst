@@ -2,7 +2,7 @@ Upstream SpiderFoot API appendix
 ================================
 
 This reference documents inherited SpiderFoot source retained as an optional
-isolated capability. SpiderFoot is an upstream component; SignalTrace is the
+isolated capability. SpiderFoot is an upstream component; CYPHERYN is the
 repository's product identity.
 
 Submodules

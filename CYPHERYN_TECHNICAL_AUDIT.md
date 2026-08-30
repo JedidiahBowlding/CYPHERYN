@@ -1,14 +1,14 @@
-# SignalTrace Verification & Hardening Release — Technical Audit
+# CYPHERYN Verification & Hardening Release — Technical Audit
 
 **Audit date:** 2026-08-29  
-**Repository:** `JedidiahBowlding/SignalTrace`  
+**Repository:** `JedidiahBowlding/CYPHERYN`
 **Base commit:** `5d5815946da3ec73f58f0f57f9389b18747e8bd7` (`main`)  
 **Audited state:** current uncommitted verification-and-hardening working tree  
 **Method:** read-only execution and inspection. This report is the only audit deliverable; no failure was fixed or suppressed.
 
 ## 1. Executive Summary
 
-This release materially improves SignalTrace. TypeScript and Ruff now pass; API tests grew from 22 to 44; the inherited suite has zero failures; direct npm and API Python audits are clean; CI targets `main` and includes coverage, type, secret, container, Compose-health, and SBOM gates; five priority providers have deterministic contract tests; local tools have hard process-tree termination; and evidence/audit records now form scoped SHA-256 chains.
+This release materially improves CYPHERYN. TypeScript and Ruff now pass; API tests grew from 22 to 44; the inherited suite has zero failures; direct npm and API Python audits are clean; CI targets `main` and includes coverage, type, secret, container, Compose-health, and SBOM gates; five priority providers have deterministic contract tests; local tools have hard process-tree termination; and evidence/audit records now form scoped SHA-256 chains.
 
 Provider readiness is implemented as **Supported → Installed → Configured → Healthy → Live Verified**. Live verification requires a recorded successful collection timestamp and is correctly presented as point-in-time evidence.
 
@@ -51,18 +51,18 @@ LOC is a physical nonblank/noncomment estimate; the inherited filter is narrower
 
 | Suite | Executed | Passed | Failed | Skipped | Time/result |
 |---|---:|---:|---:|---:|---|
-| SignalTrace API/security/provider/integrity | 44 | 44 | 0 | 0 | 15.68 s pytest; pass |
+| CYPHERYN API/security/provider/integrity | 44 | 44 | 0 | 0 | 15.68 s pytest; pass |
 | Frontend rendered routes | 2 | 2 | 0 | 0 | Pass with production build |
 | Inherited unit + non-live integration | 1,619 | 1,584 | 0 | 35 | 69.09 s; pass |
 | **Total** | **1,665** | **1,630** | **0** | **35** | **Pass** |
 
-The rendered landing-page test explicitly verifies Vinext's optimized `/_next/image?url=%2Fsignaltrace-logo.png...` contract.
+The rendered landing-page test explicitly verifies Vinext's optimized `/_next/image?url=%2Fcypheryn-logo.png...` contract.
 
 Excluded as before: 213 live inherited module tests, Robot/browser acceptance, destructive reset/restore, live active scanners, external targets, and unavailable physical operating systems. Skips are not passes; no xfail/xpass was reported.
 
 ## 5. Coverage Results
 
-SignalTrace API coverage is **54.58%** (5,709 statements, 2,593 missed), up from 53%.
+CYPHERYN API coverage is **54.58%** (5,709 statements, 2,593 missed), up from 53%.
 
 | Module | Coverage |
 |---|---:|
@@ -273,8 +273,8 @@ npm audit --package-lock-only --audit-level=low
 # isolated Python 3.10
 pytest -n auto --dist loadfile test/unit test/integration --ignore=test/integration/modules
 gitleaks git --redact --config .gitleaks.toml
-semgrep scan --config auto <tracked SignalTrace paths>
-trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed signaltrace-api:latest
+semgrep scan --config auto <tracked CYPHERYN paths>
+trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed cypheryn-api:latest
 docker compose config --services; docker compose ps; docker stats --no-stream
 python3 scripts/doctor.py
 ```
@@ -288,7 +288,7 @@ python3 scripts/doctor.py
 - Provider ladder: `platform/api/src/intel_platform/main.py:2181-2238`; `platform/frontend/app/settings/page.tsx:239-249`
 - Contract tests: `platform/api/tests/test_provider_contracts.py`
 - Isolation/integrity tests: `platform/api/tests/test_integrity_and_isolation.py`
-- CI: `.github/workflows/security-supply-chain.yml`; `.github/workflows/signaltrace-cross-platform.yml`
+- CI: `.github/workflows/security-supply-chain.yml`; `.github/workflows/cypheryn-cross-platform.yml`
 - Optimized-image assertion: `platform/frontend/tests/rendered-html.test.mjs:25`
 - Images: `platform/api/Dockerfile`; `platform/frontend/Dockerfile`
 

@@ -1,6 +1,6 @@
 # Changelog
 
-SignalTrace follows [Semantic Versioning](https://semver.org/) before and after `1.0.0`.
+CYPHERYN follows [Semantic Versioning](https://semver.org/) before and after `1.0.0`.
 
 ## [Unreleased]
 

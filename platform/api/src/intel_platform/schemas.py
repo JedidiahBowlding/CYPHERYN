@@ -20,7 +20,7 @@ class OrganizationRead(ApiModel):
 
 
 class ReportBrandingUpdate(BaseModel):
-    report_title: str = Field(default="SignalTrace", min_length=1, max_length=200)
+    report_title: str = Field(default="CYPHERYN", min_length=1, max_length=200)
     report_accent: str = Field(default="#147d72", pattern=r"^#[0-9a-fA-F]{6}$")
     logo_data_url: str | None = Field(default=None, max_length=750000)
 

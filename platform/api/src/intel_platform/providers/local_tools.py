@@ -726,7 +726,7 @@ class KatanaAuthenticatedProvider(KatanaProvider):
         authorization_header = context.credentials.get("authorization_header", "").strip()
         if not authorization_header:
             raise RuntimeError("Authenticated Katana requires an Authorization header")
-        with tempfile.TemporaryDirectory(prefix="signaltrace-katana-auth-") as directory:
+        with tempfile.TemporaryDirectory(prefix="cypheryn-katana-auth-") as directory:
             header_file = Path(directory) / "headers.txt"
             header_file.write_text(f"Authorization: {authorization_header}\n")
             header_file.chmod(0o600)
@@ -744,7 +744,7 @@ class NiktoProvider(LocalToolProvider):
     def collect(self, context: ProviderContext) -> ProviderResult:
         target = self._public_target(context.target.canonical_value)
         url = target if "://" in target else f"https://{target}"
-        with tempfile.TemporaryDirectory(prefix="signaltrace-nikto-") as directory:
+        with tempfile.TemporaryDirectory(prefix="cypheryn-nikto-") as directory:
             output = Path(directory) / "result.json"
             self._run(
                 context,
@@ -802,18 +802,18 @@ class ZapPassiveProvider(LocalToolProvider):
     def collect(self, context: ProviderContext) -> ProviderResult:
         target = self._public_target(context.target.canonical_value)
         url = target if "://" in target else f"https://{target}"
-        with tempfile.TemporaryDirectory(prefix="signaltrace-zap-") as directory:
+        with tempfile.TemporaryDirectory(prefix="cypheryn-zap-") as directory:
             report = Path(directory) / "report.json"
             plan = Path(directory) / "passive.yaml"
             plan.write_text(
                 "env:\n"
                 "  contexts:\n"
-                "  - name: SignalTrace\n"
+                "  - name: CYPHERYN\n"
                 f"    urls: [{json.dumps(url)}]\n"
                 "jobs:\n"
                 "- type: spider\n"
                 "  parameters:\n"
-                "    context: SignalTrace\n"
+                "    context: CYPHERYN\n"
                 "    maxDuration: 1\n"
                 "    maxDepth: 2\n"
                 "- type: passiveScan-wait\n"
@@ -885,7 +885,7 @@ class ZapActiveProvider(ZapPassiveProvider):
     def collect(self, context: ProviderContext) -> ProviderResult:
         target = self._public_target(context.target.canonical_value)
         url = target if "://" in target else f"https://{target}"
-        with tempfile.TemporaryDirectory(prefix="signaltrace-zap-active-") as directory:
+        with tempfile.TemporaryDirectory(prefix="cypheryn-zap-active-") as directory:
             report = Path(directory) / "report.json"
             try:
                 self._run(
@@ -918,7 +918,7 @@ class TestsslProvider(LocalToolProvider):
 
     def collect(self, context: ProviderContext) -> ProviderResult:
         target = self._public_target(context.target.canonical_value)
-        with tempfile.TemporaryDirectory(prefix="signaltrace-testssl-") as directory:
+        with tempfile.TemporaryDirectory(prefix="cypheryn-testssl-") as directory:
             output = Path(directory) / "result.json"
             self._run(
                 context, ["--quiet", "--warnings", "off", "--jsonfile-pretty", str(output), target]

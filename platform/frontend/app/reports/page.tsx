@@ -6,7 +6,7 @@ import SectionPage from "../_components/SectionPage";
 const API = process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
 const headers = {
   "X-Dev-Subject": "local-analyst",
-  "X-Dev-Email": "analyst@signaltrace.local",
+  "X-Dev-Email": "analyst@cypheryn.local",
 };
 type Organization = { id: string; name: string };
 type Investigation = { id: string; name: string; status: string };
@@ -16,7 +16,7 @@ export default function ReportsPage() {
   const [organizationId, setOrganizationId] = useState("");
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
   const [message, setMessage] = useState("");
-  const [brandTitle, setBrandTitle] = useState("SignalTrace");
+  const [brandTitle, setBrandTitle] = useState("CYPHERYN");
   const [brandAccent, setBrandAccent] = useState("#147d72");
   const [brandLogo, setBrandLogo] = useState<string | null>(null);
 
@@ -80,7 +80,7 @@ export default function ReportsPage() {
       return;
     }
     const disposition = response.headers.get("content-disposition") ?? "";
-    const name = disposition.match(/filename="([^"]+)"/)?.[1] ?? `signaltrace-${kind}`;
+    const name = disposition.match(/filename="([^"]+)"/)?.[1] ?? `cypheryn-${kind}`;
     const digest = response.headers.get("x-content-sha256") ?? "unavailable";
     const url = URL.createObjectURL(await response.blob());
     const link = document.createElement("a");

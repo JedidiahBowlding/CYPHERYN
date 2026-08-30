@@ -1,4 +1,4 @@
-# SignalTrace development
+# CYPHERYN development
 
 The supported default is Docker Compose from the repository root. It keeps PostgreSQL and Linux-only dependencies out of the host environment.
 
@@ -68,19 +68,19 @@ Paid providers are optional. Create investigations with local/passive capabiliti
 The API owns schema initialization. Back up before upgrades:
 
 ```bash
-docker compose exec -T postgres pg_dump -U signaltrace -d signaltrace > signaltrace-backup.sql
+docker compose exec -T postgres pg_dump -U cypheryn -d cypheryn > cypheryn-backup.sql
 ```
 
 Restore into an empty development database:
 
 ```bash
-docker compose exec -T postgres psql -U signaltrace -d signaltrace < signaltrace-backup.sql
+docker compose exec -T postgres psql -U cypheryn -d cypheryn < cypheryn-backup.sql
 ```
 
 PowerShell restore:
 
 ```powershell
-Get-Content .\signaltrace-backup.sql | docker compose exec -T postgres psql -U signaltrace -d signaltrace
+Get-Content .\cypheryn-backup.sql | docker compose exec -T postgres psql -U cypheryn -d cypheryn
 ```
 
 `python scripts/reset_dev.py` deletes all local Compose volumes only after the operator types `DELETE`.

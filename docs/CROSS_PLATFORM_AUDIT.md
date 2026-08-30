@@ -1,10 +1,10 @@
-# SignalTrace cross-platform audit
+# CYPHERYN cross-platform audit
 
 Audited 2026-08-29 on macOS 26.5.2 (Intel), Docker Desktop 29.1.3, Compose 5.0.0, Python 3.13.7, and host Node 22.11.0. Windows and Apple Silicon conclusions below are inspection-based unless explicitly stated.
 
 ## Product boundary
 
-SignalTrace is the application in `platform/`. The repository root also contains the inherited SpiderFoot 4 Python application. SpiderFoot is available as an optional standalone Compose profile; SignalTrace does not currently call it. IntelOwl is not implemented and is not a dependency. Redis is used only by the separate optional Greenbone stack, not by SignalTrace core.
+CYPHERYN is the application in `platform/`. The repository root also contains the inherited SpiderFoot 4 Python application. SpiderFoot is available as an optional standalone Compose profile; CYPHERYN does not currently call it. IntelOwl is not implemented and is not a dependency. Redis is used only by the separate optional Greenbone stack, not by CYPHERYN core.
 
 ## Runtime inventory
 
@@ -26,7 +26,7 @@ The API creates/upgrades its schema at startup; there is no Alembic migration co
 | Severity | Finding | Effect | Resolution / status |
 | --- | --- | --- | --- |
 | High | The old root `docker-compose.yml` launched only SpiderFoot | Users started the wrong product | Archived as explicit `compose.spiderfoot.yaml`; root `compose.yaml` is canonical |
-| High | `start-signaltrace.sh` and Greenbone helpers require Bash | Cannot run in native PowerShell | Docker Compose and Python setup/doctor/reset are the supported cross-platform entry points; Bash launcher remains macOS/WSL-only |
+| High | `start-cypheryn.sh` and Greenbone helpers require Bash | Cannot run in native PowerShell | Docker Compose and Python setup/doctor/reset are the supported cross-platform entry points; Bash launcher remains macOS/WSL-only |
 | High | Frontend npm scripts used Unix inline environment assignment | Native Windows npm commands failed | Added `cross-env` to all Vinext scripts |
 | High | `.env` and generated runtime paths were not comprehensively ignored | Credential/data disclosure risk | Root and platform env/runtime paths are ignored; `.env.example` remains tracked |
 | Medium | Frontend declared Node >=22.13; audit host has 22.11 | Native build emits engine warnings/fails unpredictably | Docker pins Node 22.14; native docs require >=22.13 |
@@ -34,10 +34,10 @@ The API creates/upgrades its schema at startup; there is no Alembic migration co
 | Medium | Build contexts included `node_modules` and local virtual environments | Slow builds and non-portable native binaries | Added component `.dockerignore` files |
 | Medium | `platform/tools/maigret-venv` contains absolute `/Users/blockdev/...` paths | Cannot be reused elsewhere | Ignored as generated state; recreate locally. It is not used by core Compose |
 | Medium | Legacy SpiderFoot test scripts and certificate helper use Bash/chmod | Native PowerShell cannot run them | Classified as legacy/advanced; core CI and workflow do not call them on Windows |
-| Medium | Legacy `Dockerfile.full` uses Debian packages and Linux paths | Container-only, potentially architecture-limited tools | Not used by SignalTrace core; standalone basic SpiderFoot profile uses `Dockerfile` |
+| Medium | Legacy `Dockerfile.full` uses Debian packages and Linux paths | Container-only, potentially architecture-limited tools | Not used by CYPHERYN core; standalone basic SpiderFoot profile uses `Dockerfile` |
 | Medium | Greenbone startup/status/stop are Bash scripts and upstream images vary by architecture | Windows native and ARM experience differs | Optional separate stack; run inside WSL/macOS terminal and consult its upstream image support |
 | Low | Linux container paths `/tmp`, `/data`, `/var/lib/postgresql` occur in Compose | None on host when named volumes are used | Intentional container-internal paths; no host path separator dependency |
-| Low | Root has inherited case-sensitive module/file names | Potential case-only conflicts on default macOS/Windows filesystems | No case-only collision was found in current first-party SignalTrace paths |
+| Low | Root has inherited case-sensitive module/file names | Potential case-only conflicts on default macOS/Windows filesystems | No case-only collision was found in current first-party CYPHERYN paths |
 
 ## Architecture assessment
 

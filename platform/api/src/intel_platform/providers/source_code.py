@@ -52,7 +52,7 @@ class SourceScannerProvider:
             parsed = urlsplit(value)
             if parsed.hostname != "github.com":
                 raise RuntimeError("Only GitHub HTTPS repository URLs are supported")
-            with tempfile.TemporaryDirectory(prefix="signaltrace-repository-") as directory:
+            with tempfile.TemporaryDirectory(prefix="cypheryn-repository-") as directory:
                 destination = Path(directory) / "repository"
                 result = subprocess.run(  # noqa: S603
                     [
@@ -227,7 +227,7 @@ class GitleaksProvider(SourceScannerProvider):
     def collect(self, context: ProviderContext) -> ProviderResult:
         with (
             self.repository(context) as root,
-            tempfile.TemporaryDirectory(prefix="signaltrace-gitleaks-") as directory,
+            tempfile.TemporaryDirectory(prefix="cypheryn-gitleaks-") as directory,
         ):
             report = Path(directory) / "report.json"
             result = self.run(
@@ -289,7 +289,7 @@ class TrufflehogProvider(GitleaksProvider):
     def collect(self, context: ProviderContext) -> ProviderResult:
         with (
             self.repository(context) as root,
-            tempfile.TemporaryDirectory(prefix="signaltrace-trufflehog-") as directory,
+            tempfile.TemporaryDirectory(prefix="cypheryn-trufflehog-") as directory,
         ):
             exclusions = Path(directory) / "exclude-paths.txt"
             exclusions.write_text(

@@ -1,6 +1,6 @@
-# SignalTrace Tutorial: From External Exposure to Verified Remediation
+# CYPHERYN Tutorial: From External Exposure to Verified Remediation
 
-SignalTrace is a local-first cyber-intelligence operations platform. It is designed to help an authorized analyst discover what the public Internet can learn about an organization, connect those observations into evidence-backed findings, understand how exposure could contribute to an attack path, and prove that remediation changed the observable state.
+CYPHERYN is a local-first cyber-intelligence operations platform. It is designed to help an authorized analyst discover what the public Internet can learn about an organization, connect those observations into evidence-backed findings, understand how exposure could contribute to an attack path, and prove that remediation changed the observable state.
 
 This tutorial teaches two complementary viewpoints:
 
@@ -9,13 +9,13 @@ This tutorial teaches two complementary viewpoints:
 
 The offensive viewpoint is a way to improve defense. It does not authorize access, exploitation, credential use, disruption, or testing outside recorded scope.
 
-![SignalTrace landing page](images/signaltrace-landing.jpg)
+![CYPHERYN landing page](images/cypheryn-landing.jpg)
 
 ## 1. Learning objectives
 
 After completing this tutorial, you should be able to:
 
-1. Start SignalTrace and verify that its core services are healthy.
+1. Start CYPHERYN and verify that its core services are healthy.
 2. Define an investigation with a precise authorization record.
 3. Distinguish a target, entity, relationship, evidence source, finding, claim, and analysis snapshot.
 4. Choose passive, local, credentialed, and active providers deliberately.
@@ -28,7 +28,7 @@ After completing this tutorial, you should be able to:
 
 ## 2. The operating model
 
-SignalTrace is not a single scanner. It is an evidence system that coordinates multiple collectors and analysis steps.
+CYPHERYN is not a single scanner. It is an evidence system that coordinates multiple collectors and analysis steps.
 
 ```text
 Authorization
@@ -58,7 +58,7 @@ The order matters. A conclusion should never exist without a target, authorizati
 | Authorization | Why and how the target may be assessed | Written approval for a company-owned domain |
 | Target | An exact input the analyst is allowed to investigate | `example.com`, an IP address, username, repository, image, or SBOM |
 | Job | A durable request to run one provider against one target | DNS discovery for an authorized domain |
-| Evidence source | Provider output and provenance retained by SignalTrace | A DNS answer with provider and collection time |
+| Evidence source | Provider output and provenance retained by CYPHERYN | A DNS answer with provider and collection time |
 | Entity | A normalized object discovered in evidence | Domain, IP, certificate, service, identity, package, or indicator |
 | Relationship | A source-backed connection between entities | Domain resolves to IP; certificate contains domain |
 | Finding | An actionable security condition | Unexpected public service or missing security control |
@@ -68,7 +68,7 @@ The order matters. A conclusion should never exist without a target, authorizati
 
 ### 2.2 Observation is not compromise
 
-SignalTrace deliberately separates three levels of reasoning:
+CYPHERYN deliberately separates three levels of reasoning:
 
 - **Observed fact:** A provider returned a value, a service answered, or a control was absent at collection time.
 - **Derived analysis:** Multiple observations suggest a security-relevant pattern.
@@ -80,7 +80,7 @@ For example, an Internet-facing service and a threat-intelligence record may coe
 
 ### 3.1 Defensive questions
 
-A defender uses SignalTrace to ask:
+A defender uses CYPHERYN to ask:
 
 - Is the asset expected and owned?
 - Is the exposure intended?
@@ -117,21 +117,21 @@ This perspective does **not** mean “launch an exploit.” It means understandi
 | Domain look-alike | Possible impersonation or phishing preparation | Review registration, content, mail controls, brand monitoring, and takedown options |
 | Changed DNS or service | Attack surface changed | Confirm change ticket, owner, expected state, and security controls |
 
-## 4. Start and verify SignalTrace
+## 4. Start and verify CYPHERYN
 
 Clone and start the platform:
 
 ```bash
-git clone https://github.com/JedidiahBowlding/SignalTrace.git
-cd SignalTrace
+git clone https://github.com/JedidiahBowlding/CYPHERYN.git
+cd CYPHERYN
 python3 scripts/setup.py --start
 ```
 
 Windows PowerShell uses the Python launcher:
 
 ```powershell
-git clone https://github.com/JedidiahBowlding/SignalTrace.git
-Set-Location SignalTrace
+git clone https://github.com/JedidiahBowlding/CYPHERYN.git
+Set-Location CYPHERYN
 py scripts/setup.py --start
 ```
 
@@ -171,13 +171,13 @@ Open **Settings**. Provider configuration is organization-specific and persists 
 ### 5.1 Credential behavior
 
 - Provider credentials are submitted to the local API.
-- SignalTrace encrypts provider secrets at rest using the locally configured provider-encryption key.
+- CYPHERYN encrypts provider secrets at rest using the locally configured provider-encryption key.
 - Saved-provider cards show whether credentials are stored without returning the secret value.
 - The browser should not display a stored API key after saving.
 - Credentials remain available to the organization after restart; they are not re-entered for every scan.
 - Never paste credentials into screenshots, issues, logs, test fixtures, or Git commits.
 
-If a credential may have been exposed, revoke it at the provider, create a replacement, update SignalTrace, and review the provider’s access history.
+If a credential may have been exposed, revoke it at the provider, create a replacement, update CYPHERYN, and review the provider’s access history.
 
 ### 5.2 Provider control plane
 
@@ -194,7 +194,7 @@ These controls prevent a broken or rate-limited provider from producing an uncon
 
 ### 5.3 Provider categories
 
-| Category | Examples implemented in SignalTrace | Primary purpose |
+| Category | Examples implemented in CYPHERYN | Primary purpose |
 | --- | --- | --- |
 | Safe validation | `safe_mock` | Test jobs, evidence, relationships, and UI without external collection |
 | Passive discovery | `dns_discovery`, `certificate_transparency`, `domain_security`, `rdap` | Learn public domain and registration posture |
@@ -212,7 +212,7 @@ Availability depends on target type, installed dependencies, credentials, organi
 
 Choose **New investigation**.
 
-![SignalTrace authorization-first investigation form](images/signaltrace-new-investigation.jpg)
+![CYPHERYN authorization-first investigation form](images/cypheryn-new-investigation.jpg)
 
 ### Step 1: Investigation details
 
@@ -267,7 +267,7 @@ Choose the correct type. Canonicalization and provider eligibility depend on it.
 
 Use this lab before connecting real providers.
 
-1. Create an investigation named **SignalTrace training lab**.
+1. Create an investigation named **CYPHERYN training lab**.
 2. Use organization **Training**.
 3. Record that the exercise uses synthetic evidence only.
 4. Select target type **Domain** and target `example.com`.
@@ -357,7 +357,7 @@ The graph shows normalized entities and source-backed relationships. Use it to a
 
 Select a node to inspect its type, canonical value, provider, confidence, and evidence classification. Filter entity types to reduce visual noise. Use **Fit graph** after filtering or panning.
 
-An edge means “SignalTrace has evidence for this relationship.” It does not necessarily mean ownership, malicious control, or compromise.
+An edge means “CYPHERYN has evidence for this relationship.” It does not necessarily mean ownership, malicious control, or compromise.
 
 ### Entities
 
@@ -394,7 +394,7 @@ Threat intelligence adds context; it does not provide an automatic verdict on ow
 
 ### VirusTotal
 
-SignalTrace can preserve verdict counts and malware associations. Interpret them carefully:
+CYPHERYN can preserve verdict counts and malware associations. Interpret them carefully:
 
 - A malicious count is a provider observation, not a complete incident conclusion.
 - Check the indicator type and exact canonical value.
@@ -429,7 +429,7 @@ A useful finding answers six questions:
 5. **How should it be fixed?**
 6. **How will the fix be verified?**
 
-SignalTrace’s vulnerability help explains a plausible attack consequence and remediation when you hover the help control. Treat this as defensive context, not proof that exploitation occurred.
+CYPHERYN’s vulnerability help explains a plausible attack consequence and remediation when you hover the help control. Treat this as defensive context, not proof that exploitation occurred.
 
 ### 12.1 Example: unexpected public service
 
@@ -464,7 +464,7 @@ SignalTrace’s vulnerability help explains a plausible attack consequence and r
 
 ## 13. Risk score explained
 
-In SignalTrace, **higher numbers mean more risk**. The score is evidence-prioritization logic, not a probability of breach and not a replacement for business judgment.
+In CYPHERYN, **higher numbers mean more risk**. The score is evidence-prioritization logic, not a probability of breach and not a replacement for business judgment.
 
 The current analysis assigns active findings these weights:
 
@@ -690,7 +690,7 @@ For provider failures, inspect Settings for enabled state, credential status, ki
 
 ## 22. Rules of responsible operation
 
-- Use SignalTrace only for assets you own or have explicit permission to assess.
+- Use CYPHERYN only for assets you own or have explicit permission to assess.
 - Record scope before collection.
 - Keep passive discovery separate from active authorization.
 - Treat discovered descendants and third-party infrastructure as review items, not automatically authorized targets.
@@ -702,7 +702,7 @@ For provider failures, inspect Settings for enabled state, credential status, ki
 
 ## 23. Completion checklist
 
-You are using SignalTrace effectively when you can answer “yes” to all of these:
+You are using CYPHERYN effectively when you can answer “yes” to all of these:
 
 - Is every target covered by a clear authorization record?
 - Do you know which providers are passive, credentialed, local, or active?

@@ -150,7 +150,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="SignalTrace API",
+    title="CYPHERYN API",
     version="0.1.0",
     lifespan=lifespan,
     docs_url="/api/docs",
@@ -565,7 +565,7 @@ async def analyze_malware_sample(
     safe_filename = Path(filename).name[:255] or "sample.bin"
     path, digests = quarantine_file(data, settings.quarantine_dir)
     clamav = scan_clamav(path, settings.clamav_database_dir)
-    rules_path = Path(__file__).resolve().parents[2] / "rules" / "signaltrace.yar"
+    rules_path = Path(__file__).resolve().parents[2] / "rules" / "cypheryn.yar"
     yara_matches = scan_yara(path, rules_path)
     intel_matches = correlate_hashes(db, investigation.organization_id, list(digests.values()))
     verdict = (
@@ -694,7 +694,7 @@ def export_sigma_rules(
     return Response(
         content,
         media_type="application/yaml",
-        headers={"Content-Disposition": 'attachment; filename="signaltrace-sigma-rules.yml"'},
+        headers={"Content-Disposition": 'attachment; filename="cypheryn-sigma-rules.yml"'},
     )
 
 
@@ -708,7 +708,7 @@ def export_suricata_rules(
     return Response(
         export_suricata(db, organization_id),
         media_type="text/plain",
-        headers={"Content-Disposition": 'attachment; filename="signaltrace-stix.rules"'},
+        headers={"Content-Disposition": 'attachment; filename="cypheryn-stix.rules"'},
     )
 
 
@@ -1535,12 +1535,12 @@ def download_pdf_report(
         sources,
         style,
         narrative,
-        brand_name=organization.report_title if organization else "SignalTrace",
+        brand_name=organization.report_title if organization else "CYPHERYN",
         brand_accent=organization.report_accent if organization else "#147d72",
         brand_logo=organization.report_logo if organization else None,
         integrity_anchor=anchor,
     )
-    filename = f"signaltrace-{investigation.id[:8]}-{style}.pdf"
+    filename = f"cypheryn-{investigation.id[:8]}-{style}.pdf"
     digest = sha256(content)
     record_audit(
         db,
@@ -1641,7 +1641,7 @@ def download_evidence_export(
         reason_code=f"sha256:{digest[:16]}",
     )
     db.commit()
-    filename = f"signaltrace-{investigation.id[:8]}-{extension}"
+    filename = f"cypheryn-{investigation.id[:8]}-{extension}"
     return Response(
         content=content,
         media_type=media_type,

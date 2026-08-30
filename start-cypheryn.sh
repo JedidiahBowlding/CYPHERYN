@@ -35,12 +35,12 @@ if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
 fi
 
 if lsof -nP -iTCP:8000 -sTCP:LISTEN >/dev/null 2>&1; then
-  echo "Port 8000 is already in use. Stop the existing API before starting SignalTrace."
+  echo "Port 8000 is already in use. Stop the existing API before starting CYPHERYN."
   exit 1
 fi
 
 if lsof -nP -iTCP:3000 -sTCP:LISTEN >/dev/null 2>&1; then
-  echo "Port 3000 is already in use. Stop the existing frontend before starting SignalTrace."
+  echo "Port 3000 is already in use. Stop the existing frontend before starting CYPHERYN."
   exit 1
 fi
 
@@ -52,14 +52,14 @@ TAXII_PID=""
 stop_services() {
   trap - INT TERM EXIT
   echo
-  echo "Stopping SignalTrace..."
+  echo "Stopping CYPHERYN..."
   for process_id in "$FRONTEND_PID" "$WORKER_PID" "$API_PID" "$TAXII_PID"; do
     if [[ -n "$process_id" ]] && kill -0 "$process_id" 2>/dev/null; then
       kill "$process_id" 2>/dev/null || true
     fi
   done
   wait 2>/dev/null || true
-  echo "SignalTrace stopped."
+  echo "CYPHERYN stopped."
 }
 
 trap stop_services INT TERM EXIT
@@ -146,7 +146,7 @@ if ! curl -fsS http://localhost:3000 >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "SignalTrace is running."
+echo "CYPHERYN is running."
 echo "Application: http://localhost:3000"
 echo "API docs:    http://127.0.0.1:8000/api/docs"
 echo "Local TAXII: http://127.0.0.1:9000/.well-known/taxii2/"
@@ -167,5 +167,5 @@ while kill -0 "$API_PID" 2>/dev/null \
   sleep 2
 done
 
-echo "A SignalTrace service stopped unexpectedly. Review logs in $RUNTIME_DIR"
+echo "A CYPHERYN service stopped unexpectedly. Review logs in $RUNTIME_DIR"
 exit 1

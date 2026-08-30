@@ -1,6 +1,6 @@
-# Contributing to SignalTrace
+# Contributing to CYPHERYN
 
-Thank you for improving SignalTrace. Contributions must preserve authorization boundaries, evidence provenance, credential secrecy, and local-first operation.
+Thank you for improving CYPHERYN. Contributions must preserve authorization boundaries, evidence provenance, credential secrecy, and local-first operation.
 
 ## Workflow
 

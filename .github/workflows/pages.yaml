@@ -32,7 +32,7 @@ jobs:
         run: |
           mkdir -p _site/images
           cp -R project-site/. _site/
-          cp docs/images/signaltrace-*.jpg _site/images/
+          cp docs/images/cypheryn-*.jpg _site/images/
       - name: Upload project site
         uses: actions/upload-pages-artifact@v3
         with:

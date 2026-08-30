@@ -3,9 +3,9 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "signaltrace-api"
+name = "cypheryn-api"
 version = "0.8.0"
-description = "SignalTrace evidence-grounded defensive intelligence API and worker"
+description = "CYPHERYN evidence-grounded defensive intelligence API and worker"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115,<1",

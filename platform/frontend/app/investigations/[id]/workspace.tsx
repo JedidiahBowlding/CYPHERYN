@@ -13,7 +13,7 @@ const API = process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
 const headers = {
   "Content-Type": "application/json",
   "X-Dev-Subject": "local-analyst",
-  "X-Dev-Email": "analyst@signaltrace.local",
+  "X-Dev-Email": "analyst@cypheryn.local",
 };
 type Job = {
   id: string;
@@ -389,7 +389,7 @@ export default function InvestigationWorkspace({
     const url = URL.createObjectURL(await response.blob());
     const link = document.createElement("a");
     link.href = url;
-    link.download = `signaltrace-${id.slice(0, 8)}-${style}.pdf`;
+    link.download = `cypheryn-${id.slice(0, 8)}-${style}.pdf`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -513,7 +513,7 @@ export default function InvestigationWorkspace({
     <main className="detail-page">
       <header className="detail-top">
         <Link className="workflow-brand" href="/">
-          <span>S</span>SignalTrace
+          <span>S</span>CYPHERYN
         </Link>
         <nav>
           <Link href="/investigations">Investigations</Link>

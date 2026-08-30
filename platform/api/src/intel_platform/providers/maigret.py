@@ -34,7 +34,7 @@ class MaigretProvider:
             if deadline.tzinfo is None:
                 deadline = deadline.replace(tzinfo=UTC)
             timeout = max(5, min(int((deadline - datetime.now(UTC)).total_seconds()), 180))
-        with tempfile.TemporaryDirectory(prefix="signaltrace-maigret-") as directory:
+        with tempfile.TemporaryDirectory(prefix="cypheryn-maigret-") as directory:
             command = [
                 str(MAIGRET),
                 context.target.canonical_value,

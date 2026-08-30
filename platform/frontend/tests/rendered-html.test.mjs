@@ -13,16 +13,16 @@ async function render(path = "/") {
   );
 }
 
-test("server-renders the SignalTrace landing page", async () => {
+test("server-renders the CYPHERYN landing page", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>SignalTrace — See the Exposure\. Prove the Risk\.<\/title>/i);
+  assert.match(html, /<title>CYPHERYN — See the Exposure\. Prove the Risk\.<\/title>/i);
   assert.match(html, /Follow every signal/);
   assert.match(html, /Prove every finding/);
   assert.match(html, /href="\/investigations\/new"/);
-  assert.match(html, /\/_next\/image\?url=%2Fsignaltrace-logo\.png(?:&|&amp;)w=/);
+  assert.match(html, /\/_next\/image\?url=%2Fcypheryn-logo\.png(?:&|&amp;)w=/);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
 });
 
@@ -38,7 +38,7 @@ test("keeps security guidance and cross-platform scripts in source", async () =>
   assert.match(help, /How to fix it/i);
   assert.match(help, /role="tooltip"/);
   assert.match(page, /Start an investigation/);
-  assert.match(layout, /SignalTrace/);
+  assert.match(layout, /CYPHERYN/);
   assert.match(packageJson, /cross-env WRANGLER_LOG_PATH/);
   assert.doesNotMatch(packageJson, /@rolldown\/binding-darwin-x64/);
   assert.match(providerSettings, /Live verified/);

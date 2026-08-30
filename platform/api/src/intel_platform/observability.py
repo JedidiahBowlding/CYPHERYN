@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from .models import CollectionJob, EvidenceSource, JobStatus, ProviderRuntimeState, WorkerState
 
 correlation_id_context: ContextVar[str] = ContextVar("correlation_id", default="")
-logger = logging.getLogger("signaltrace")
+logger = logging.getLogger("cypheryn")
 WORKER_STALE_SECONDS = 45
 
 
@@ -36,7 +36,7 @@ def structured_log(event_type: str, *, severity: str = "info", **fields: object)
     }
     payload = {
         "timestamp": datetime.now(UTC).isoformat(),
-        "service": "signaltrace-api",
+        "service": "cypheryn-api",
         "severity": severity,
         "correlation_id": correlation_id_context.get(),
         "event_type": event_type,
@@ -224,14 +224,14 @@ def operational_snapshot(db: Session) -> dict:
 def prometheus_metrics(snapshot: dict) -> str:
     queue = snapshot["queue"]
     lines = [
-        "# HELP signaltrace_worker_healthy Whether at least one worker heartbeat is fresh.",
-        "# TYPE signaltrace_worker_healthy gauge",
-        f"signaltrace_worker_healthy {1 if snapshot['worker_healthy'] else 0}",
+        "# HELP cypheryn_worker_healthy Whether at least one worker heartbeat is fresh.",
+        "# TYPE cypheryn_worker_healthy gauge",
+        f"cypheryn_worker_healthy {1 if snapshot['worker_healthy'] else 0}",
     ]
     for key in ("queued", "running", "failed", "cancelled", "retries", "expired_leases"):
-        lines.append(f"signaltrace_jobs_{key} {queue[key]}")
-    lines.append(f"signaltrace_oldest_queued_job_seconds {queue['oldest_queued_age_seconds']}")
-    lines.append(f"signaltrace_evidence_total {snapshot['evidence_count']}")
+        lines.append(f"cypheryn_jobs_{key} {queue[key]}")
+    lines.append(f"cypheryn_oldest_queued_job_seconds {queue['oldest_queued_age_seconds']}")
+    lines.append(f"cypheryn_evidence_total {snapshot['evidence_count']}")
     for provider, metric in sorted(snapshot["providers"].items()):
         safe = provider.replace("\\", "\\\\").replace('"', '\\"')
         for key in (
@@ -243,7 +243,7 @@ def prometheus_metrics(snapshot: dict) -> str:
             "authentication_failures",
             "cancellations",
         ):
-            lines.append(f'signaltrace_provider_{key}{{provider="{safe}"}} {metric[key]}')
+            lines.append(f'cypheryn_provider_{key}{{provider="{safe}"}} {metric[key]}')
     return "\n".join(lines) + "\n"
 
 

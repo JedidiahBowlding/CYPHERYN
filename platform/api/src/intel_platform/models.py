@@ -78,7 +78,7 @@ class Organization(Base):
     __tablename__ = "organizations"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    report_title: Mapped[str] = mapped_column(String(200), default="SignalTrace", nullable=False)
+    report_title: Mapped[str] = mapped_column(String(200), default="CYPHERYN", nullable=False)
     report_accent: Mapped[str] = mapped_column(String(7), default="#147d72", nullable=False)
     report_logo: Mapped[bytes | None] = mapped_column(LargeBinary)
     report_logo_mime: Mapped[str] = mapped_column(String(30), default="", nullable=False)

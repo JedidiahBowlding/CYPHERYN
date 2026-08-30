@@ -87,7 +87,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="SignalTrace Trusted Scanner Orchestrator",
+    title="CYPHERYN Trusted Scanner Orchestrator",
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
@@ -147,7 +147,7 @@ def create_execution(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     production = os.environ.get("PLATFORM_ENVIRONMENT", "development").lower() == "production"
     if production and request.provider in ACTIVE_SCANNERS and not policy.network.startswith(
-        "signaltrace-egress-"
+        "cypheryn-egress-"
     ):
         raise HTTPException(
             status_code=422,

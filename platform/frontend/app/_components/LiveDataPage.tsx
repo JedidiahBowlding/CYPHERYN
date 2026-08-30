@@ -6,7 +6,7 @@ import FindingHelp from "./FindingHelp";
 const API = process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
 const headers = {
   "X-Dev-Subject": "local-analyst",
-  "X-Dev-Email": "analyst@signaltrace.local",
+  "X-Dev-Email": "analyst@cypheryn.local",
 };
 type Investigation = {
   id: string;

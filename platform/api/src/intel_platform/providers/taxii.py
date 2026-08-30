@@ -66,7 +66,7 @@ class TaxiiProvider:
         password = str(context.credentials.get("password") or "")
         if not token and not (username and password):
             raise RuntimeError("TAXII bearer token or username/password is required")
-        headers = {"Accept": TAXII_MEDIA_TYPE, "User-Agent": "SignalTrace-TAXII/1.0"}
+        headers = {"Accept": TAXII_MEDIA_TYPE, "User-Agent": "CYPHERYN-TAXII/1.0"}
         auth = None
         if token:
             headers["Authorization"] = f"Bearer {token}"

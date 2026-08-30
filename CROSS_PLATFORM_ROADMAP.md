@@ -1,12 +1,12 @@
-# SignalTrace Cross-Platform Local Setup Roadmap
+# CYPHERYN Cross-Platform Local Setup Roadmap
 
 Status: approved for implementation  
 Target hosts: macOS (Apple Silicon and Intel) and Windows 11 (Docker Desktop with WSL2)  
-Primary outcome: a new contributor can clone, configure, start, verify, test, and stop SignalTrace using repository documentation alone.
+Primary outcome: a new contributor can clone, configure, start, verify, test, and stop CYPHERYN using repository documentation alone.
 
 ## Implementation checkpoint — 2026-08-29
 
-Implemented: canonical core Compose stack; API/worker/frontend/TAXII images; generated and validated `.env`; cross-platform setup, doctor, and destructive-reset guards; Git line-ending and secret/runtime exclusions; SignalTrace-first README; macOS/Windows development and troubleshooting guides; multi-OS CI; provider-availability portability tests; and vulnerability attack/remediation hover guidance.
+Implemented: canonical core Compose stack; API/worker/frontend/TAXII images; generated and validated `.env`; cross-platform setup, doctor, and destructive-reset guards; Git line-ending and secret/runtime exclusions; CYPHERYN-first README; macOS/Windows development and troubleshooting guides; multi-OS CI; provider-availability portability tests; and vulnerability attack/remediation hover guidance.
 
 Verified on Intel macOS: image builds, live core startup, PostgreSQL/API/frontend/TAXII health, 22 API tests, 2 rendered frontend tests, and frontend lint with no errors. Core Python, Node, and PostgreSQL manifests contain both `linux/amd64` and `linux/arm64` variants. Windows 11/WSL2 and Apple Silicon hardware acceptance remain intentionally unclaimed until those CI/hardware runs execute. The final clone URL remains pending because this directory intentionally has no Git repository or remote yet.
 
@@ -15,18 +15,18 @@ Verified on Intel macOS: image builds, live core startup, PostgreSQL/API/fronten
 This records the state found before implementation, not the conceptual service list in the master prompt. Items described as “current” in this section are historical baseline facts; the implementation checkpoint above records the new state.
 
 - The repository root still contains the upstream Python-based SpiderFoot 4 code, its legacy Dockerfiles, and a SpiderFoot-only `docker-compose.yml` exposing port `5001`.
-- The current SignalTrace product is under `platform/`.
-- The SignalTrace API uses Python 3.12+ and currently builds with Python 3.13.
+- The current CYPHERYN product is under `platform/`.
+- The CYPHERYN API uses Python 3.12+ and currently builds with Python 3.13.
 - The API is FastAPI, SQLAlchemy, Uvicorn, and PostgreSQL-capable; native development has also used SQLite.
 - The frontend is React 19, TypeScript, Vinext/Vite, npm, and Node.js 22.13+.
 - The frontend runs on port `3000`; the API runs on port `8000` with docs at `/api/docs` and health endpoints at `/health/live` and `/health/ready`.
 - Local TAXII runs on port `9000`.
 - Ollama is optional and currently expected on port `11434`.
-- Greenbone/OpenVAS is an optional separate Compose stack. Its Redis and PostgreSQL services are internal to Greenbone; SignalTrace does not currently require application-level Redis.
-- SpiderFoot code exists locally, but the platform README describes a future adapter boundary. Its actual platform integration must be verified before it is advertised as a required SignalTrace service.
+- Greenbone/OpenVAS is an optional separate Compose stack. Its Redis and PostgreSQL services are internal to Greenbone; CYPHERYN does not currently require application-level Redis.
+- SpiderFoot code exists locally, but the platform README describes a future adapter boundary. Its actual platform integration must be verified before it is advertised as a required CYPHERYN service.
 - IntelOwl is not currently implemented in the platform and must not be added to Compose or README as though it exists.
-- The current root README is the upstream SpiderFoot README and does not document the SignalTrace product.
-- `start-signaltrace.sh` is Bash-only and therefore is not a native PowerShell entry point.
+- The current root README is the upstream SpiderFoot README and does not document the CYPHERYN product.
+- `start-cypheryn.sh` is Bash-only and therefore is not a native PowerShell entry point.
 - `platform/compose.yaml` currently includes only the API and PostgreSQL. It does not start the frontend, worker, TAXII server, Ollama, SpiderFoot, or Greenbone.
 - No repository URL can be inferred from Git metadata because this working copy intentionally has no `.git` directory. The real URL must be supplied before final clone instructions are written.
 
@@ -49,12 +49,12 @@ This records the state found before implementation, not the conceptual service l
 Deliverable: `docs/CROSS_PLATFORM_AUDIT.md`
 
 - [ ] Inventory every language, framework, runtime, package manager, database, service, port, health endpoint, build command, test command, and environment variable.
-- [ ] Separate the legacy SpiderFoot application from the SignalTrace platform architecture.
-- [ ] Determine whether the root SpiderFoot service is currently called by SignalTrace or remains unintegrated source.
+- [ ] Separate the legacy SpiderFoot application from the CYPHERYN platform architecture.
+- [ ] Determine whether the root SpiderFoot service is currently called by CYPHERYN or remains unintegrated source.
 - [ ] Confirm that IntelOwl is absent and record it as a future optional integration rather than a current dependency.
 - [ ] Document that Redis is only present inside the optional Greenbone stack unless application code changes.
 - [ ] Inventory local AI behavior and document Ollama as optional unless the architecture changes.
-- [ ] Audit `start-signaltrace.sh`, Greenbone shell scripts, `generate-certificate`, Dockerfiles, Compose files, Python utilities, and npm scripts.
+- [ ] Audit `start-cypheryn.sh`, Greenbone shell scripts, `generate-certificate`, Dockerfiles, Compose files, Python utilities, and npm scripts.
 - [ ] Search first-party source while excluding generated virtual environments, `node_modules`, caches, logs, databases, and downloaded feed data.
 - [ ] Record Bash-only syntax, `chmod`, `/tmp`, `/var`, `/home`, `apt`, `apk`, Linux user/group commands, loopback assumptions, and host-path assumptions.
 - [ ] Identify the committed `platform/tools/maigret-venv` absolute macOS paths as non-portable generated artifacts and plan their removal from source control.
@@ -70,7 +70,7 @@ Exit gate:
 
 Primary deliverable: root `compose.yaml`
 
-- [ ] Choose the root `compose.yaml` as the canonical SignalTrace development stack.
+- [ ] Choose the root `compose.yaml` as the canonical CYPHERYN development stack.
 - [ ] Rename or clearly archive the legacy SpiderFoot-only Compose files to prevent users from starting the wrong product.
 - [ ] Define the default core services based on actual requirements:
   - [ ] `frontend`
@@ -79,7 +79,7 @@ Primary deliverable: root `compose.yaml`
   - [ ] `postgres`
   - [ ] `taxii` if local TAXII remains a required default
 - [ ] Decide whether local TAXII feed refresh is an init job, scheduled job, or optional profile.
-- [ ] Keep SpiderFoot optional until a real SignalTrace adapter is proven and tested.
+- [ ] Keep SpiderFoot optional until a real CYPHERYN adapter is proven and tested.
 - [ ] Keep Greenbone/OpenVAS in an explicit optional profile or separate documented stack.
 - [ ] Do not add IntelOwl until a real adapter and configuration contract exist.
 - [ ] Do not add application Redis unless durable application code actually consumes it.
@@ -94,7 +94,7 @@ Primary deliverable: root `compose.yaml`
 Exit gate:
 
 - [ ] `docker compose config` succeeds with a copied `.env` on macOS and Windows-compatible paths.
-- [ ] `docker compose up -d` starts the complete core SignalTrace workflow.
+- [ ] `docker compose up -d` starts the complete core CYPHERYN workflow.
 
 ## Phase 3 — Container images and architecture compatibility
 
@@ -161,7 +161,7 @@ Proposed deliverables:
 - [ ] Support both macOS Terminal and Windows PowerShell invocation: `python scripts/doctor.py`.
 - [ ] Never print `.env` values or stored provider keys.
 - [ ] Implement `scripts/reset_dev.py` with an explicit confirmation and a prominent data-loss warning.
-- [ ] Keep `start-signaltrace.sh` as an advanced macOS/Linux native helper or replace its orchestration role with cross-platform utilities.
+- [ ] Keep `start-cypheryn.sh` as an advanced macOS/Linux native helper or replace its orchestration role with cross-platform utilities.
 - [ ] Do not require native Windows users to run Bash.
 
 Exit gate:
@@ -203,8 +203,8 @@ Exit gate:
 
 ## Phase 8 — CI and cross-platform regression coverage
 
-- [ ] Preserve the existing SpiderFoot test workflow while separating it from SignalTrace tests.
-- [ ] Add a SignalTrace CI workflow with `ubuntu-latest`, `macos-latest`, and `windows-latest`.
+- [ ] Preserve the existing SpiderFoot test workflow while separating it from CYPHERYN tests.
+- [ ] Add a CYPHERYN CI workflow with `ubuntu-latest`, `macos-latest`, and `windows-latest`.
 - [ ] Test `scripts/setup.py --check`, `scripts/doctor.py --offline`, environment parsing, and path handling on all three systems.
 - [ ] Run API lint and tests with a supported Python version.
 - [ ] Run frontend install, lint, tests, and production build with the locked Node.js version.
@@ -228,7 +228,7 @@ Deliverables:
 - `docs/TROUBLESHOOTING.md`
 - `docs/CROSS_PLATFORM_AUDIT.md`
 
-- [ ] Replace the upstream-only root README with a SignalTrace-first README while preserving clear attribution and links for bundled SpiderFoot code.
+- [ ] Replace the upstream-only root README with a CYPHERYN-first README while preserving clear attribution and links for bundled SpiderFoot code.
 - [ ] Obtain the actual future GitHub repository URL before writing clone commands.
 - [ ] Use the approved README structure:
   - [ ] Project name and short description
@@ -259,7 +259,7 @@ Deliverables:
 - [ ] Recommend a WSL filesystem clone only if measured bind-mount performance or file watching justifies it.
 - [ ] Document exact URLs and configurable ports.
 - [ ] Document first-run behavior based on actual images, migrations, feed initialization, and service startup.
-- [ ] Add a real optional-provider table covering the 43 registered SignalTrace adapters by category without requiring all credentials.
+- [ ] Add a real optional-provider table covering the 43 registered CYPHERYN adapters by category without requiring all credentials.
 - [ ] Explain that SpiderFoot and Greenbone are optional unless enabled; state plainly that IntelOwl is not integrated.
 - [ ] Document start, stop, restart, logs, rebuild, update, health-check, backup, restore, and reset commands.
 - [ ] Include Bash and PowerShell health checks and the expected healthy JSON response.

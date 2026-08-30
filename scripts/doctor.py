@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report SignalTrace environment health without printing secret values."""
+"""Report CYPHERYN environment health without printing secret values."""
 
 from __future__ import annotations
 
@@ -102,7 +102,7 @@ def integrity_anchor_ready(key_directory: Path, anchor_directory: Path, compose:
                 (
                     "from pathlib import Path; "
                     "raise SystemExit(0 if "
-                    "Path('/run/secrets/signaltrace-anchor/active-key.json').is_file() and "
+                    "Path('/run/secrets/cypheryn-anchor/active-key.json').is_file() and "
                     "Path('/anchors').is_dir() else 1)"
                 ),
             ],
@@ -120,7 +120,7 @@ def main() -> int:
     parser.add_argument("--offline", action="store_true", help="Skip live service checks")
     args = parser.parse_args()
     failures = 0
-    print("SignalTrace Environment Check\n")
+    print("CYPHERYN Environment Check\n")
     for executable in ("git", "docker"):
         available = shutil.which(executable) is not None
         result("PASS" if available else "FAIL", executable.title())

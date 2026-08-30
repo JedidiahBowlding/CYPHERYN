@@ -147,7 +147,7 @@ def json_export(
 ) -> bytes:
     generated = datetime.now(UTC).isoformat()
     body = {
-        "schema": "signaltrace-investigation-export-v2",
+        "schema": "cypheryn-investigation-export-v2",
         "generated_at": generated,
         "investigation": {
             "id": investigation.id,
@@ -247,7 +247,7 @@ def timeline_csv(records: list[dict]) -> bytes:
 
 
 def _stix_id(kind: str, local_id: str) -> str:
-    return f"{kind}--{uuid.uuid5(uuid.NAMESPACE_URL, 'signaltrace:' + local_id)}"
+    return f"{kind}--{uuid.uuid5(uuid.NAMESPACE_URL, 'cypheryn:' + local_id)}"
 
 
 def stix_export(
@@ -264,7 +264,7 @@ def stix_export(
             "id": _stix_id("identity", investigation.id),
             "created": now,
             "modified": now,
-            "name": "SignalTrace",
+            "name": "CYPHERYN",
             "identity_class": "system",
         }
     ]
@@ -315,13 +315,13 @@ def stix_export(
                 "modified": now,
                 "abstract": finding.title,
                 "content": finding.description,
-                "authors": ["SignalTrace"],
+                "authors": ["CYPHERYN"],
                 "labels": [finding.severity, finding.status, finding.provider],
                 "object_refs": [_stix_id("identity", investigation.id)],
-                "x_signaltrace_status": finding.status,
-                "x_signaltrace_provider_observed_at": iso(finding.provider_observed_at),
-                "x_signaltrace_direct_observed_at": iso(finding.direct_observed_at),
-                "x_signaltrace_verification_history": finding.verification_history or [],
+                "x_cypheryn_status": finding.status,
+                "x_cypheryn_provider_observed_at": iso(finding.provider_observed_at),
+                "x_cypheryn_direct_observed_at": iso(finding.direct_observed_at),
+                "x_cypheryn_verification_history": finding.verification_history or [],
             }
         )
     bundle = {

@@ -1,6 +1,6 @@
-# SignalTrace Operations and Observability
+# CYPHERYN Operations and Observability
 
-SignalTrace separates API readiness from worker readiness. `/health/ready` proves the API can reach its database. `/health/workers` reports whether at least one persisted worker heartbeat is newer than 45 seconds and includes safe queue state. An API may therefore be ready while collection is degraded because all workers are stale.
+CYPHERYN separates API readiness from worker readiness. `/health/ready` proves the API can reach its database. `/health/workers` reports whether at least one persisted worker heartbeat is newer than 45 seconds and includes safe queue state. An API may therefore be ready while collection is degraded because all workers are stale.
 
 ## Metrics
 

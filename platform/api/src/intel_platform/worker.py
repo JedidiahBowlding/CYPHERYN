@@ -1434,12 +1434,12 @@ def generate_due_reports(session_factory=SessionLocal) -> int:
                 sources,
                 schedule.style,
                 narrative,
-                brand_name=organization.report_title if organization else "SignalTrace",
+                brand_name=organization.report_title if organization else "CYPHERYN",
                 brand_accent=organization.report_accent if organization else "#147d72",
                 brand_logo=organization.report_logo if organization else None,
                 integrity_anchor=anchor,
             )
-            filename = f"signaltrace-{investigation.id[:8]}-{schedule.style}-{now:%Y%m%d-%H%M}.pdf"
+            filename = f"cypheryn-{investigation.id[:8]}-{schedule.style}-{now:%Y%m%d-%H%M}.pdf"
             db.add(
                 ReportArtifact(
                     investigation_id=investigation.id,
@@ -1473,7 +1473,7 @@ def main() -> None:
     upgrade_existing_schema()
     register_builtin_providers(registry)
     worker_id = os.getenv("WORKER_ID", f"{socket.gethostname()}:{os.getpid()}")
-    worker_version = os.getenv("SIGNALTRACE_VERSION", "development")
+    worker_version = os.getenv("CYPHERYN_VERSION", "development")
     heartbeat_stop = threading.Event()
     threading.Thread(
         target=worker_heartbeat_loop,
@@ -1483,7 +1483,7 @@ def main() -> None:
             "version": worker_version,
             "stop": heartbeat_stop,
         },
-        name="signaltrace-worker-heartbeat",
+        name="cypheryn-worker-heartbeat",
         daemon=True,
     ).start()
     print(f"job worker ready: {worker_id}", flush=True)
@@ -1501,7 +1501,7 @@ def main() -> None:
                     key_directory=Path(settings.integrity_anchor_key_dir),
                     destination_directory=Path(settings.integrity_anchor_store_dir),
                     interval_minutes=settings.integrity_anchor_interval_minutes,
-                    application_version=os.getenv("SIGNALTRACE_VERSION", "development"),
+                    application_version=os.getenv("CYPHERYN_VERSION", "development"),
                 )
             processed = process_one(worker_id)
             if processed is None:

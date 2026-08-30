@@ -24,8 +24,8 @@ export default function LandingPage() {
     <main className="landing-page">
       <nav className="landing-nav">
         <Link className="landing-brand" href="/">
-          <Image src="/signaltrace-logo.png" alt="" width={1254} height={1254} />
-          <span>SignalTrace</span>
+          <Image src="/cypheryn-logo.png" alt="" width={1254} height={1254} />
+          <span>CYPHERYN</span>
         </Link>
         <div>
           <a href="#capabilities">Capabilities</a>
@@ -44,7 +44,7 @@ export default function LandingPage() {
             Follow every signal.<span>Prove every finding.</span>
           </h1>
           <p className="hero-lede">
-            SignalTrace turns authorized OSINT, attack-surface observations, and
+            CYPHERYN turns authorized OSINT, attack-surface observations, and
             threat intelligence into evidence you can inspect, compare, and act
             on.
           </p>
@@ -67,13 +67,13 @@ export default function LandingPage() {
             </div>
           </dl>
         </div>
-        <div className="logo-banner" aria-label="SignalTrace identity banner">
+        <div className="logo-banner" aria-label="CYPHERYN identity banner">
           <div className="banner-grid" />
           <div className="banner-orbit orbit-one" />
           <div className="banner-orbit orbit-two" />
           <Image
-            src="/signaltrace-logo.png"
-            alt="SignalTrace radar spider logo"
+            src="/cypheryn-logo.png"
+            alt="CYPHERYN connected intelligence shield logo"
             width={1254}
             height={1254}
             priority
@@ -137,8 +137,8 @@ export default function LandingPage() {
       </section>
       <footer className="landing-footer">
         <div className="landing-brand">
-          <Image src="/signaltrace-logo.png" alt="" width={1254} height={1254} />
-          <span>SignalTrace</span>
+          <Image src="/cypheryn-logo.png" alt="" width={1254} height={1254} />
+          <span>CYPHERYN</span>
         </div>
         <p>Authorized intelligence. Evidence-grounded decisions.</p>
         <Link href="/dashboard">Enter platform →</Link>

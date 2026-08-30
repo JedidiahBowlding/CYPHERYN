@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete local SignalTrace Docker volumes after explicit confirmation."""
+"""Delete local CYPHERYN Docker volumes after explicit confirmation."""
 
 from __future__ import annotations
 

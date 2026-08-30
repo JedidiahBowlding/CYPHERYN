@@ -45,7 +45,7 @@ class SuccessfulRunner:
     available = True
 
     def run(self, command, policy, *, cancellation=None):
-        assert policy.image == "signaltrace/nmap:1.0.0"
+        assert policy.image == "cypheryn/nmap:1.0.0"
         assert policy.environment == {}
         return ScannerExecutionResult(
             command=tuple(command),
@@ -93,7 +93,7 @@ def _request(**overrides):
 
 def test_orchestrator_requires_auth_and_enforces_server_allowlists(monkeypatch) -> None:
     monkeypatch.setenv("SCANNER_ORCHESTRATOR_TOKEN", TOKEN)
-    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"signaltrace/nmap:1.0.0"}')
+    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"cypheryn/nmap:1.0.0"}')
     scanner_orchestrator._executions.clear()
     client = TestClient(scanner_orchestrator.app)
     assert client.post("/v1/executions", json=_request()).status_code == 401
@@ -122,7 +122,7 @@ def test_orchestrator_requires_auth_and_enforces_server_allowlists(monkeypatch) 
 
 def test_orchestrator_executes_and_returns_only_job_scoped_results(monkeypatch) -> None:
     monkeypatch.setenv("SCANNER_ORCHESTRATOR_TOKEN", TOKEN)
-    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"signaltrace/nmap:1.0.0"}')
+    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"cypheryn/nmap:1.0.0"}')
     monkeypatch.setattr(scanner_orchestrator.threading, "Thread", ImmediateThread)
     monkeypatch.setattr(scanner_orchestrator, "DockerApiScannerRunner", SuccessfulRunner)
     scanner_orchestrator._executions.clear()
@@ -141,7 +141,7 @@ def test_orchestrator_executes_and_returns_only_job_scoped_results(monkeypatch) 
 
 def test_orchestrator_rejects_excessive_policy_and_bounds_capacity(monkeypatch) -> None:
     monkeypatch.setenv("SCANNER_ORCHESTRATOR_TOKEN", TOKEN)
-    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"signaltrace/nmap:1.0.0"}')
+    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"cypheryn/nmap:1.0.0"}')
     headers = {"Authorization": f"Bearer {TOKEN}"}
     client = TestClient(scanner_orchestrator.app)
     excessive = _request()
@@ -152,23 +152,23 @@ def test_orchestrator_rejects_excessive_policy_and_bounds_capacity(monkeypatch) 
 def test_production_requires_digest_and_managed_active_egress(monkeypatch) -> None:
     monkeypatch.setenv("PLATFORM_ENVIRONMENT", "production")
     monkeypatch.setenv("SCANNER_ORCHESTRATOR_TOKEN", TOKEN)
-    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"signaltrace/nmap:1.0.0"}')
+    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"cypheryn/nmap:1.0.0"}')
     monkeypatch.setattr(scanner_orchestrator.threading, "Thread", DeferredThread)
     scanner_orchestrator._executions.clear()
     client = TestClient(scanner_orchestrator.app)
     headers = {"Authorization": f"Bearer {TOKEN}"}
     assert client.post("/v1/executions", headers=headers, json=_request()).status_code == 422
-    digest = "signaltrace/nmap@sha256:" + "a" * 64
+    digest = "cypheryn/nmap@sha256:" + "a" * 64
     monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", json.dumps({"nmap": digest}))
     assert client.post("/v1/executions", headers=headers, json=_request()).status_code == 422
     request = _request()
-    request["policy"]["network"] = "signaltrace-egress-owned-targets"
+    request["policy"]["network"] = "cypheryn-egress-owned-targets"
     assert client.post("/v1/executions", headers=headers, json=request).status_code == 202
 
 
 def test_orchestrator_cancellation_reaches_the_container_runner(monkeypatch) -> None:
     monkeypatch.setenv("SCANNER_ORCHESTRATOR_TOKEN", TOKEN)
-    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"signaltrace/nmap:1.0.0"}')
+    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"cypheryn/nmap:1.0.0"}')
     monkeypatch.setattr(scanner_orchestrator, "DockerApiScannerRunner", CancellableRunner)
     CancellableRunner.started.clear()
     scanner_orchestrator._executions.clear()
@@ -217,7 +217,7 @@ def test_worker_client_uses_token_and_does_not_select_an_image() -> None:
             200,
             json={
                 "status": "completed",
-                "image": "signaltrace/nmap:1.0.0",
+                "image": "cypheryn/nmap:1.0.0",
                 "container_id": "container-id",
                 "returncode": 0,
                 "stdout": "ok",
@@ -237,7 +237,7 @@ def test_worker_client_uses_token_and_does_not_select_an_image() -> None:
     result = client.run(
         "nmap",
         ["nmap", "-sV", "203.0.113.10"],
-        ScannerPolicy(image="signaltrace/nmap:1.0.0", network="bridge"),
+        ScannerPolicy(image="cypheryn/nmap:1.0.0", network="bridge"),
         job_id="job-1",
         target_id="target-1",
         authorization_id="authorization-1",
@@ -264,7 +264,7 @@ def test_worker_client_fails_closed_on_orchestrator_rejection(
         client.run(
             "nmap",
             ["nmap", "203.0.113.10"],
-            ScannerPolicy(image="signaltrace/nmap:1.0.0"),
+            ScannerPolicy(image="cypheryn/nmap:1.0.0"),
             job_id="job-1",
             target_id="target-1",
             authorization_id="authorization-1",
@@ -293,7 +293,7 @@ def test_worker_client_propagates_terminal_state(
         client.run(
             "nmap",
             ["nmap", "203.0.113.10"],
-            ScannerPolicy(image="signaltrace/nmap:1.0.0"),
+            ScannerPolicy(image="cypheryn/nmap:1.0.0"),
             job_id="job-1",
             target_id="target-1",
             authorization_id="authorization-1",
@@ -315,9 +315,9 @@ def test_docker_api_runner_applies_container_policy_and_cleans_up() -> None:
         requests.append(request)
         if request.url.path == "/_ping":
             return httpx.Response(200, text="OK")
-        if request.url.path == "/networks/signaltrace-egress-owned-targets":
+        if request.url.path == "/networks/cypheryn-egress-owned-targets":
             return httpx.Response(
-                200, json={"Labels": {"signaltrace.egress-policy": "enforced"}}
+                200, json={"Labels": {"cypheryn.egress-policy": "enforced"}}
             )
         if request.url.path == "/containers/create":
             config = json.loads(request.content)
@@ -326,8 +326,8 @@ def test_docker_api_runner_applies_container_policy_and_cleans_up() -> None:
             assert config["HostConfig"]["CapDrop"] == ["ALL"]
             assert config["HostConfig"]["SecurityOpt"] == ["no-new-privileges:true"]
             assert config["Labels"] == {
-                "signaltrace.scanner.managed": "true",
-                "signaltrace.scanner.namespace": "signaltrace",
+                "cypheryn.scanner.managed": "true",
+                "cypheryn.scanner.namespace": "cypheryn",
             }
             assert config["Tty"] is False
             return httpx.Response(201, json={"Id": container_id})
@@ -348,7 +348,7 @@ def test_docker_api_runner_applies_container_policy_and_cleans_up() -> None:
     result = runner.run(
         ["nmap", "203.0.113.10"],
         ScannerPolicy(
-            image="signaltrace/nmap:1.0.0", network="signaltrace-egress-owned-targets"
+            image="cypheryn/nmap:1.0.0", network="cypheryn-egress-owned-targets"
         ),
     )
     assert result.stdout == "bounded output"
@@ -369,8 +369,8 @@ def test_docker_runner_rejects_unattested_egress_network() -> None:
         runner.run(
             ["nmap", "203.0.113.10"],
             ScannerPolicy(
-                image="signaltrace/nmap:1.0.0",
-                network="signaltrace-egress-owned-targets",
+                image="cypheryn/nmap:1.0.0",
+                network="cypheryn-egress-owned-targets",
             ),
         )
 
@@ -399,7 +399,7 @@ def test_docker_api_runner_forces_cancellation() -> None:
     with pytest.raises(ScannerCancelledError):
         runner.run(
             ["nmap", "203.0.113.10"],
-            ScannerPolicy(image="signaltrace/nmap:1.0.0"),
+            ScannerPolicy(image="cypheryn/nmap:1.0.0"),
             cancellation=cancellation,
         )
     assert deleted
@@ -412,7 +412,7 @@ def test_docker_api_runner_rejects_engine_failure() -> None:
     with pytest.raises(ScannerIsolationError, match="create"):
         runner.run(
             ["nmap", "203.0.113.10"],
-            ScannerPolicy(image="signaltrace/nmap:1.0.0"),
+            ScannerPolicy(image="cypheryn/nmap:1.0.0"),
         )
 
     def unavailable(request: httpx.Request) -> httpx.Response:
@@ -422,5 +422,5 @@ def test_docker_api_runner_rejects_engine_failure() -> None:
     with pytest.raises(ScannerUnavailableError):
         disconnected.run(
             ["nmap", "203.0.113.10"],
-            ScannerPolicy(image="signaltrace/nmap:1.0.0"),
+            ScannerPolicy(image="cypheryn/nmap:1.0.0"),
         )

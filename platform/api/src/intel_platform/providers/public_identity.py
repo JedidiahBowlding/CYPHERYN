@@ -28,7 +28,7 @@ class PublicIdentityProvider:
         timeout = self._remaining_timeout(context)
         headers = {
             "Accept": "application/vnd.github+json",
-            "User-Agent": "SignalTrace-Defensive-OSINT/1.0",
+            "User-Agent": "CYPHERYN-Defensive-OSINT/1.0",
             "X-GitHub-Api-Version": "2022-11-28",
         }
         target_type = context.target.target_type.value

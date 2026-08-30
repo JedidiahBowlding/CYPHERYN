@@ -1,4 +1,4 @@
-# SignalTrace Tool Integration Roadmap
+# CYPHERYN Tool Integration Roadmap
 
 ## Phase 1 — Discovery and validation
 
@@ -7,7 +7,7 @@
 - [x] Integrate Naabu for authorized TCP port discovery
 - [x] Integrate Nuclei for template-based vulnerability checks
 - [x] Integrate testssl.sh for TLS and cipher analysis
-- [x] Normalize results into SignalTrace entities, evidence, and findings
+- [x] Normalize results into CYPHERYN entities, evidence, and findings
 - [ ] Apply authorization, timeout, cancellation, and rate-limit controls
 - [x] Add individual enable/disable controls for every tool
 - [x] Display tool versions and health status
@@ -110,7 +110,7 @@
 - [ ] Integrate MISP feeds and events
 - [x] Import STIX 2.1 bundles
 - [x] Support TAXII collections
-- [x] Correlate indicators with SignalTrace assets
+- [x] Correlate indicators with CYPHERYN assets
 - [x] Track malware, campaigns, actors, and infrastructure
 - [x] Add indicator confidence and expiration
 - [x] Prevent old indicators from creating permanent false alerts

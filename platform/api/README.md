@@ -1,6 +1,6 @@
-# SignalTrace API and worker
+# CYPHERYN API and worker
 
-The SignalTrace backend owns authentication, organizations, authorization scope, investigations, targets, provider policy, durable jobs, normalized evidence, entities, relationships, findings, monitoring, alerts, reports, and audit history.
+The CYPHERYN backend owns authentication, organizations, authorization scope, investigations, targets, provider policy, durable jobs, normalized evidence, entities, relationships, findings, monitoring, alerts, reports, and audit history.
 
 ## Runtime behavior
 

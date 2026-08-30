@@ -183,7 +183,7 @@ def main() -> None:
         key = abuse_key(args.api_dir)
     except (OSError, RuntimeError, ValueError):
         key = ""
-    with httpx.Client(timeout=90, follow_redirects=False, headers={"User-Agent": "SignalTrace-FeedSync/1.0"}) as client:
+    with httpx.Client(timeout=90, follow_redirects=False, headers={"User-Agent": "CYPHERYN-FeedSync/1.0"}) as client:
         for name, loader in (
             ("mitre_attack", lambda: mitre_objects(client)),
             ("cisa_kev", lambda: cisa_objects(client)),

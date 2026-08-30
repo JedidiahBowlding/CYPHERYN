@@ -1,4 +1,4 @@
-name: SignalTrace cross-platform
+name: CYPHERYN cross-platform
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - "scripts/**"
       - "compose.yaml"
       - ".env.example"
-      - ".github/workflows/signaltrace-cross-platform.yml"
+      - ".github/workflows/cypheryn-cross-platform.yml"
   pull_request:
 
 jobs:

@@ -11,7 +11,7 @@ async function api<T>(path: string, body: unknown): Promise<T> {
     headers: {
       "Content-Type": "application/json",
       "X-Dev-Subject": "local-analyst",
-      "X-Dev-Email": "analyst@signaltrace.local",
+      "X-Dev-Email": "analyst@cypheryn.local",
     },
     body: JSON.stringify(body),
   });
@@ -84,7 +84,7 @@ export default function NewInvestigation() {
       <header className="workflow-top">
         <Link href="/investigations">← Investigations</Link>
         <div className="workflow-brand">
-          <span>S</span>SignalTrace
+          <span>S</span>CYPHERYN
         </div>
         <p>Authorized collection only</p>
       </header>

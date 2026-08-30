@@ -1,6 +1,6 @@
 # External Integrity Anchoring
 
-SignalTrace automatically creates signed, independently retained checkpoints for every
+CYPHERYN automatically creates signed, independently retained checkpoints for every
 investigation that contains evidence. This makes later evidence-chain rewriting detectable
 against a checkpoint outside PostgreSQL.
 
@@ -17,7 +17,7 @@ against a checkpoint outside PostgreSQL.
 
 The default local paths are under `platform/.runtime/`, which is excluded from Git. For a
 production trust boundary, set `PLATFORM_ANCHOR_STORE_DIR` to storage administered outside
-the SignalTrace host, such as an immutable NFS target, synchronized WORM volume, or a mount
+the CYPHERYN host, such as an immutable NFS target, synchronized WORM volume, or a mount
 backed by object-lock storage. Filesystem permissions are defense in depth; the external
 storage system must enforce retention and deletion policy independently.
 
@@ -59,7 +59,7 @@ unless organizational policy deliberately makes historical re-signing impossible
 
 ## Offline verification
 
-Copy an anchor bundle to a machine outside the SignalTrace trust domain and run:
+Copy an anchor bundle to a machine outside the CYPHERYN trust domain and run:
 
 ```bash
 cd platform/api
@@ -82,7 +82,7 @@ reference without access to the live database.
 
 ## Security limitation
 
-Anchoring is tamper evidence, not absolute prevention. An attacker controlling SignalTrace,
+Anchoring is tamper evidence, not absolute prevention. An attacker controlling CYPHERYN,
 the signing key, and the external destination can replace future checkpoints. Independent
 retention, restricted key access, monitored rotation, and periodic offline verification are
 what create the separate trust domain.

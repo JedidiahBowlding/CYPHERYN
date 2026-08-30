@@ -1,12 +1,12 @@
-name: signaltrace
+name: cypheryn
 
 services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-signaltrace}
-      POSTGRES_USER: ${POSTGRES_USER:-signaltrace}
+      POSTGRES_DB: ${POSTGRES_DB:-cypheryn}
+      POSTGRES_USER: ${POSTGRES_USER:-cypheryn}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env and set POSTGRES_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -23,10 +23,10 @@ services:
     restart: unless-stopped
     environment: &api-environment
       PLATFORM_ENVIRONMENT: ${PLATFORM_ENVIRONMENT:-development}
-      PLATFORM_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-signaltrace}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-signaltrace}
+      PLATFORM_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-cypheryn}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cypheryn}
       PLATFORM_ALLOW_DEV_IDENTITY: ${PLATFORM_ALLOW_DEV_IDENTITY:-true}
       PLATFORM_OIDC_ISSUER: ${PLATFORM_OIDC_ISSUER:-}
-      PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:-signaltrace}
+      PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:-cypheryn}
       PLATFORM_OIDC_JWKS_URL: ${PLATFORM_OIDC_JWKS_URL:-}
       PLATFORM_CORS_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3000}"]'
       PLATFORM_PROVIDER_ENCRYPTION_KEY: ${PLATFORM_PROVIDER_ENCRYPTION_KEY:?Run python scripts/setup.py to generate PLATFORM_PROVIDER_ENCRYPTION_KEY}
@@ -34,7 +34,7 @@ services:
       PLATFORM_LOCAL_AI_MODEL: ${PLATFORM_LOCAL_AI_MODEL:-qwen2.5-coder:7b}
       PLATFORM_LOCAL_AI_TIMEOUT_SECONDS: ${PLATFORM_LOCAL_AI_TIMEOUT_SECONDS:-120}
       PLATFORM_SCANNER_IMAGES: ${PLATFORM_SCANNER_IMAGES:-{}}
-      SIGNALTRACE_VERSION: ${SIGNALTRACE_VERSION:-development}
+      CYPHERYN_VERSION: ${CYPHERYN_VERSION:-development}
       PLATFORM_QUARANTINE_DIR: /data/quarantine
       PLATFORM_CLAMAV_DATABASE_DIR: /data/clamav-db
       PLATFORM_SMTP_HOST: ${PLATFORM_SMTP_HOST:-}
@@ -44,7 +44,7 @@ services:
       PLATFORM_SMTP_FROM: ${PLATFORM_SMTP_FROM:-}
       PLATFORM_SMTP_USE_TLS: ${PLATFORM_SMTP_USE_TLS:-true}
       PLATFORM_INTEGRITY_ANCHOR_ENABLED: ${PLATFORM_INTEGRITY_ANCHOR_ENABLED:-true}
-      PLATFORM_INTEGRITY_ANCHOR_KEY_DIR: /run/secrets/signaltrace-anchor
+      PLATFORM_INTEGRITY_ANCHOR_KEY_DIR: /run/secrets/cypheryn-anchor
       PLATFORM_INTEGRITY_ANCHOR_STORE_DIR: /anchors
       PLATFORM_INTEGRITY_ANCHOR_INTERVAL_MINUTES: ${PLATFORM_INTEGRITY_ANCHOR_INTERVAL_MINUTES:-1440}
     depends_on:
@@ -85,7 +85,7 @@ services:
     volumes:
       - quarantine-data:/data/quarantine
       - clamav-data:/data/clamav-db
-      - ${PLATFORM_ANCHOR_KEY_DIR:-./platform/.runtime/anchor-keys}:/run/secrets/signaltrace-anchor:ro
+      - ${PLATFORM_ANCHOR_KEY_DIR:-./platform/.runtime/anchor-keys}:/run/secrets/cypheryn-anchor:ro
       - ${PLATFORM_ANCHOR_STORE_DIR:-./platform/.runtime/anchors}:/anchors
     read_only: true
     tmpfs: [/tmp]
@@ -123,7 +123,7 @@ services:
     environment:
       PLATFORM_ENVIRONMENT: ${PLATFORM_ENVIRONMENT:-development}
       SCANNER_ORCHESTRATOR_TOKEN: ${SCANNER_ORCHESTRATOR_TOKEN:?Run python scripts/setup.py to generate SCANNER_ORCHESTRATOR_TOKEN}
-      SCANNER_ORCHESTRATOR_NAMESPACE: ${COMPOSE_PROJECT_NAME:-signaltrace}
+      SCANNER_ORCHESTRATOR_NAMESPACE: ${COMPOSE_PROJECT_NAME:-cypheryn}
       PLATFORM_SCANNER_IMAGES: ${PLATFORM_SCANNER_IMAGES:-{}}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

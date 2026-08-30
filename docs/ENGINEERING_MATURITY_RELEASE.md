@@ -1,4 +1,4 @@
-# SignalTrace Engineering Maturity Release
+# CYPHERYN Engineering Maturity Release
 
 This milestone proves and hardens existing behavior. It does not expand the provider catalog.
 
@@ -8,7 +8,7 @@ High-risk local adapters fail closed unless `PLATFORM_SCANNER_IMAGES` maps the p
 
 Authorization remains checked immediately before provider execution. If authorization expires after a scan has begun, the current execution is terminated only when cancellation/deadline/policy requests it; expiration always prevents a new execution or retry. Scanner audit events must record provider/version/image, target and authorization identifiers, timing, outcome, limits, and policy—not secrets or raw credentials.
 
-Docker Desktop cannot enforce destination-level egress ACLs with a plain bridge alone. `network=none` is the safe default. Network scanners require an explicitly selected bridge or SignalTrace-managed network plus application-level public-target validation. Production deployments should put that network behind an egress-policy gateway or isolated worker node.
+Docker Desktop cannot enforce destination-level egress ACLs with a plain bridge alone. `network=none` is the safe default. Network scanners require an explicitly selected bridge or CYPHERYN-managed network plus application-level public-target validation. Production deployments should put that network behind an egress-policy gateway or isolated worker node.
 
 ## Observability model
 
@@ -19,9 +19,9 @@ Workers persist identity, version, heartbeat, last successful poll, active-job c
 Provider tiers are independent of runtime readiness:
 
 - `SUPPORTED`: maintained and covered by the complete deterministic support contract.
-- `EXPERIMENTAL`: functioning SignalTrace-native integration whose complete support contract is not yet certified.
+- `EXPERIMENTAL`: functioning CYPHERYN-native integration whose complete support contract is not yet certified.
 - `ADAPTER_ONLY`: an adapter exists, but installation/service availability and certification are not guaranteed.
-- `INHERITED`: upstream behavior retained for compatibility and not claimed as SignalTrace-supported.
+- `INHERITED`: upstream behavior retained for compatibility and not claimed as CYPHERYN-supported.
 
 The current supported contract set is VirusTotal, Shodan, AlienVault OTX, Censys, and ThreatFox. Each adapter independently proves request construction, missing and rejected credentials, throttling, invalid JSON, invalid provider schemas, transport and deadline timeouts, pre-flight and in-stream cancellation, provider-specific security normalization, redaction, and evidence provenance. No live third-party call runs in ordinary CI. Runtime display separately reports adapter presence, installation, configuration, health, contract status, Live Verified timestamp, version, and failure reason. See `docs/PROVIDER_CERTIFICATION.md` for the enforced matrix.
 
@@ -29,19 +29,19 @@ Live verification is fresh for seven days, aging from day 7 through day 29, and 
 
 ## Critical coverage policy
 
-Coverage gates focus on owned security/integrity modules: integrity and redaction at 90%, provider controls at 85%, process termination and scanner isolation at 80%, observability at 85%, and external anchoring at 70%. A global 60% floor prevents broad regression. Inherited SpiderFoot is excluded from SignalTrace-native thresholds.
+Coverage gates focus on owned security/integrity modules: integrity and redaction at 90%, provider controls at 85%, process termination and scanner isolation at 80%, observability at 85%, and external anchoring at 70%. A global 60% floor prevents broad regression. Inherited SpiderFoot is excluded from CYPHERYN-native thresholds.
 
 The low-coverage orchestration, detection, normalization, report, notification, and malware modules remain explicit pre-`0.9.0` work. The project will raise thresholds only alongside behavior-focused tests, never meaningless line execution.
 
 ## External integrity anchoring
 
-SignalTrace automatically calculates versioned checkpoints containing scope, chain head, record count, first/last record IDs, timestamp, application version, and SHA-256 algorithm. An external Ed25519 private key signs canonical JSON. The worker schedules checkpoints when evidence changes and at a configurable interval, writes exclusive immutable anchor bundles to a separately mounted destination, and retains prior keys during rotation. JSON and technical PDF exports reference the latest public checkpoint metadata. Private keys are files outside normal database records and are never mounted into the API.
+CYPHERYN automatically calculates versioned checkpoints containing scope, chain head, record count, first/last record IDs, timestamp, application version, and SHA-256 algorithm. An external Ed25519 private key signs canonical JSON. The worker schedules checkpoints when evidence changes and at a configurable interval, writes exclusive immutable anchor bundles to a separately mounted destination, and retains prior keys during rotation. JSON and technical PDF exports reference the latest public checkpoint metadata. Private keys are files outside normal database records and are never mounted into the API.
 
 The provider-neutral destination contract currently includes filesystem storage suitable for a separately mounted or synchronized trust domain. S3 Object Lock, immutable cloud storage, transparency services, or customer verification endpoints can implement the same interface. The offline verifier checks signature, optional expected key identity, record hashes, chain continuity, head, count, and scope.
 
 ```bash
 cd platform/api
-python -m intel_platform.integrity_anchor generate-key /secure/signaltrace-anchor.pem
+python -m intel_platform.integrity_anchor generate-key /secure/cypheryn-anchor.pem
 python -m intel_platform.integrity_anchor verify export.json checkpoint.anchor.json \
   --expected-key-id ed25519:<trusted-id>
 ```
@@ -52,7 +52,7 @@ Anchoring detects divergence from the independently retained checkpoint. It does
 
 The repository now includes contribution, conduct, security, changelog, issue/PR, and dependency-update policy. A version tag runs tests, focused coverage, lint/type/build/render, dependency audits, shipped-image scans, SBOM generation, source packaging, SHA-256 checksums, GitHub provenance attestation, and GitHub Release publication.
 
-Recommended `main` protection must be configured by the repository owner: require pull requests and review, require Tests, SignalTrace cross-platform, Security and supply chain, and CodeQL, dismiss stale approvals, block force pushes/deletion, and require conversation resolution. Repository settings are an external control and cannot be proven by files alone.
+Recommended `main` protection must be configured by the repository owner: require pull requests and review, require Tests, CYPHERYN cross-platform, Security and supply chain, and CodeQL, dismiss stale approvals, block force pushes/deletion, and require conversation resolution. Repository settings are an external control and cannot be proven by files alone.
 
 ## Known limitations
 

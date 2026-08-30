@@ -1,4 +1,4 @@
-"""One-time local setup: rotate Greenbone's default password into SignalTrace."""
+"""One-time local setup: rotate Greenbone's default password into CYPHERYN."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ API = "http://127.0.0.1:8000"
 HEADERS = {
     "Content-Type": "application/json",
     "X-Dev-Subject": "local-analyst",
-    "X-Dev-Email": "analyst@signaltrace.local",
+    "X-Dev-Email": "analyst@cypheryn.local",
 }
 
 
@@ -33,7 +33,7 @@ def main() -> None:
         return
     organizations = request("/api/v1/organizations")
     if not organizations:
-        raise RuntimeError("Create a SignalTrace organization before securing Greenbone")
+        raise RuntimeError("Create a CYPHERYN organization before securing Greenbone")
     organization_id = organizations[0]["id"]
     alphabet = string.ascii_letters + string.digits + "-_"
     password = "".join(secrets.choice(alphabet) for _ in range(40))
@@ -88,7 +88,7 @@ def main() -> None:
             "-T",
             "gvm-tools",
             "python3",
-            "/opt/signaltrace/gmp_bridge.py",
+            "/opt/cypheryn/gmp_bridge.py",
         ],
         input=json.dumps({"action": "ping", "username": "admin", "password": password}),
         capture_output=True,
@@ -100,8 +100,8 @@ def main() -> None:
     response = json.loads(lines[-1]) if lines else {}
     if verification.returncode != 0 or not response.get("ok"):
         raise RuntimeError("The rotated Greenbone credential could not be verified")
-    SENTINEL.write_text("SignalTrace manages the rotated Greenbone credential.\n")
-    print("Greenbone password rotated and stored in SignalTrace's encrypted credential store.")
+    SENTINEL.write_text("CYPHERYN manages the rotated Greenbone credential.\n")
+    print("Greenbone password rotated and stored in CYPHERYN's encrypted credential store.")
 
 
 if __name__ == "__main__":

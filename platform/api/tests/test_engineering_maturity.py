@@ -54,14 +54,14 @@ def test_scanner_policy_rejects_latest_and_unmanaged_networks() -> None:
 
 def test_scanner_command_has_hard_resource_and_filesystem_limits(tmp_path: Path) -> None:
     runner = DisposableScannerRunner("docker")
-    policy = ScannerPolicy(image="scanner:1.2.3", network="signaltrace-scanner-egress")
+    policy = ScannerPolicy(image="scanner:1.2.3", network="cypheryn-scanner-egress")
     command = runner._docker_command(["scan", "example.test"], policy, tmp_path / "cid")
     assert "--read-only" in command
     assert "--cap-drop=ALL" in command
     assert "--security-opt=no-new-privileges:true" in command
-    assert "--label=signaltrace.scanner.managed=true" in command
+    assert "--label=cypheryn.scanner.managed=true" in command
     assert "--pids-limit=128" in command
-    assert "--network=signaltrace-scanner-egress" in command
+    assert "--network=cypheryn-scanner-egress" in command
     assert not any("docker.sock" in item for item in command)
 
 
@@ -132,7 +132,7 @@ def test_scanner_orchestrator_cleanup_removes_only_valid_managed_container_ids(
     monkeypatch.setattr(subprocess, "run", fake_run)
     removed = DisposableScannerRunner("docker").cleanup_managed()
     assert removed == 1
-    assert "label=signaltrace.scanner.managed=true" in commands[0]
+    assert "label=cypheryn.scanner.managed=true" in commands[0]
     assert commands[1][-1] == "a" * 64
 
 
@@ -167,8 +167,8 @@ def test_worker_and_queue_health_are_distinct_from_api_health(tmp_path: Path) ->
         snapshot = operational_snapshot(db)
         assert snapshot["worker_healthy"] is True
         metrics = prometheus_metrics(snapshot)
-        assert "signaltrace_worker_healthy 1" in metrics
-        assert 'signaltrace_provider_requests{provider="virustotal"} 1' in metrics
+        assert "cypheryn_worker_healthy 1" in metrics
+        assert 'cypheryn_provider_requests{provider="virustotal"} 1' in metrics
 
 
 def test_observability_classifies_provider_failures_and_redacts_log_fields(
@@ -205,7 +205,7 @@ def test_observability_classifies_provider_failures_and_redacts_log_fields(
     assert correlation_id("valid-correlation.id") == "valid-correlation.id"
     assert correlation_id("not valid!") != "not valid!"
     sensitive_value = "must-not-appear"
-    with caplog.at_level("INFO", logger="signaltrace"):
+    with caplog.at_level("INFO", logger="cypheryn"):
         structured_log("test.redaction", token=sensitive_value, job_id="safe")
     assert sensitive_value not in caplog.text
     assert '"job_id": "safe"' in caplog.text
@@ -278,7 +278,7 @@ def test_signed_anchor_verifies_chain_and_detects_divergence(tmp_path: Path) -> 
 
 def test_anchor_signature_rejects_substitution() -> None:
     checkpoint = {
-        "checkpoint_version": "signaltrace-checkpoint-v1",
+        "checkpoint_version": "cypheryn-checkpoint-v1",
         "scope_type": "investigation",
         "scope_id": "one",
         "chain_head": "a" * 64,

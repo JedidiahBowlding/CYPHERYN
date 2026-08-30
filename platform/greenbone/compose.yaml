@@ -293,7 +293,7 @@ services:
     volumes:
       - gvmd_socket_vol:/run/gvmd
       - ospd_openvas_socket_vol:/run/ospd
-      - ./gmp_bridge.py:/opt/signaltrace/gmp_bridge.py:ro
+      - ./gmp_bridge.py:/opt/cypheryn/gmp_bridge.py:ro
     depends_on:
       - gvmd
       - ospd-openvas

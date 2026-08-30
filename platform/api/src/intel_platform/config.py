@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str = "postgresql+psycopg://platform:platform@postgres:5432/platform"
     oidc_issuer: str = ""
-    oidc_audience: str = "signaltrace"
+    oidc_audience: str = "cypheryn"
     oidc_jwks_url: str = ""
     allow_dev_identity: bool = False
     cors_origins: list[str] = Field(default_factory=list)
@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     smtp_from: str = ""
     smtp_use_tls: bool = True
     integrity_anchor_enabled: bool = False
-    integrity_anchor_key_dir: str = "/run/secrets/signaltrace-anchor"
+    integrity_anchor_key_dir: str = "/run/secrets/cypheryn-anchor"
     integrity_anchor_store_dir: str = "/anchors"
     integrity_anchor_interval_minutes: int = 1440
 

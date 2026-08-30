@@ -1,4 +1,4 @@
-# SignalTrace Verification and Hardening Release
+# CYPHERYN Verification and Hardening Release
 
 This release focuses on proving and protecting existing capabilities rather than expanding the provider catalog.
 
@@ -14,7 +14,7 @@ This release focuses on proving and protecting existing capabilities rather than
 
 ## Release gate closure
 
-- The rendered landing-page test validates Vinext's optimized SignalTrace logo URL and passes with the production build.
+- The rendered landing-page test validates Vinext's optimized CYPHERYN logo URL and passes with the production build.
 - The API image upgrades Debian security packages during the build. OpenSSL resolves to the fixed `3.5.7-1~deb13u2` packages.
 - Trivy reports zero unsuppressed HIGH or CRITICAL findings for the rebuilt API image.
 - Two reviewed Trivy exceptions cover pip-vendored `msgpack` and `setuptools` source metadata; runtime package inspection confirms neither distribution is installed. The real OpenSSL findings are remediated, not suppressed.

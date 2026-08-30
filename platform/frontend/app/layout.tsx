@@ -14,11 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SignalTrace — See the Exposure. Prove the Risk.",
+  metadataBase: new URL("https://cypheryn.com"),
+  title: "CYPHERYN — See the Exposure. Prove the Risk.",
   description:
     "Local-first OSINT, attack-surface monitoring, threat intelligence, evidence graphs, and defensible remediation in one workspace.",
   openGraph: {
-    title: "SignalTrace — See the Exposure. Prove the Risk.",
+    title: "CYPHERYN — See the Exposure. Prove the Risk.",
     description:
       "Local-first OSINT, attack-surface monitoring, threat intelligence, evidence graphs, and defensible remediation in one workspace.",
     images: [
@@ -26,13 +27,13 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1744,
         height: 907,
-        alt: "SignalTrace defensive intelligence",
+        alt: "CYPHERYN defensive intelligence",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SignalTrace — See the Exposure. Prove the Risk.",
+    title: "CYPHERYN — See the Exposure. Prove the Risk.",
     description:
       "Local-first OSINT, attack-surface monitoring, threat intelligence, evidence graphs, and defensible remediation in one workspace.",
     images: ["/og.png"],

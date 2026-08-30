@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare a safe cross-platform SignalTrace development environment."""
+"""Prepare a safe cross-platform CYPHERYN development environment."""
 
 from __future__ import annotations
 
@@ -97,7 +97,7 @@ def main() -> int:
             )
             if result.returncode:
                 return result.returncode
-            print("\nSignalTrace startup requested.")
+            print("\nCYPHERYN startup requested.")
             print("Application: http://localhost:3000")
             print("API docs:   http://localhost:8000/api/docs")
             print("Run: python scripts/doctor.py")
