@@ -99,8 +99,8 @@ def integrity_anchor_ready(key_directory: Path, anchor_directory: Path, compose:
                 (
                     "from pathlib import Path; "
                     "raise SystemExit(0 if "
-                    "Path('/run/signaltrace/anchor-keys/active-key.json').is_file() and "
-                    "Path('/var/lib/signaltrace/anchors').is_dir() else 1)"
+                    "Path('/run/secrets/signaltrace-anchor/active-key.json').is_file() and "
+                    "Path('/anchors').is_dir() else 1)"
                 ),
             ],
             cwd=ROOT,
