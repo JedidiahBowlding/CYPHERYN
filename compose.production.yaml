@@ -1,0 +1,79 @@
+services:
+  api:
+    environment:
+      PLATFORM_ENVIRONMENT: production
+      PLATFORM_ALLOW_DEV_IDENTITY: "false"
+      PLATFORM_OIDC_ISSUER: ${PLATFORM_OIDC_ISSUER:?Set the Auth0 issuer URL}
+      PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:?Set the Auth0 client ID}
+      PLATFORM_OIDC_JWKS_URL: ${PLATFORM_OIDC_JWKS_URL:?Set the Auth0 JWKS URL}
+      PLATFORM_CORS_ORIGINS: '["https://app.cypheryn.com"]'
+
+  frontend:
+    build:
+      args:
+        NEXT_PUBLIC_PLATFORM_API_URL: https://app.cypheryn.com
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.4
+    restart: unless-stopped
+    command:
+      - --provider=oidc
+      - --oidc-issuer-url=${PLATFORM_OIDC_ISSUER}
+      - --client-id=${AUTH0_CLIENT_ID}
+      - --client-secret-file=/run/secrets/auth0-client-secret
+      - --redirect-url=https://app.cypheryn.com/oauth2/callback
+      - --scope=openid profile email
+      - --code-challenge-method=S256
+      - --cookie-name=__Host-cypheryn_session
+      - --cookie-secret-file=/run/secrets/oauth2-cookie-secret
+      - --cookie-secure=true
+      - --cookie-httponly=true
+      - --cookie-samesite=lax
+      - --email-domain=*
+      - --authenticated-emails-file=/run/secrets/authenticated-emails
+      - --http-address=0.0.0.0:4180
+      - --reverse-proxy=true
+      - --set-authorization-header=true
+      - --set-xauthrequest=true
+      - --skip-provider-button=true
+      - --upstream=static://202
+      - --silence-ping-logging=true
+    volumes:
+      - ${AUTH0_CLIENT_SECRET_FILE:-./platform/.runtime/auth0-client-secret}:/run/secrets/auth0-client-secret:ro
+      - ${OAUTH2_COOKIE_SECRET_FILE:-./platform/.runtime/oauth2-cookie-secret}:/run/secrets/oauth2-cookie-secret:ro
+      - ${AUTHENTICATED_EMAILS_FILE:-./platform/.runtime/authenticated-emails.txt}:/run/secrets/authenticated-emails:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [edge]
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    restart: unless-stopped
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?Set the ACME account email}
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      oauth2-proxy:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/production/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    networks: [edge]
+
+volumes:
+  caddy-data:
+  caddy-config:
