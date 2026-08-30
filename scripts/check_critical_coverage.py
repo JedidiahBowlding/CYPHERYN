@@ -27,6 +27,8 @@ THRESHOLDS = {
     "report_exports.py": 90,
     "notifications.py": 80,
     "malware_analysis.py": 90,
+    "federation.py": 70,
+    "federation_api.py": 70,
 }
 
 

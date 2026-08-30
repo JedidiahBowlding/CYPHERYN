@@ -18,6 +18,7 @@ from .auth import get_current_user, membership_for, require_writer
 from .config import get_settings
 from .database import Base, engine, get_db
 from .detection_engine import export_suricata, ingest_network_events, parse_sigma
+from .federation_api import router as federation_router
 from .integrity import verify_audit_event, verify_evidence_source
 from .integrity_anchor import latest_anchor_metadata
 from .job_events import append_job_event
@@ -156,6 +157,7 @@ app = FastAPI(
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
 )
+app.include_router(federation_router)
 
 settings = get_settings()
 if settings.cors_origins:

@@ -610,3 +610,77 @@ class ReportArtifact(Base):
     content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class FederationPeer(Base):
+    __tablename__ = "federation_peers"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "node_id", name="uq_federation_peer_org_node"),
+        Index("ix_federation_peer_org_status", "organization_id", "status"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    node_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    base_url: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    public_key: Mapped[str] = mapped_column(Text, nullable=False)
+    key_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    protocol_version: Mapped[str] = mapped_column(String(30), default="cypheryn-federation-v1")
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    capabilities: Mapped[list] = mapped_column(JSON, default=list)
+    enrolled_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class FederatedAssertion(Base):
+    __tablename__ = "federated_assertions"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "assertion_id", name="uq_federated_assertion"),
+        Index("ix_federated_assertion_subject", "organization_id", "subject_fingerprint"),
+        Index("ix_federated_assertion_issuer", "organization_id", "issuer_node_id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    assertion_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    issuer_node_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    issuer_key_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    assertion_type: Mapped[str] = mapped_column(String(60), nullable=False)
+    subject_type: Mapped[str] = mapped_column(String(60), nullable=False)
+    subject_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    assertion: Mapped[dict] = mapped_column(JSON, nullable=False)
+    verification_status: Mapped[str] = mapped_column(String(30), nullable=False)
+    trust_state: Mapped[str] = mapped_column(String(20), nullable=False)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class FederationReplayNonce(Base):
+    __tablename__ = "federation_replay_nonces"
+    __table_args__ = (
+        UniqueConstraint("issuer_node_id", "nonce", name="uq_federation_issuer_nonce"),
+        Index("ix_federation_nonce_expiry", "expires_at"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    issuer_node_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    nonce: Mapped[str] = mapped_column(String(128), nullable=False)
+    assertion_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class FederationRateWindow(Base):
+    __tablename__ = "federation_rate_windows"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "issuer_node_id", name="uq_federation_rate_issuer"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    issuer_node_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    window_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    request_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
