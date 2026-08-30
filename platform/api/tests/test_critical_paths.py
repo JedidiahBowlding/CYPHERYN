@@ -70,7 +70,9 @@ from intel_platform.worker import (
 def session_factory(tmp_path: Path):
     engine = create_engine(f"sqlite:///{tmp_path / 'critical.db'}")
     Base.metadata.create_all(engine)
-    return sessionmaker(bind=engine, expire_on_commit=False)
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    yield factory
+    engine.dispose()
 
 
 @pytest.mark.parametrize(

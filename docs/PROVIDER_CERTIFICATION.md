@@ -62,3 +62,31 @@ From `platform/api`:
 
 The complete API suite runs the same tests in hosted CI. No real provider credentials are
 required and test credential values are synthetic.
+
+## Controlled live verification
+
+Live verification is an operational check and must never run in ordinary pull-request CI.
+Use a dedicated non-production provider account with least-privilege credentials, provider
+spend/rate limits, and an owned or explicitly authorized benign indicator. Never use a real
+person's identity, an unrelated public IP, malware, or customer data merely to refresh a
+status badge.
+
+For each supported provider:
+
+1. Confirm the provider terms permit the planned query and record the target authorization.
+2. Save the credential through CYPHERYN's provider configuration; never put it in a shell
+   command, test fixture, screenshot, ticket, or CI log.
+3. Run one bounded collection against the controlled indicator and confirm that the job
+   completes, provenance contains the expected provider and target, and persisted/logged
+   output contains no credential.
+4. Record the provider, account/environment, target class (not a secret target value), job
+   ID, result, verifier, and UTC timestamp. The product's `Live Verified` timestamp must
+   match the successful collection rather than the documentation date.
+5. Exercise an invalid synthetic credential only in a disposable provider account when the
+   provider permits it; otherwise rely on the deterministic authentication contract test.
+
+Run this procedure before a release candidate and at least every 30 days for providers
+represented as Live Verified. A failed or stale check must not be hidden: retain the last
+success timestamp, expose the current health result, investigate the failure, and avoid
+claiming continued availability. Revoke the dedicated credentials when verification is no
+longer required.

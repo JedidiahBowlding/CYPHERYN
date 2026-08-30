@@ -57,6 +57,32 @@ Back up old public keys or anchor files in the independent trust domain before r
 Never delete an old private key until the applicable evidence-retention period has passed
 unless organizational policy deliberately makes historical re-signing impossible.
 
+### Key operations runbook
+
+1. Assign separate custodians for the signing-key store and independent anchor store. The
+   worker service account may read the active private key but must not administer either
+   store.
+2. Before rotation, copy the current public key, its key ID, and the latest verified anchor
+   bundle to independently administered, retention-locked storage. Private-key backups must
+   be encrypted and access-controlled; do not place them in the database, repository, CI
+   artifacts, or ordinary host backups.
+3. Run the rotation command, restart the worker, force or await a new checkpoint, and verify
+   it offline using the newly distributed expected key ID. Record the operator, time, old
+   key ID, new key ID, verification result, and change ticket.
+4. Distribute the public key and key ID through an authenticated channel independent of the
+   CYPHERYN application. Verifiers should pin the expected key ID rather than trusting a key
+   supplied only inside the bundle being checked.
+
+If a private key may be compromised, disable anchoring, preserve the key and anchor stores
+read-only for investigation, rotate from a trusted administration host, revoke the old key
+in the external verifier registry, and publish the compromise interval. Never rewrite or
+re-sign historical anchors to conceal the event.
+
+At least quarterly, perform a restore drill on a separate machine: restore the public-key
+registry and a random historical bundle, run offline verification, and record the result.
+Also test recovery from loss of the active private key. Recovery creates a new key and a
+documented continuity break; it must not silently impersonate the lost key.
+
 ## Offline verification
 
 Copy an anchor bundle to a machine outside the CYPHERYN trust domain and run:

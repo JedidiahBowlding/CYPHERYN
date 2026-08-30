@@ -21,7 +21,7 @@ THRESHOLDS = {
     "docker_api_scanner.py": 80,
     "scanner_orchestrator.py": 80,
     "scanner_orchestrator_client.py": 80,
-    "worker.py": 60,
+    "worker.py": 75,
     "detection_engine.py": 70,
     "normalization.py": 90,
     "report_exports.py": 90,

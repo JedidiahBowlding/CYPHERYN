@@ -349,7 +349,7 @@ def import_stix(
             default_ttl_days=payload.default_ttl_days,
         )
     except ValueError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     record_audit(
         db,
         organization_id=investigation.organization_id,
@@ -400,7 +400,7 @@ def review_identity_candidate(
     require_writer(db, user.id, investigation.organization_id)
     if entity.entity_type not in {"identity_profile", "breach_exposure"}:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Entity is not reviewable identity evidence",
         )
     entity.attributes = {
@@ -506,7 +506,7 @@ def analyze_malware_hash(
     require_writer(db, user.id, investigation.organization_id)
     if not payload.authorization_confirmed:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "Authorization confirmation required"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Authorization confirmation required"
         )
     sha256 = payload.sha256.lower()
     matches = correlate_hashes(db, investigation.organization_id, [sha256])
@@ -552,14 +552,14 @@ async def analyze_malware_sample(
     require_writer(db, user.id, investigation.organization_id)
     if request.headers.get("X-Analysis-Authorization") != "confirmed":
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "Authorization confirmation required"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Authorization confirmation required"
         )
     content_length = int(request.headers.get("content-length") or 0)
     if content_length > settings.malware_max_upload_bytes:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Sample exceeds 25 MiB limit")
     data = await request.body()
     if not data:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Sample is empty")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Sample is empty")
     if len(data) > settings.malware_max_upload_bytes:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Sample exceeds 25 MiB limit")
     safe_filename = Path(filename).name[:255] or "sample.bin"
@@ -641,7 +641,7 @@ def import_sigma_rule(
     try:
         parsed = parse_sigma(payload.content)
     except ValueError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     rule = db.scalar(
         select(DetectionRule).where(
             DetectionRule.organization_id == organization_id,
@@ -754,13 +754,13 @@ async def ingest_network_detection_log(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Unsupported network detection source")
     if request.headers.get("X-Analysis-Authorization") != "confirmed":
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "Authorization confirmation required"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Authorization confirmation required"
         )
     if int(request.headers.get("content-length") or 0) > 10 * 1024 * 1024:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Log exceeds 10 MiB limit")
     data = await request.body()
     if not data or len(data) > 10 * 1024 * 1024:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "A JSON-lines log is required")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "A JSON-lines log is required")
     result = ingest_network_events(db, investigation, source, data)
     record_audit(
         db,
@@ -832,7 +832,7 @@ def update_notification_preferences(
         try:
             webhook_url = validate_webhook_url(webhook_url)
         except ValueError as exc:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     preference = db.scalar(
         select(NotificationPreference).where(
             NotificationPreference.organization_id == organization_id
@@ -1058,7 +1058,7 @@ def request_finding_verification(
             canonical_address = str(ipaddress.ip_address(address))
         except ValueError as exc:
             raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "The finding does not contain a directly verifiable IP service",
             ) from exc
         direct_target = db.scalar(
@@ -1090,7 +1090,7 @@ def request_finding_verification(
         or valid_until <= now
     ):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Explicit, unexpired active authorization is required for direct verification",
         )
     job = CollectionJob(
@@ -1211,7 +1211,7 @@ def add_target(
         or not authorization.passive_allowed
     ):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "Valid passive authorization required"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Valid passive authorization required"
         )
     target = Target(
         investigation_id=investigation_id,
@@ -1290,7 +1290,7 @@ def update_target_authorization(
         or not authorization.active_allowed
     ):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Valid active authorization required",
         )
     target.authorization_id = authorization.id
@@ -1701,13 +1701,13 @@ def update_report_branding(
             )
             if match is None:
                 raise HTTPException(
-                    status.HTTP_422_UNPROCESSABLE_ENTITY, "PNG or JPEG logo required"
+                    status.HTTP_422_UNPROCESSABLE_CONTENT, "PNG or JPEG logo required"
                 )
             try:
                 logo = base64.b64decode(match.group(2), validate=True)
             except binascii.Error as exc:
                 raise HTTPException(
-                    status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid logo data"
+                    status.HTTP_422_UNPROCESSABLE_CONTENT, "Invalid logo data"
                 ) from exc
             if len(logo) > 500_000:
                 raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Logo exceeds 500 KB")
@@ -1836,7 +1836,7 @@ def create_monitor_schedule(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown provider") from exc
     if target.target_type.value not in provider.capabilities.target_types:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "Provider does not support target"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Provider does not support target"
         )
     schedule = db.scalar(
         select(MonitorSchedule).where(
@@ -1933,7 +1933,7 @@ def enqueue_collection(
     if target is not None and target.investigation_id != investigation_id:
         target = None
     if target is None:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Add an authorized target first")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add an authorized target first")
 
     try:
         provider = registry.get(payload.provider)
@@ -1941,7 +1941,7 @@ def enqueue_collection(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown provider") from exc
     if target.target_type.value not in provider.capabilities.target_types:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Provider does not support this target type",
         )
     if not provider.capabilities.passive_only:
@@ -1970,14 +1970,14 @@ def enqueue_collection(
             or valid_until <= now
         ):
             raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "Explicit, current active authorization is required for this provider",
             )
     if provider.name == "zap_active" and (
         not payload.active_attack_approved or membership.role != MembershipRole.ORGANIZATION_ADMIN
     ):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "ZAP active attack requires explicit per-run administrator approval",
         )
     if provider.capabilities.requires_credentials:
@@ -1989,7 +1989,7 @@ def enqueue_collection(
         )
         if not configuration or not configuration.encrypted_credentials:
             raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "Provider credentials are required",
             )
     try:

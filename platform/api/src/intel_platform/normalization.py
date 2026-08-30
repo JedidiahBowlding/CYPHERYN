@@ -93,5 +93,5 @@ def canonicalize_target(target_type: TargetType, value: str) -> str:
                 raise ValueError("SBOM must be a JSON, XML, or SPDX file under 50 MB")
             return str(path)
     except (ValueError, UnicodeError) as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
-    raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unsupported target type")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "unsupported target type")

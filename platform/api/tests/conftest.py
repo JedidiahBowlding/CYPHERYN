@@ -34,3 +34,4 @@ def client(tmp_path) -> Generator[TestClient, None, None]:
     yield test_client
     test_client.close()
     app.dependency_overrides.clear()
+    engine.dispose()
