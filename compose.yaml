@@ -22,7 +22,7 @@ services:
       context: ./platform/api
     restart: unless-stopped
     environment: &api-environment
-      PLATFORM_ENVIRONMENT: development
+      PLATFORM_ENVIRONMENT: ${PLATFORM_ENVIRONMENT:-development}
       PLATFORM_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-signaltrace}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-signaltrace}
       PLATFORM_ALLOW_DEV_IDENTITY: ${PLATFORM_ALLOW_DEV_IDENTITY:-true}
       PLATFORM_OIDC_ISSUER: ${PLATFORM_OIDC_ISSUER:-}
@@ -121,6 +121,7 @@ services:
       dockerfile: Dockerfile.orchestrator
     restart: unless-stopped
     environment:
+      PLATFORM_ENVIRONMENT: ${PLATFORM_ENVIRONMENT:-development}
       SCANNER_ORCHESTRATOR_TOKEN: ${SCANNER_ORCHESTRATOR_TOKEN:?Run python scripts/setup.py to generate SCANNER_ORCHESTRATOR_TOKEN}
       SCANNER_ORCHESTRATOR_NAMESPACE: ${COMPOSE_PROJECT_NAME:-signaltrace}
       PLATFORM_SCANNER_IMAGES: ${PLATFORM_SCANNER_IMAGES:-{}}

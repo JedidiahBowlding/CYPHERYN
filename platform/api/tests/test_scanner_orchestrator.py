@@ -33,6 +33,14 @@ class ImmediateThread:
         self.target(*self.args)
 
 
+class DeferredThread:
+    def __init__(self, *, target, args, daemon):
+        pass
+
+    def start(self):
+        pass
+
+
 class SuccessfulRunner:
     available = True
 
@@ -139,6 +147,23 @@ def test_orchestrator_rejects_excessive_policy_and_bounds_capacity(monkeypatch) 
     excessive = _request()
     excessive["policy"]["memory_mb"] = 4096
     assert client.post("/v1/executions", headers=headers, json=excessive).status_code == 422
+
+
+def test_production_requires_digest_and_managed_active_egress(monkeypatch) -> None:
+    monkeypatch.setenv("PLATFORM_ENVIRONMENT", "production")
+    monkeypatch.setenv("SCANNER_ORCHESTRATOR_TOKEN", TOKEN)
+    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"signaltrace/nmap:1.0.0"}')
+    monkeypatch.setattr(scanner_orchestrator.threading, "Thread", DeferredThread)
+    scanner_orchestrator._executions.clear()
+    client = TestClient(scanner_orchestrator.app)
+    headers = {"Authorization": f"Bearer {TOKEN}"}
+    assert client.post("/v1/executions", headers=headers, json=_request()).status_code == 422
+    digest = "signaltrace/nmap@sha256:" + "a" * 64
+    monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", json.dumps({"nmap": digest}))
+    assert client.post("/v1/executions", headers=headers, json=_request()).status_code == 422
+    request = _request()
+    request["policy"]["network"] = "signaltrace-egress-owned-targets"
+    assert client.post("/v1/executions", headers=headers, json=request).status_code == 202
 
 
 def test_orchestrator_cancellation_reaches_the_container_runner(monkeypatch) -> None:
@@ -290,6 +315,10 @@ def test_docker_api_runner_applies_container_policy_and_cleans_up() -> None:
         requests.append(request)
         if request.url.path == "/_ping":
             return httpx.Response(200, text="OK")
+        if request.url.path == "/networks/signaltrace-egress-owned-targets":
+            return httpx.Response(
+                200, json={"Labels": {"signaltrace.egress-policy": "enforced"}}
+            )
         if request.url.path == "/containers/create":
             config = json.loads(request.content)
             assert config["Env"] == []
@@ -318,7 +347,9 @@ def test_docker_api_runner_applies_container_policy_and_cleans_up() -> None:
     assert runner.available is True
     result = runner.run(
         ["nmap", "203.0.113.10"],
-        ScannerPolicy(image="signaltrace/nmap:1.0.0", network="bridge"),
+        ScannerPolicy(
+            image="signaltrace/nmap:1.0.0", network="signaltrace-egress-owned-targets"
+        ),
     )
     assert result.stdout == "bounded output"
     assert result.returncode == 0
@@ -326,6 +357,22 @@ def test_docker_api_runner_applies_container_policy_and_cleans_up() -> None:
     assert any(request.method == "DELETE" for request in requests)
     framed = b"\x01\0\0\0\0\0\0\x03out" + b"\x02\0\0\0\0\0\0\x03err"
     assert runner._decode_logs(framed, 6) == ("out", "err", False)
+
+
+def test_docker_runner_rejects_unattested_egress_network() -> None:
+    runner = DockerApiScannerRunner(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"Labels": {}})
+        )
+    )
+    with pytest.raises(ScannerIsolationError, match="enforced-policy label"):
+        runner.run(
+            ["nmap", "203.0.113.10"],
+            ScannerPolicy(
+                image="signaltrace/nmap:1.0.0",
+                network="signaltrace-egress-owned-targets",
+            ),
+        )
 
 
 def test_docker_api_runner_forces_cancellation() -> None:

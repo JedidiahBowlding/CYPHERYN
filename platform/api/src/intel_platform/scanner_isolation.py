@@ -15,6 +15,7 @@ from pathlib import Path
 from .process_isolation import MAX_CAPTURE_BYTES
 
 IMAGE_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._/:@-]{0,299}$")
+DIGEST_PATTERN = re.compile(r"@sha256:[a-f0-9]{64}$")
 SAFE_ENV_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
 
 
@@ -45,6 +46,11 @@ class ScannerPolicy:
     def validate(self) -> None:
         if not IMAGE_PATTERN.fullmatch(self.image) or "latest" in self.image.rsplit("/", 1)[-1]:
             raise ScannerIsolationError("Scanner image must be an explicit, valid tag or digest")
+        production = os.environ.get("PLATFORM_ENVIRONMENT", "development").lower() == "production"
+        if production and not DIGEST_PATTERN.search(self.image):
+            raise ScannerIsolationError(
+                "Production scanner images must be pinned by an immutable SHA-256 digest"
+            )
         if not 0.1 <= self.cpu_limit <= 16:
             raise ScannerIsolationError("Scanner CPU limit must be between 0.1 and 16")
         if not 64 <= self.memory_mb <= 32768:
@@ -61,6 +67,8 @@ class ScannerPolicy:
             raise ScannerIsolationError(
                 "Scanner network must be none, bridge, or SignalTrace-managed"
             )
+        if production and self.network == "bridge":
+            raise ScannerIsolationError("The unrestricted Docker bridge is forbidden in production")
         if any(not SAFE_ENV_PATTERN.fullmatch(key) for key in self.environment):
             raise ScannerIsolationError("Scanner environment contains an invalid variable name")
 

@@ -141,7 +141,18 @@ def create_execution(
     if any(len(item) > 4096 for item in request.command):
         raise HTTPException(status_code=422, detail="Scanner argument exceeds the size limit")
     policy = ScannerPolicy(image=image, **request.policy.model_dump())
-    policy.validate()
+    try:
+        policy.validate()
+    except ScannerIsolationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    production = os.environ.get("PLATFORM_ENVIRONMENT", "development").lower() == "production"
+    if production and request.provider in ACTIVE_SCANNERS and not policy.network.startswith(
+        "signaltrace-egress-"
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Production active scanners require a managed egress-policy network",
+        )
     if (
         policy.cpu_limit > 2
         or policy.memory_mb > 2048

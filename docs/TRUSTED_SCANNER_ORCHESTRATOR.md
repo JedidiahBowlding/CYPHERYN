@@ -50,6 +50,19 @@ PLATFORM_SCANNER_IMAGES={"nmap":"your-registry/signaltrace-nmap:1.0.0"}
 The image must contain the expected scanner executable. SignalTrace does not publish or silently
 download third-party scanner images. Review, pin, scan, and license each image before enabling it.
 
+Production mode is deliberately stricter. Every image must use an immutable digest, the unrestricted
+Docker `bridge` network is rejected, and active scanners must use a `signaltrace-egress-*` network
+whose Docker metadata asserts `signaltrace.egress-policy=enforced`:
+
+```env
+PLATFORM_ENVIRONMENT=production
+PLATFORM_SCANNER_IMAGES={"nmap":"registry.example/signaltrace-nmap@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+```
+
+The label is a fail-closed deployment assertion, not an egress firewall. Create and label that
+network only after an external gateway or dedicated scanner node actually enforces the authorized
+destination policy. SignalTrace refuses an absent, inaccessible, or unlabeled managed network.
+
 The initial remote-execution allowlist covers output-stream-compatible adapters: Subfinder,
 ProjectDiscovery HTTPX, Naabu, Nmap, RustScan, Masscan, Nuclei, Katana, and DNS Twist. Adapters that
 currently exchange host-side temporary files (authenticated Katana, Nikto, ZAP, and testssl.sh)
@@ -109,5 +122,6 @@ worker submits an active execution and sends the resulting authorization ID for 
 
 Docker Desktop and a plain Docker bridge cannot enforce destination-level egress policy. Production
 operators should place scanner traffic behind a policy-aware egress gateway or run the orchestrator
-on a dedicated scanner node. The default profile is appropriate for controlled local development,
-not a hostile multi-tenant environment.
+on a dedicated scanner node. `PLATFORM_ENVIRONMENT=production` prevents version-tagged images,
+generic bridge networking, and active execution on an unattested network. The default development
+profile is appropriate for controlled local use, not a hostile multi-tenant environment.

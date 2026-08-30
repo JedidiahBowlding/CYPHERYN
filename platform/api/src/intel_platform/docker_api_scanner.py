@@ -71,6 +71,14 @@ class DockerApiScannerRunner:
         timed_out = False
         cancelled = False
         with self._client() as client:
+            if policy.network.startswith("signaltrace-egress-"):
+                network = client.get(f"/networks/{policy.network}")
+                self._require(network, "inspect scanner egress network")
+                labels = network.json().get("Labels") or {}
+                if labels.get("signaltrace.egress-policy") != "enforced":
+                    raise ScannerIsolationError(
+                        "Scanner egress network is missing the enforced-policy label"
+                    )
             response = client.post(
                 "/containers/create",
                 json={
