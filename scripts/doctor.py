@@ -80,6 +80,37 @@ def configured_path(values: dict[str, str], name: str, default: str) -> Path:
     return value if value.is_absolute() else ROOT / value
 
 
+def integrity_anchor_ready(key_directory: Path, anchor_directory: Path, compose: bool) -> bool:
+    """Verify anchor storage without weakening private-key directory permissions."""
+    try:
+        return (key_directory / "active-key.json").is_file() and anchor_directory.is_dir()
+    except PermissionError:
+        if not compose:
+            return False
+        check = subprocess.run(
+            [
+                "docker",
+                "compose",
+                "exec",
+                "-T",
+                "worker",
+                "python",
+                "-c",
+                (
+                    "from pathlib import Path; "
+                    "raise SystemExit(0 if "
+                    "Path('/run/signaltrace/anchor-keys/active-key.json').is_file() and "
+                    "Path('/var/lib/signaltrace/anchors').is_dir() else 1)"
+                ),
+            ],
+            cwd=ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        return check.returncode == 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--offline", action="store_true", help="Skip live service checks")
@@ -118,7 +149,7 @@ def main() -> int:
     anchor_directory = configured_path(
         values, "PLATFORM_ANCHOR_STORE_DIR", "platform/.runtime/anchors"
     )
-    anchor_ready = (key_directory / "active-key.json").is_file() and anchor_directory.is_dir()
+    anchor_ready = integrity_anchor_ready(key_directory, anchor_directory, compose)
     result(
         "PASS" if anchor_ready else ("FAIL" if anchoring_enabled else "WARN"),
         "External integrity anchoring",
