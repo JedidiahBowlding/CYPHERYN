@@ -94,6 +94,8 @@ def integrity_anchor_ready(key_directory: Path, anchor_directory: Path, compose:
                 "compose",
                 "exec",
                 "-T",
+                "--user",
+                "0:0",
                 "worker",
                 "python",
                 "-c",
