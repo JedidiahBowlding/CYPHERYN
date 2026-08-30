@@ -185,7 +185,8 @@ def test_malware_quarantine_hashes_permissions_and_scanner_outcomes(
     sample, hashes = quarantine_file(b"signaltrace", str(tmp_path / "quarantine"))
     assert hashes["sha256"] == "e2d2dc42afbcd589d38625e313e26fe3fbb74037d1622dc00abf49737ea272d9"
     assert sample.read_bytes() == b"signaltrace"
-    assert os.stat(sample).st_mode & 0o777 == 0o600
+    if os.name == "posix":
+        assert os.stat(sample).st_mode & 0o777 == 0o600
     monkeypatch.setattr("intel_platform.malware_analysis.shutil.which", lambda name: None)
     assert scan_clamav(sample)["status"] == "not_installed"
     assert scan_yara(sample, tmp_path / "missing.yar") == []

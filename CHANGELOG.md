@@ -21,6 +21,7 @@ SignalTrace follows [Semantic Versioning](https://semver.org/) before and after 
 ### Fixed
 
 - Timeline CSV exports now include evidence integrity hashes instead of rejecting evidence timeline records containing integrity metadata.
+- Local repository targets now recognize absolute Windows drive paths before URL parsing; platform-specific permission assertions run only where POSIX modes are meaningful.
 
 ### Security
 
