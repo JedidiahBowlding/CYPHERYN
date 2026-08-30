@@ -51,7 +51,11 @@ def canonicalize_target(target_type: TargetType, value: str) -> str:
             local_path = Path(raw).expanduser()
             if local_path.is_absolute() or local_path.exists():
                 path = local_path.resolve(strict=True)
-                if not path.is_dir() or path in {Path(path.anchor), Path.home()} or len(path.parts) < 4:
+                if (
+                    not path.is_dir()
+                    or path in {Path(path.anchor), Path.home()}
+                    or len(path.parts) < 4
+                ):
                     raise ValueError("local repository must be a specific existing directory")
                 return str(path)
             parsed = urlsplit(raw)
@@ -64,7 +68,9 @@ def canonicalize_target(target_type: TargetType, value: str) -> str:
                     raise ValueError("repository URL must be https://github.com/owner/repository")
                 path = parsed.path.rstrip("/").removesuffix(".git")
                 return f"https://github.com{path}.git"
-            raise ValueError("repository must be an existing local directory or an HTTPS GitHub URL")
+            raise ValueError(
+                "repository must be an existing local directory or an HTTPS GitHub URL"
+            )
         if target_type == TargetType.CONTAINER_IMAGE:
             image = raw.lower()
             if (
