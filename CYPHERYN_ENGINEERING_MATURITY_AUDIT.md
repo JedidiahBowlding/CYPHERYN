@@ -24,12 +24,16 @@ independently enforced network policy, and longer-term operational evidence is s
 - Product version: `0.8.0`; no `v0.9.0` tag was created by this audit.
 - Baseline hosted CI: Tests, CYPHERYN cross-platform, CodeQL, Dependabot, and Security and
   supply chain all passed for exact commit `f01c56a`.
-- GitHub `main` protection is enabled and enforced for administrators. It requires one
-  approving review, dismissal of stale reviews, approval after the last push, resolved
-  conversations, linear history, strict up-to-date checks, all 16 current CI check contexts,
-  and denies force-pushes and deletion.
-- A tag remains prohibited unless every required check is green on the exact candidate
-  commit.
+- GitHub `main` protection is enabled and enforced for administrators. It requires resolved
+  conversations, linear history, strict up-to-date results from all 15 check contexts that
+  actually run on pull requests, and denies force-pushes and deletion. Review state is
+  dismissed when stale, but the approval count is zero because this is currently a
+  single-maintainer repository; GitHub does not permit authors to approve their own pull
+  requests. The push-only Dependabot context was removed after GitHub correctly identified
+  that it can never satisfy a pull-request gate.
+- Exact merged release-candidate commit `21acae75cfd4935e6ea353edd5ca799d3fe13c31`
+  passed hosted Tests run `33329689425`, cross-platform run `33329689438`, CodeQL run
+  `33329689434`, and Security and supply chain run `33329689427`. No tag was created.
 
 ### Current local verification
 
@@ -194,12 +198,12 @@ The ignored local database is not shipped, packaged, or referenced by current so
 
 ## Release recommendation
 
-CYPHERYN is technically positioned for `v0.9.0` once the exact release-candidate commit has
-passed every protected hosted check. Repository protection is now confirmed, the worker
-gate is 75%, release naming is regression-tested, dependency audits are clean, and no tag
-was created prematurely. `v1.0` should wait for independently enforced scanner egress in a
+CYPHERYN is technically positioned for `v0.9.0`: the exact release-candidate implementation
+commit passed every hosted workflow, repository protection is confirmed, the worker gate is
+75%, release naming is regression-tested, dependency audits are clean, and no tag was
+created prematurely. `v1.0` should wait for independently enforced scanner egress in a
 documented production topology, broader API/adapter verification, repeated live-provider
 operations, proven independent anchor retention/rotation/restore, and sustained production
 evidence.
 
-NOT READY FOR v0.9.0 TAG
+READY FOR v0.9.0 TAG
