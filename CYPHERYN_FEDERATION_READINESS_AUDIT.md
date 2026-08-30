@@ -4,7 +4,7 @@ Audit date: 2026-08-30
 
 Released prerequisite: `v0.9.0` at `12ea6849132806cdebbf642447fe7b0c0506053b`
 
-Federation implementation commit: `1f0c9b8d200569650501a0f176b09c43995fb5af`
+Federation implementation commit: `ba323a0889526eaf9c6332eec774baf5161df89f`
 
 Branch: `feature/federation-foundation`
 
@@ -118,6 +118,10 @@ nested rollback protect duplicate/concurrent delivery.
 The complete API suite passed with all critical gates, including worker orchestration at
 75.04%, federation core at 75.85% (70% gate), and federation API at 78.23% (70% gate). Ruff
 and both core and federation Compose validations passed.
+
+The exact merged implementation commit passed hosted Tests run `33332402794`,
+cross-platform run `33332402811`, CodeQL run `33332402808`, and Security and supply chain
+run `33332402830`.
 
 ## Backward compatibility
 
