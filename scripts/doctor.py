@@ -83,10 +83,11 @@ def configured_path(values: dict[str, str], name: str, default: str) -> Path:
 def integrity_anchor_ready(key_directory: Path, anchor_directory: Path, compose: bool) -> bool:
     """Verify anchor storage without weakening private-key directory permissions."""
     try:
-        return (key_directory / "active-key.json").is_file() and anchor_directory.is_dir()
+        if (key_directory / "active-key.json").is_file() and anchor_directory.is_dir():
+            return True
     except PermissionError:
-        if not compose:
-            return False
+        pass
+    if compose:
         check = subprocess.run(
             [
                 "docker",
@@ -109,6 +110,7 @@ def integrity_anchor_ready(key_directory: Path, anchor_directory: Path, compose:
             check=False,
         )
         return check.returncode == 0
+    return False
 
 
 def main() -> int:
