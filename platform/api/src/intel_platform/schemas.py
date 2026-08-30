@@ -9,6 +9,70 @@ class ApiModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class FederationPeerCreate(BaseModel):
+    node_id: str = Field(pattern=r"^cypheryn-node:[0-9a-f]{64}$")
+    display_name: str = Field(min_length=1, max_length=200)
+    base_url: str | None = Field(default=None, max_length=1000)
+    public_key: str = Field(min_length=40, max_length=100)
+    key_id: str = Field(pattern=r"^ed25519:[0-9a-f]{64}$")
+    protocol_version: str = Field(default="cypheryn-federation-v1", max_length=30)
+    capabilities: list[str] = Field(default_factory=list, max_length=20)
+
+
+class FederationPeerStatusUpdate(BaseModel):
+    status: str = Field(pattern=r"^(trusted|suspended|revoked)$")
+
+
+class FederationPeerRead(ApiModel):
+    id: str
+    organization_id: str
+    node_id: str
+    display_name: str
+    base_url: str
+    key_id: str
+    protocol_version: str
+    status: str
+    capabilities: list
+    last_seen_at: datetime | None
+    revoked_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class FederatedAssertionCreate(BaseModel):
+    assertion_type: str = Field(
+        pattern=r"^(indicator_assessment|exposure_observation|threat_association)$"
+    )
+    subject_type: str = Field(
+        pattern=r"^(domain|ip_address|url|sha256|certificate|service)$"
+    )
+    subject_fingerprint: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+    evidence_fingerprint: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+    source_category: str = Field(min_length=1, max_length=100)
+    confidence: int = Field(ge=0, le=100)
+    severity: str = Field(pattern=r"^(info|low|medium|high|critical|unknown)$")
+    observation_time: datetime
+    evidence_checkpoint: dict | None = None
+
+
+class FederatedAssertionRead(ApiModel):
+    id: str
+    organization_id: str
+    assertion_id: str
+    issuer_node_id: str
+    issuer_key_id: str
+    assertion_type: str
+    subject_type: str
+    subject_fingerprint: str
+    evidence_fingerprint: str
+    payload_fingerprint: str
+    verification_status: str
+    trust_state: str
+    issued_at: datetime
+    expires_at: datetime
+    received_at: datetime
+
+
 class OrganizationCreate(BaseModel):
     name: str = Field(min_length=2, max_length=200)
 

@@ -12,7 +12,15 @@ from uuid import uuid4
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .models import CollectionJob, EvidenceSource, JobStatus, ProviderRuntimeState, WorkerState
+from .models import (
+    CollectionJob,
+    EvidenceSource,
+    FederatedAssertion,
+    FederationPeer,
+    JobStatus,
+    ProviderRuntimeState,
+    WorkerState,
+)
 
 correlation_id_context: ContextVar[str] = ContextVar("correlation_id", default="")
 logger = logging.getLogger("cypheryn")
@@ -177,6 +185,13 @@ def operational_snapshot(db: Session) -> dict:
                 ),
             }
         )
+    federation_peer_states = dict(
+        db.execute(
+            select(FederationPeer.status, func.count(FederationPeer.id)).group_by(
+                FederationPeer.status
+            )
+        ).all()
+    )
     return {
         "generated_at": now.isoformat(),
         "worker_healthy": any(
@@ -218,6 +233,19 @@ def operational_snapshot(db: Session) -> dict:
         },
         "providers": providers,
         "evidence_count": db.scalar(select(func.count(EvidenceSource.id))) or 0,
+        "federation": {
+            "peers": sum(federation_peer_states.values()),
+            "trusted_peers": federation_peer_states.get("trusted", 0),
+            "suspended_peers": federation_peer_states.get("suspended", 0),
+            "revoked_peers": federation_peer_states.get("revoked", 0),
+            "assertions_received": db.scalar(select(func.count(FederatedAssertion.id))) or 0,
+            "verified_assertions": db.scalar(
+                select(func.count(FederatedAssertion.id)).where(
+                    FederatedAssertion.verification_status == "verified"
+                )
+            )
+            or 0,
+        },
     }
 
 
@@ -228,6 +256,16 @@ def prometheus_metrics(snapshot: dict) -> str:
         "# TYPE cypheryn_worker_healthy gauge",
         f"cypheryn_worker_healthy {1 if snapshot['worker_healthy'] else 0}",
     ]
+    federation = snapshot.get("federation", {})
+    for metric in (
+        "peers",
+        "trusted_peers",
+        "suspended_peers",
+        "revoked_peers",
+        "assertions_received",
+        "verified_assertions",
+    ):
+        lines.append(f"cypheryn_federation_{metric} {int(federation.get(metric, 0))}")
     for key in ("queued", "running", "failed", "cancelled", "retries", "expired_leases"):
         lines.append(f"cypheryn_jobs_{key} {queue[key]}")
     lines.append(f"cypheryn_oldest_queued_job_seconds {queue['oldest_queued_age_seconds']}")

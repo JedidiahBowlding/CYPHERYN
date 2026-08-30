@@ -1,0 +1,78 @@
+services:
+  node-a-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cypheryn_a
+      POSTGRES_USER: cypheryn_a
+      POSTGRES_PASSWORD: federation-dev-a
+    volumes: [node-a-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cypheryn_a -d cypheryn_a"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  node-b-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cypheryn_b
+      POSTGRES_USER: cypheryn_b
+      POSTGRES_PASSWORD: federation-dev-b
+    volumes: [node-b-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cypheryn_b -d cypheryn_b"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  node-a-key-init:
+    build: {context: ./platform/api}
+    user: "0:0"
+    command:
+      ["sh", "-c", "python -m intel_platform.federation initialize /keys/node.pem && chown 10001:10001 /keys/node.pem"]
+    volumes: [node-a-keys:/keys]
+    restart: "no"
+
+  node-b-key-init:
+    build: {context: ./platform/api}
+    user: "0:0"
+    command:
+      ["sh", "-c", "python -m intel_platform.federation initialize /keys/node.pem && chown 10001:10001 /keys/node.pem"]
+    volumes: [node-b-keys:/keys]
+    restart: "no"
+
+  node-a:
+    build: {context: ./platform/api}
+    command: ["uvicorn", "intel_platform.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      PLATFORM_DATABASE_URL: postgresql+psycopg://cypheryn_a:federation-dev-a@node-a-db/cypheryn_a
+      PLATFORM_FEDERATION_ENABLED: "true"
+      PLATFORM_FEDERATION_DISPLAY_NAME: "CYPHERYN Node A"
+      PLATFORM_FEDERATION_KEY_PATH: /keys/node.pem
+      PLATFORM_ALLOW_DEV_IDENTITY: "true"
+    volumes: [node-a-keys:/keys:ro]
+    ports: ["127.0.0.1:8101:8000"]
+    depends_on:
+      node-a-db: {condition: service_healthy}
+      node-a-key-init: {condition: service_completed_successfully}
+
+  node-b:
+    build: {context: ./platform/api}
+    command: ["uvicorn", "intel_platform.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      PLATFORM_DATABASE_URL: postgresql+psycopg://cypheryn_b:federation-dev-b@node-b-db/cypheryn_b
+      PLATFORM_FEDERATION_ENABLED: "true"
+      PLATFORM_FEDERATION_DISPLAY_NAME: "CYPHERYN Node B"
+      PLATFORM_FEDERATION_KEY_PATH: /keys/node.pem
+      PLATFORM_ALLOW_DEV_IDENTITY: "true"
+    volumes: [node-b-keys:/keys:ro]
+    ports: ["127.0.0.1:8102:8000"]
+    depends_on:
+      node-b-db: {condition: service_healthy}
+      node-b-key-init: {condition: service_completed_successfully}
+
+volumes:
+  node-a-data:
+  node-b-data:
+  node-a-keys:
+  node-b-keys:
