@@ -1,10 +1,10 @@
-FROM node:22.14-bookworm-slim AS dependencies
+FROM node:26.8-bookworm-slim AS dependencies
 
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM node:22.14-bookworm-slim AS development
+FROM node:26.8-bookworm-slim AS development
 
 ENV NODE_ENV=development
 WORKDIR /app
@@ -20,7 +20,7 @@ ENV NEXT_PUBLIC_PLATFORM_API_URL=${NEXT_PUBLIC_PLATFORM_API_URL}
 COPY . .
 RUN npm run build
 
-FROM node:22.14-bookworm-slim AS production
+FROM node:26.8-bookworm-slim AS production
 
 ENV NODE_ENV=production
 RUN apt-get update \
