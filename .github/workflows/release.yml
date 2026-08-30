@@ -21,7 +21,7 @@ jobs:
         working-directory: platform/api
         run: |
           python -m pip install -e ".[dev]" pip-audit
-          python -m pytest --cov=intel_platform --cov-fail-under=50 --cov-report=json:coverage.json
+          python -m pytest --cov=intel_platform --cov-fail-under=60 --cov-report=json:coverage.json
           python ../../scripts/check_critical_coverage.py coverage.json
           python -m ruff check src tests
           python -m pip_audit . --strict

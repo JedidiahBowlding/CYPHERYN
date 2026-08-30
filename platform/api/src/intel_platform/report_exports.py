@@ -236,6 +236,7 @@ def timeline_csv(records: list[dict]) -> bytes:
         "object_id",
         "summary",
         "sha256",
+        "integrity_hash",
     ]
     writer = csv.DictWriter(output, fieldnames=fields)
     writer.writeheader()

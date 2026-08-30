@@ -16,6 +16,12 @@ THRESHOLDS = {
     "security_controls.py": 90,
     "integrity_anchor.py": 60,
     "scanner_isolation.py": 80,
+    "worker.py": 60,
+    "detection_engine.py": 70,
+    "normalization.py": 90,
+    "report_exports.py": 90,
+    "notifications.py": 80,
+    "malware_analysis.py": 90,
 }
 
 

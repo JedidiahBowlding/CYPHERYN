@@ -6,6 +6,7 @@ SignalTrace follows [Semantic Versioning](https://semver.org/) before and after 
 
 ### Added
 
+- Critical-path regression coverage for worker lease recovery and lifecycle transitions, detection ingestion, target normalization, report integrity exports, notification transport handling, and malware-analysis safety behavior.
 - Disposable scanner-container policy and execution boundary with explicit resource, filesystem, environment, network, deadline, cancellation, and cleanup controls.
 - Worker/queue/provider operational telemetry, structured correlation IDs, worker health, and Prometheus-compatible metrics.
 - Objective provider support tiers and timestamp-based verification freshness.
@@ -14,7 +15,12 @@ SignalTrace follows [Semantic Versioning](https://semver.org/) before and after 
 
 ### Changed
 
+- Raised the owned API coverage floor from 50% to 60% and added enforceable module gates for worker, detection, normalization, reports, notifications, and malware analysis.
 - Active local scanner adapters fail closed unless a disposable scanner image is explicitly configured.
+
+### Fixed
+
+- Timeline CSV exports now include evidence integrity hashes instead of rejecting evidence timeline records containing integrity metadata.
 
 ### Security
 
