@@ -23,7 +23,7 @@ Provider tiers are independent of runtime readiness:
 - `ADAPTER_ONLY`: an adapter exists, but installation/service availability and certification are not guaranteed.
 - `INHERITED`: upstream behavior retained for compatibility and not claimed as SignalTrace-supported.
 
-The current supported contract set is VirusTotal, Shodan, AlienVault OTX, Censys, and ThreatFox. No live third-party call runs in ordinary CI. Runtime display separately reports adapter presence, installation, configuration, health, contract status, Live Verified timestamp, version, and failure reason.
+The current supported contract set is VirusTotal, Shodan, AlienVault OTX, Censys, and ThreatFox. Each adapter independently proves request construction, missing and rejected credentials, throttling, invalid JSON, invalid provider schemas, transport and deadline timeouts, pre-flight and in-stream cancellation, provider-specific security normalization, redaction, and evidence provenance. No live third-party call runs in ordinary CI. Runtime display separately reports adapter presence, installation, configuration, health, contract status, Live Verified timestamp, version, and failure reason. See `docs/PROVIDER_CERTIFICATION.md` for the enforced matrix.
 
 Live verification is fresh for seven days, aging from day 7 through day 29, and stale at day 30. This policy balances typical weekly defensive review with the volatility of Internet intelligence; deployments may use stricter operational policy. Health never creates a Live Verified timestamp—only a successful collection does.
 
@@ -61,5 +61,5 @@ Recommended `main` protection must be configured by the repository owner: requir
 - Container network destination enforcement needs an environment-specific gateway for strong egress policy.
 - Scanner image signatures/digests should be required operationally even though explicit version tags are accepted for local development.
 - Signed anchors only add independence when exported outside the application administrator's trust domain.
-- Provider certification currently covers five priority providers; all others are labeled truthfully.
+- Five providers satisfy the exhaustive supported contract; all other adapters are labeled truthfully until they independently satisfy the same matrix.
 - Critical orchestration coverage remains below the long-term target and is reported rather than hidden.

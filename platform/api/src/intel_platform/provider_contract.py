@@ -7,6 +7,19 @@ from sqlalchemy.orm import Session
 from .models import CollectionJob, Target
 
 
+class ProviderCancelledError(RuntimeError):
+    """Raised when collection stops because an analyst requested cancellation."""
+
+
+class ProviderHttpError(RuntimeError):
+    """A provider HTTP failure whose message never contains request credentials."""
+
+    def __init__(self, provider: str, status_code: int) -> None:
+        self.provider = provider
+        self.status_code = status_code
+        super().__init__(f"{provider} returned HTTP {status_code}")
+
+
 @dataclass(frozen=True)
 class ProviderCapabilities:
     target_types: frozenset[str]

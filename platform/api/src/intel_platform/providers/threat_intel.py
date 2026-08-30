@@ -8,7 +8,13 @@ import httpx
 from sqlalchemy import select
 
 from ..models import Entity, Relationship
-from ..provider_contract import ProviderCapabilities, ProviderContext, ProviderResult
+from ..provider_contract import (
+    ProviderCancelledError,
+    ProviderCapabilities,
+    ProviderContext,
+    ProviderHttpError,
+    ProviderResult,
+)
 
 MAX_RESPONSE_BYTES = 1_000_000
 
@@ -26,19 +32,29 @@ class ThreatIntelProvider:
         )
 
     def collect(self, context: ProviderContext) -> ProviderResult:
+        self._ensure_active(context)
         request = self.build_request(context)
         timeout = self._remaining_timeout(context)
         with httpx.Client(timeout=timeout, follow_redirects=False) as client:
             with client.stream(**request) as response:
-                response.raise_for_status()
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError:
+                    raise ProviderHttpError(self.name, response.status_code) from None
                 body = bytearray()
                 for chunk in response.iter_bytes():
+                    self._ensure_active(context)
                     body.extend(chunk)
                     if len(body) > MAX_RESPONSE_BYTES:
                         raise RuntimeError(f"{self.name} response exceeded size limit")
-        payload = json.loads(body)
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"{self.name} response was not valid JSON") from exc
         if not isinstance(payload, dict):
             raise RuntimeError(f"{self.name} response must be a JSON object")
+        self.validate_payload(payload)
+        self._ensure_active(context)
         return self.normalize(context, payload)
 
     def build_request(self, context: ProviderContext) -> dict:
@@ -56,7 +72,23 @@ class ThreatIntelProvider:
         deadline = context.deadline_at
         if deadline.tzinfo is None:
             deadline = deadline.replace(tzinfo=UTC)
-        return max(1.0, (deadline - datetime.now(UTC)).total_seconds())
+        remaining = (deadline - datetime.now(UTC)).total_seconds()
+        if remaining <= 0:
+            raise TimeoutError(f"{self.name} collection deadline expired")
+        return max(0.1, remaining)
+
+    def _ensure_active(self, context: ProviderContext) -> None:
+        if getattr(context.job, "cancellation_requested_at", None) is not None:
+            raise ProviderCancelledError(f"{self.name} collection was cancelled")
+        if context.deadline_at is not None:
+            deadline = context.deadline_at
+            if deadline.tzinfo is None:
+                deadline = deadline.replace(tzinfo=UTC)
+            if datetime.now(UTC) >= deadline:
+                raise TimeoutError(f"{self.name} collection deadline expired")
+
+    def validate_payload(self, payload: dict) -> None:
+        """Reject successful HTTP responses that do not match the provider schema."""
 
     def normalize(self, context: ProviderContext, payload: dict) -> ProviderResult:
         db, job, target = context.db, context.job, context.target
@@ -218,6 +250,12 @@ class VirusTotalProvider(ThreatIntelProvider):
             "headers": {"x-apikey": self._credential(context, "api_key")},
         }
 
+    def validate_payload(self, payload: dict) -> None:
+        if not isinstance(payload.get("data"), dict) or not isinstance(
+            payload["data"].get("attributes"), dict
+        ):
+            raise RuntimeError("virustotal response schema is invalid")
+
     def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:
         attributes = payload.get("data", {}).get("attributes", {})
         stats = attributes.get("last_analysis_stats") or {}
@@ -255,6 +293,47 @@ class ShodanProvider(ThreatIntelProvider):
             "params": {"key": self._credential(context, "api_key"), "minify": "true"},
         }
 
+    def validate_payload(self, payload: dict) -> None:
+        if not isinstance(payload.get("ip_str"), str) or not isinstance(
+            payload.get("ports", []), list
+        ):
+            raise RuntimeError("shodan response schema is invalid")
+
+    def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:
+        address = str(payload["ip_str"])
+        ports = sorted({int(port) for port in payload.get("ports", []) if int(port) > 0})
+        vulnerabilities = sorted(str(item) for item in (payload.get("vulns") or []))[:100]
+        associations = [
+            {
+                "entity_type": "network_service",
+                "value": f"{address}:{port}/tcp",
+                "predicate": "EXPOSES_SERVICE",
+                "confidence": 90,
+                "attributes": {"port": port, "source": "shodan"},
+            }
+            for port in ports[:100]
+        ]
+        associations.extend(
+            {
+                "entity_type": "vulnerability",
+                "value": vulnerability,
+                "predicate": "MAY_BE_AFFECTED_BY",
+                "confidence": 80,
+                "attributes": {"source": "shodan"},
+            }
+            for vulnerability in vulnerabilities
+        )
+        return {
+            "kind": "shodan_host_summary",
+            "ip": address,
+            "ports": ports[:100],
+            "vulnerabilities": vulnerabilities,
+            "organization": payload.get("org"),
+            "asn": payload.get("asn"),
+            "country_code": payload.get("country_code"),
+            "last_update": payload.get("last_update"),
+        }, associations
+
 
 class GreyNoiseProvider(ThreatIntelProvider):
     name = "greynoise"
@@ -283,6 +362,11 @@ class AlienVaultOtxProvider(ThreatIntelProvider):
             "url": f"https://otx.alienvault.com/api/v1/indicators/{kind}/{target}/general",
             "headers": {"X-OTX-API-KEY": self._credential(context, "api_key")},
         }
+
+    def validate_payload(self, payload: dict) -> None:
+        pulse_info = payload.get("pulse_info")
+        if not isinstance(pulse_info, dict) or not isinstance(pulse_info.get("pulses", []), list):
+            raise RuntimeError("alienvault_otx response schema is invalid")
 
     def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:
         pulse_info = payload.get("pulse_info") or {}
@@ -367,6 +451,11 @@ class CensysProvider(ThreatIntelProvider):
                 "Accept": "application/vnd.censys.api.v3.host.v1+json",
             },
         }
+
+    def validate_payload(self, payload: dict) -> None:
+        result = payload.get("result")
+        if not isinstance(result, dict) or not isinstance(result.get("resource"), dict):
+            raise RuntimeError("censys response schema is invalid")
 
     def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:
         resource = payload.get("result", {}).get("resource", {})
@@ -486,6 +575,14 @@ class AbuseChProvider(ThreatIntelProvider):
             },
             "headers": {"Auth-Key": self._credential(context, "auth_key")},
         }
+
+    def validate_payload(self, payload: dict) -> None:
+        status = payload.get("query_status")
+        records = payload.get("data")
+        if not isinstance(status, str) or (status == "ok" and not isinstance(records, list)):
+            raise RuntimeError("abuse_ch response schema is invalid")
+        if records is not None and not isinstance(records, list):
+            raise RuntimeError("abuse_ch response schema is invalid")
 
     def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:
         records = payload.get("data") if isinstance(payload.get("data"), list) else []

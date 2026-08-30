@@ -414,7 +414,7 @@ PowerShell uses `py scripts/reset_dev.py`. The utility requires the operator to 
 - Worker health is distinct from API health at `/health/workers`; dependency-free Prometheus metrics are exposed at `/metrics`.
 - Optional signed evidence checkpoints can be retained in a separately controlled trust domain and verified offline.
 
-Operational metrics, alert conditions, privacy considerations, and troubleshooting are documented in [the observability guide](docs/OBSERVABILITY.md). Scanner isolation, provider certification, critical coverage, integrity anchoring, and release boundaries are detailed in [the engineering maturity release guide](docs/ENGINEERING_MATURITY_RELEASE.md).
+Operational metrics, alert conditions, privacy considerations, and troubleshooting are documented in [the observability guide](docs/OBSERVABILITY.md). The exact five-provider support contract is documented in [the provider certification guide](docs/PROVIDER_CERTIFICATION.md). Scanner isolation, critical coverage, integrity anchoring, and release boundaries are detailed in [the engineering maturity release guide](docs/ENGINEERING_MATURITY_RELEASE.md).
 
 For production deployment, disable development identity, configure OIDC, rotate every development secret, apply HTTPS and network controls, establish backup/retention policy, and complete an environment-specific security review.
 

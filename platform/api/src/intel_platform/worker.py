@@ -47,7 +47,7 @@ from .observability import (
     structured_log,
     worker_heartbeat_loop,
 )
-from .provider_contract import ProviderContext, registry
+from .provider_contract import ProviderCancelledError, ProviderContext, registry
 from .provider_safety import (
     ProviderBlockedError,
     enforce_enqueue,
@@ -1303,7 +1303,7 @@ def process_one(
                 failed.lease_expires_at = None
                 failed.error_summary = redact_text(str(exc))[:500]
                 failed_investigation = db.get(Investigation, failed.investigation_id)
-                cancelled = isinstance(exc, ScannerCancelledError)
+                cancelled = isinstance(exc, (ProviderCancelledError, ScannerCancelledError))
                 if failed_investigation and not cancelled:
                     record_failure(
                         db,
@@ -1320,7 +1320,7 @@ def process_one(
                         "cancelled",
                         JobStatus.CANCELLED,
                         from_status=JobStatus.RUNNING,
-                        message="Disposable scanner container terminated after cancellation",
+                        message="Provider execution terminated after cancellation",
                     )
                 elif failed.attempt >= failed.max_attempts:
                     failed.status = JobStatus.FAILED
