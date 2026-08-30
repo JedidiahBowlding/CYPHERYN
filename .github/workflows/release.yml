@@ -41,7 +41,7 @@ jobs:
           docker compose build api worker frontend taxii scanner-orchestrator
       - name: Scan shipped images
         run: |
-          for image in signaltrace-api:latest signaltrace-worker:latest signaltrace-frontend:latest signaltrace-taxii:latest signaltrace-scanner-orchestrator:latest; do
+          for image in cypheryn-api:latest cypheryn-worker:latest cypheryn-frontend:latest cypheryn-taxii:latest cypheryn-scanner-orchestrator:latest; do
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$PWD:/workspace" aquasec/trivy:0.68.2 image \
               --severity HIGH,CRITICAL --ignore-unfixed --ignorefile /workspace/.trivyignore \
@@ -52,38 +52,38 @@ jobs:
       - name: Generate SBOMs
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-api:latest
-          output-file: dist/signaltrace-api.spdx.json
+          image: cypheryn-api:latest
+          output-file: dist/cypheryn-api.spdx.json
       - name: Generate frontend SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-frontend:latest
-          output-file: dist/signaltrace-frontend.spdx.json
+          image: cypheryn-frontend:latest
+          output-file: dist/cypheryn-frontend.spdx.json
       - name: Generate worker SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-worker:latest
-          output-file: dist/signaltrace-worker.spdx.json
+          image: cypheryn-worker:latest
+          output-file: dist/cypheryn-worker.spdx.json
       - name: Generate TAXII SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-taxii:latest
-          output-file: dist/signaltrace-taxii.spdx.json
+          image: cypheryn-taxii:latest
+          output-file: dist/cypheryn-taxii.spdx.json
       - name: Generate scanner orchestrator SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-scanner-orchestrator:latest
-          output-file: dist/signaltrace-scanner-orchestrator.spdx.json
+          image: cypheryn-scanner-orchestrator:latest
+          output-file: dist/cypheryn-scanner-orchestrator.spdx.json
       - name: Package source and checksums
         run: |
-          git archive --format=tar.gz --prefix="SignalTrace-${GITHUB_REF_NAME}/" \
-            -o "dist/SignalTrace-${GITHUB_REF_NAME}.tar.gz" "$GITHUB_SHA"
+          git archive --format=tar.gz --prefix="CYPHERYN-${GITHUB_REF_NAME}/" \
+            -o "dist/CYPHERYN-${GITHUB_REF_NAME}.tar.gz" "$GITHUB_SHA"
           (cd dist && sha256sum * > SHA256SUMS)
       - name: Attest source artifact
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: dist/SignalTrace-*.tar.gz
+          subject-path: dist/CYPHERYN-*.tar.gz
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes --title "SignalTrace $GITHUB_REF_NAME"
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes --title "CYPHERYN $GITHUB_REF_NAME"

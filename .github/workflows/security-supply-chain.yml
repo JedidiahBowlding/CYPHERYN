@@ -60,7 +60,7 @@ jobs:
       - name: Scan shipped images
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: signaltrace-api:latest
+          image-ref: cypheryn-api:latest
           format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
@@ -70,12 +70,12 @@ jobs:
       - name: Generate API SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-api:latest
-          artifact-name: signaltrace-api.spdx.json
+          image: cypheryn-api:latest
+          artifact-name: cypheryn-api.spdx.json
       - name: Scan worker image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: signaltrace-worker:latest
+          image-ref: cypheryn-worker:latest
           format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
@@ -85,12 +85,12 @@ jobs:
       - name: Generate worker SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-worker:latest
-          artifact-name: signaltrace-worker.spdx.json
+          image: cypheryn-worker:latest
+          artifact-name: cypheryn-worker.spdx.json
       - name: Scan frontend image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: signaltrace-frontend:latest
+          image-ref: cypheryn-frontend:latest
           format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
@@ -100,12 +100,12 @@ jobs:
       - name: Generate frontend SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-frontend:latest
-          artifact-name: signaltrace-frontend.spdx.json
+          image: cypheryn-frontend:latest
+          artifact-name: cypheryn-frontend.spdx.json
       - name: Scan TAXII image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: signaltrace-taxii:latest
+          image-ref: cypheryn-taxii:latest
           format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
@@ -115,12 +115,12 @@ jobs:
       - name: Generate TAXII SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-taxii:latest
-          artifact-name: signaltrace-taxii.spdx.json
+          image: cypheryn-taxii:latest
+          artifact-name: cypheryn-taxii.spdx.json
       - name: Scan scanner orchestrator image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: signaltrace-scanner-orchestrator:latest
+          image-ref: cypheryn-scanner-orchestrator:latest
           format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
@@ -130,5 +130,5 @@ jobs:
       - name: Generate scanner orchestrator SBOM
         uses: anchore/sbom-action@v0.24.2
         with:
-          image: signaltrace-scanner-orchestrator:latest
-          artifact-name: signaltrace-scanner-orchestrator.spdx.json
+          image: cypheryn-scanner-orchestrator:latest
+          artifact-name: cypheryn-scanner-orchestrator.spdx.json

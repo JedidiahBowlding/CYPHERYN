@@ -1,5 +1,5 @@
 # Trivy identifies pip's vendored source copies as installed distributions.
 # Runtime verification (`pip show` and importlib.metadata) confirms neither
-# msgpack nor setuptools is installed in the SignalTrace API image.
+# msgpack nor setuptools is installed in the CYPHERYN API image.
 GHSA-6v7p-g79w-8964
 CVE-2025-47273

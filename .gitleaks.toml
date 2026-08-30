@@ -1,4 +1,4 @@
-title = "SignalTrace secret scanning policy"
+title = "CYPHERYN secret scanning policy"
 
 [allowlist]
 description = "Reviewed inherited public/test constants and bundled public feed fixtures"

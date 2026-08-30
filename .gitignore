@@ -186,7 +186,7 @@ cover/
 #################
 docs/_build/
 
-# SignalTrace local configuration and runtime data
+# CYPHERYN local configuration and runtime data
 ##################################################
 .env
 .env.*

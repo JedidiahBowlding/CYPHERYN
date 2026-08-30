@@ -1,127 +1,173 @@
 # CYPHERYN Engineering Maturity Audit
 
-Audit date: 2026-08-29  
-Release candidate: `v0.8.0`  
-Audit target: the commit containing this document. Resolve the immutable identifier with `git rev-parse HEAD`; the hosted-CI result linked from that commit is the authoritative record.
+Audit date: 2026-08-30
+
+Release track: `v0.9.0` production-readiness
+
+Implementation baseline: `2aa033b7abfdea97ddfb29b8afbd027d4ba06464`
+
+Audit scope: the baseline plus the release-brand residue corrections committed with this document.
 
 ## Executive result
 
-CYPHERYN's owned application code passes its API and frontend test suites, dependency audits, static checks, Compose smoke test, secret scan, and fixable High/Critical scans of all four shipped images. This release adds a materially stronger scanner-execution design, durable worker health, provider/queue telemetry, focused security coverage gates, independently signed integrity checkpoints, and public-project governance.
+CYPHERYN is an advanced pre-1.0 defensive cyber-intelligence platform with strong authorization controls, durable collection, provider certification, isolated active-scanner execution, operational telemetry, evidence provenance, and externally verifiable integrity checkpoints. The engineering maturity assessment is **8.8/10**, up from the original 6.6, the Verification & Hardening assessment of 7.6, and the prior engineering-maturity assessment of 8.2.
 
-The release is not scored as production-complete. The default Compose worker intentionally has no Docker socket and therefore cannot launch configured disposable scanner images; production active scanning still needs a separately trusted orchestrator deployment. Critical orchestration modules also remain below their long-term coverage targets. Provider certification is strongest for the five priority providers but several contract requirements are proven across shared controls rather than by twenty provider-specific tests each.
+The previous audit is obsolete in two material areas. CYPHERYN now ships a separately trusted scanner orchestrator, leaving the normal worker without Docker control, and production scanner configuration now fails closed unless images use immutable SHA-256 digests and a managed egress network carries the required enforcement assertion. Critical-path coverage, supported-provider contracts, and external anchoring have also advanced beyond the previous report.
 
-## Repository state
+This is not a `v1.0` recommendation. Production scanner egress still depends on an independently enforced network policy, worker orchestration remains below its long-term coverage target, and hosted release evidence must be collected from the final tagged commit.
+
+## Repository and verification state
 
 - Branch: `main`
-- Baseline inspected: `9513c1f32ca55ab5a07e155d1c155e1a920032ba`
-- Exact release commit and clean status: recorded in the completion report after hosted CI, because a Git commit cannot contain its own hash.
-- Version: `0.8.0`; no `v1.0` claim and no release tag created by this audit.
+- Product version: `0.8.0`; no `v0.9.0` tag was created by this audit.
+- Baseline hosted CI: Tests, CYPHERYN cross-platform, CodeQL, and Pages passed for `2aa033b`.
+- Baseline supply-chain workflow: failed because it still requested removed `signaltrace-*` image names. The application images built successfully; Trivy could not find the obsolete image reference. This audit corrects that release residue and requires a green rerun on the resulting commit.
 
-## Verification results
+### Current local verification
 
 | Area | Result | Evidence |
 | --- | --- | --- |
-| CYPHERYN API tests | PASS | 55 passed, 0 failed |
+| CYPHERYN API tests | PASS | 150 passed, 0 failed |
+| Owned API coverage | PASS | 65% total; 60% gate |
+| Critical coverage gates | PASS | all 19 module gates passed |
+| Ruff | PASS | API source and tests clean |
 | Frontend rendered tests | PASS | 2 passed, 0 failed |
 | Frontend lint | PASS | ESLint clean |
 | TypeScript | PASS | `tsc --noEmit` clean |
 | Frontend production build | PASS | all declared routes built |
-| API coverage | PASS | 56.39% global, 50% floor |
-| Ruff | PASS | owned API source/tests clean |
-| npm audit | PASS | 0 vulnerabilities |
-| Python audit | PASS | 0 known vulnerabilities; local package is not on PyPI |
-| Secret scan | PASS | Gitleaks, 16 commits, no leak |
-| Compose validation | PASS | configuration valid |
-| Compose smoke | PASS | API, frontend, PostgreSQL, TAXII healthy; worker heartbeat healthy |
-| Container scan | PASS | API, worker, frontend, TAXII: 0 fixable High/Critical each |
-| SBOM | PASS | CycloneDX generated for all four shipped images |
-| Workflow syntax | PASS | all workflow YAML parsed |
-| Inherited SpiderFoot tests | ENVIRONMENT-LIMITED | 1,612 passed, 6 network-fixture failures, 214 skipped in legacy Python 3.8 container |
+| Compose image identities | PASS | `cypheryn-api`, worker, frontend, TAXII, and scanner orchestrator |
+| Browser verification | PASS | recolored CYPHERYN UI rendered without console errors |
 
-The six inherited failures depend on mutable public blocklists/DNS: EasyList no longer matches the old fixture, DNS for Family/OpenNIC resolution differs, and the live StevenBlack file format changed. CYPHERYN-owned code is not involved. These results are reported, not suppressed. A previously verified modern-host baseline had 1,584 inherited passes and 35 skips.
+The Python run emitted deprecation and SQLite resource warnings that do not fail the suite. They should be reduced before `v1.0`, especially leaked test-engine connections, because warning-free tests are easier to operate and diagnose.
 
-## Coverage
+## Critical-path coverage
 
-Current focused results:
-
-| Critical module/control | Coverage | Gate |
+| Critical module or control | Coverage | Gate |
 | --- | ---: | ---: |
-| Evidence integrity | 97% | 90% |
-| Security controls | 95% | 90% |
-| Provider certification | 94% | 90% |
-| Observability | 94% | 85% |
-| Provider safety | 88% | 85% |
-| Scanner isolation | 85% | 80% |
-| Process isolation | 81% | 80% |
-| External anchoring | 65% | 60% |
-| Entire owned API | 56.39% | 50% |
+| Evidence integrity | 97.14% | 90% |
+| Observability | 93.88% | 85% |
+| Process isolation | 80.65% | 80% |
+| Provider certification | 94.12% | 90% |
+| Provider contract | 96.08% | 85% |
+| Provider safety | 88.31% | 85% |
+| Supported threat-intelligence adapters | 92.52% | 90% |
+| Security controls | 95.00% | 90% |
+| External integrity anchoring | 70.43% | 70% |
+| Scanner isolation policy | 85.23% | 80% |
+| Docker scanner runner | 90.76% | 80% |
+| Scanner orchestrator | 82.39% | 80% |
+| Orchestrator client | 86.21% | 80% |
+| Worker orchestration | 61.44% | 60% |
+| Detection engine | 70.27% | 70% |
+| Normalization | 93.24% | 90% |
+| Report exports | 93.75% | 90% |
+| Notifications | 84.00% | 80% |
+| Malware analysis | 91.55% | 90% |
 
-The focused gates pass. `worker.py` (46%), detection (15%), normalization (21%), report exports (21%), notifications (30%), and malware analysis (28%) remain below the requested long-term orchestration/business-logic goals. Raising these is required before `v0.9.0`; this release does not disguise the gap with low-value tests.
+This is a material improvement over the previous audit: worker orchestration rose from 46%, detection from 15%, normalization and exports from 21%, notifications from 30%, and malware analysis from 28%. The largest remaining critical-path weakness is worker orchestration. Schedule creation, provider outcome combinations, retries, monitoring summaries, and scheduled report generation still need deeper failure and concurrency tests. The central API module is 51%, and several experimental/inherited adapters remain intentionally below supported-provider coverage levels.
 
-## Scanner isolation and authorization
+## Trusted scanner orchestration
 
-Verified controls include explicit non-floating images, one disposable container per execution, read-only root, dropped capabilities, `no-new-privileges`, CPU/memory/PID/deadline/output/tmpfs limits, reduced environment, no host mounts, no repository mount, no scanner Docker socket, cancellation and timeout force-removal, and bounded output. Active tools fail closed when an isolated image is not configured. Existing tests continue to verify missing, future, expired, revoked, cross-organization, target-mismatch, and per-run active authorization behavior.
+CYPHERYN now includes a deployable `scanner-orchestrator` Compose profile. The ordinary worker and API do not mount the Docker socket. Only the separately trusted orchestrator receives Docker control, is isolated on the internal backend network, and authenticates job-scoped submit, status, and cancellation requests with a generated bearer token.
 
-Network policy defaults to `none`; `bridge` or a named `cypheryn-*` network must be explicit. Docker bridges cannot enforce target-specific egress by themselves. The trusted runner needs Docker control, but the shipped worker is not granted that control. A production deployment must place the runner in a separate trusted orchestration service or isolated worker node with policy-aware egress. This is a deployment boundary, not a hostile-code sandbox claim.
+Verified controls include:
 
-## Provider certification matrix
+- server-side provider/image/executable allowlists;
+- immediate persisted authorization revalidation before active execution;
+- one disposable container per execution;
+- read-only root filesystem, all capabilities dropped, and `no-new-privileges`;
+- bounded CPU, memory, PID count, deadline, output, and temporary storage;
+- reduced environments with no application credentials;
+- no repository, host, or worker-directory mounts in scanner children;
+- forced container removal for cancellation, timeout, startup cleanup, and shutdown;
+- fail-closed behavior for missing, unreachable, unauthenticated, or policy-rejecting orchestration.
 
-Runtime readiness remains independent of support tier: Supported → Installed → Configured → Healthy → Live Verified. Live Verified requires a successful collection timestamp and ages after seven days; it is stale at thirty days.
+Adapters requiring host-side file exchange remain disabled through the remote contract rather than weakening isolation with worker mounts.
 
-| Provider | Tier | Adapter | Contract | Runtime readiness |
-| --- | --- | --- | --- | --- |
-| VirusTotal | Supported | Present | Priority contract suite | Runtime-derived |
-| Shodan | Supported | Present | Priority contract suite | Runtime-derived |
-| AlienVault OTX | Supported | Present | Priority contract suite | Runtime-derived |
-| Censys | Supported | Present | Priority contract suite | Runtime-derived |
-| ThreatFox / abuse.ch | Supported | Present | Priority contract suite | Runtime-derived |
-| SpiderFoot | Inherited | Present | Upstream behavior | Runtime-derived |
-| Active local scanners | Adapter-only | Varies | Isolation/shared controls | Runtime-derived |
-| Other CYPHERYN-native adapters | Experimental | Present | Partial/shared contracts | Runtime-derived |
+### Production supply-chain and egress policy
 
-The deterministic priority suite proves request construction, credential absence, 401/403/429 handling, malformed response and timeout propagation, security-signal normalization, and secret-free URLs. Shared worker/provider tests prove evidence hashing/provenance, circuit-breaker behavior, and successful-collection timestamp semantics. Ordinary CI makes no live third-party calls. A future certification revision should make every one of the twenty requirements directly parameterized for every Supported provider; until then the matrix is credible but not exhaustive.
+Production mode requires every configured scanner image to use an immutable `@sha256:` digest. Floating tags and the unrestricted Docker `bridge` network are rejected. Active scanners must use a `cypheryn-egress-*` network whose Docker metadata asserts `cypheryn.egress-policy=enforced`; an absent, inaccessible, or unlabeled network fails closed.
 
-## Observability
+The label is an assertion, not a firewall. Operators must place the orchestrator behind a policy-aware gateway or on a dedicated scanner node that actually constrains authorized destinations. CYPHERYN correctly refuses to pretend that ordinary Docker bridge networking provides destination-level enforcement.
 
-- `/health/ready` reports API/dependency readiness.
-- `/health/workers` separately reports persisted worker identity, version, heartbeat, successful poll, active jobs, failure and staleness.
-- `/metrics` exposes Prometheus-compatible worker, queue, evidence, and per-provider request/success/failure/timeout/throttle/authentication/cancellation counts.
-- Queue snapshot includes age, wait, execution time, retries, cancellations and expired leases.
-- Provider snapshot includes average and p95 latency, circuit state and last successful collection.
-- Correlation IDs are accepted/generated at HTTP entry, persisted on jobs, returned to clients and included in structured worker/API logs. Evidence and findings remain traceable through job and evidence references.
-- Secret-named structured-log fields are dropped and payloads are not logged.
+## Supported-provider certification
 
-The local smoke test observed a fresh worker heartbeat while an older stopped worker record was correctly marked stale.
+The five Supported providers—VirusTotal, Shodan, AlienVault OTX, Censys, and abuse.ch ThreatFox—are now directly covered by one deterministic contract matrix. Adding a provider to the Supported tier without a complete case fails CI.
 
-## Evidence and external-anchor verification
+Every provider case proves HTTPS request construction, correct target encoding and credential placement, missing credentials, 401/403 failures, 429 throttling, malformed transport data, provider-schema rejection, timeout, cancellation before and during I/O, provider-specific normalization, secret redaction, evidence provenance, non-synthetic status, and SHA-256 response fingerprints. Tests use mocked transports and do not require customer keys or live third-party calls.
 
-Existing evidence and audit SHA-256 chains still pass mutation-detection tests. The new checkpoint format includes scope, head, count, first/last identifiers, timestamp, application version, hash algorithm and checkpoint version. Ed25519 signing keys remain external to normal database records. Offline verification proves signature/key identity, record hashes, chain continuity, head, count and scope; tests reject payload divergence and signature substitution.
+Runtime readiness remains a separate operational truth:
 
-The provided filesystem destination is only independent if mounted or synchronized into a separately controlled trust domain. Anchoring is tamper evidence, not absolute prevention, and does not protect history created after the latest checkpoint.
+**Supported → Installed → Configured → Healthy → Live Verified**
 
-## Supply chain, governance and release status
+`Live Verified` still requires a recorded successful real collection and ages with time; certification does not manufacture that status.
 
-Present: `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, PR template, structured bug template, Dependabot for pip/npm/Actions/Docker/Compose, cross-platform tests, CodeQL, secret scan, dependency audits, four-image vulnerability scans and SBOMs. The release workflow performs tag-triggered gates, builds, SBOMs, source archive, SHA-256 checksum, GitHub artifact attestation and GitHub Release publication.
+## Evidence integrity and independent anchoring
 
-Recommended `main` branch rules remain a repository-setting task: pull requests/review, required Tests/Cross-platform/Security/CodeQL checks, stale-approval dismissal, conversation resolution, and force-push/deletion prevention.
+Evidence and audit events retain linked SHA-256 integrity chains. CYPHERYN now operationalizes external checkpoints rather than merely providing a signing primitive:
+
+- a capability-dropped initializer creates and rotates Ed25519 keys outside PostgreSQL;
+- the API never receives the private-key mount;
+- the worker creates due checkpoints when evidence first appears, the chain head changes, or the interval elapses;
+- immutable `*.anchor.json` and `*.integrity.json` bundles are written to the configured destination;
+- offline verification checks signature, trusted key identity, checkpoint digest, record hashes, chain continuity, scope, count, and chain head;
+- JSON and PDF reports embed the latest public checkpoint metadata;
+- key rotation retains historical verification material.
+
+The default local directory is not an independent trust domain. Production assurance requires separately administered WORM, object-lock, immutable NFS, or equivalent storage plus monitored key rotation and offline verification.
+
+## Observability and operations
+
+CYPHERYN exposes API readiness, worker heartbeat and version, active jobs, queue depth/age/wait/execution/retry/cancellation/lease metrics, provider latency and failures, circuit states, evidence counts, and Prometheus-compatible metrics. Correlation IDs propagate from HTTP entry through persisted jobs and structured logs. Secret-named log fields and payload logging are suppressed.
+
+The doctor utility verifies core service readiness, the trusted orchestrator when enabled, and protected integrity-anchor paths without weakening key-directory permissions.
+
+## Release and supply-chain machinery
+
+The release path now consistently uses CYPHERYN public identities:
+
+- images: `cypheryn-api`, `cypheryn-worker`, `cypheryn-frontend`, `cypheryn-taxii`, and `cypheryn-scanner-orchestrator`;
+- SBOMs: `cypheryn-*.spdx.json`;
+- source package: `CYPHERYN-vX.Y.Z.tar.gz` with a `CYPHERYN-vX.Y.Z/` archive prefix;
+- provenance subject: the CYPHERYN source archive;
+- GitHub Release title: `CYPHERYN vX.Y.Z`;
+- issue templates and private-advisory links: the CYPHERYN repository.
+
+The tag-triggered release continues to run API and frontend tests, critical coverage gates, Ruff, dependency audits, five image builds, High/Critical Trivy gates, SPDX SBOM generation, SHA-256 checksums, GitHub build-provenance attestation, and release publication.
+
+## Rebrand residue classification
+
+| Occurrence class | Decision |
+| --- | --- |
+| Release names, images, archives, SBOMs, attestations, titles | Public branding; renamed to CYPHERYN |
+| Issue templates, security-advisory URL, scanning-policy comments | Public/developer branding; renamed to CYPHERYN |
+| Compose source project and image identities | Safe internal rename already completed; validated as `cypheryn-*` |
+| Tracked database, migration, environment, and volume identifiers | No remaining tracked `signaltrace` identifiers found |
+| Local ignored `platform/api/signaltrace-dev.db` | User-owned development data; deliberately not renamed or deleted by this audit |
+| Git history and legacy remote | Historical compatibility/audit record; not rewritten |
+
+The ignored local database is not shipped, packaged, or referenced by current source. Removing or renaming it could discard or fork local data, so it remains outside the rebrand commit unless the operator explicitly migrates it.
 
 ## Remaining limitations and risks
 
-1. Default Compose does not include a trusted scanner-container orchestrator; active adapters remain safely disabled without it.
-2. Target-specific scanner egress requires an environment-specific policy gateway or isolated node.
-3. Scanner tags are explicit but production should require immutable digests and signature verification.
-4. Critical orchestration and core-business coverage is not yet at the 70–75% long-term target.
-5. Priority provider certification combines provider-specific and shared-control tests; direct twenty-case-per-provider coverage is future work.
-6. Anchor scheduling, remote immutable destinations, rotation ceremony and ordinary report-export embedding need expansion.
-7. Inherited SpiderFoot uses an obsolete Python/Alpine dependency surface and mutable Internet-dependent tests; it should remain isolated and optional.
-8. Hosted CI and repository branch settings are external state and must be verified on the final commit.
+1. Production egress enforcement is external infrastructure; the Docker-network label only records a fail-closed deployment assertion.
+2. Worker orchestration is 61.44%, above its current gate but below the long-term 75% target.
+3. The large API routing module and experimental/inherited providers need more behavioral coverage and simplification.
+4. Test runs expose deprecation and unclosed SQLite connection warnings.
+5. The orchestrator is a privileged trust component because Docker-socket control is host-equivalent; it must remain unexposed and narrowly deployed.
+6. Independent evidence assurance depends on real external retention, key custody, rotation, and periodic offline verification.
+7. Inherited SpiderFoot remains an isolated optional legacy surface with mutable Internet-dependent tests.
+8. Branch protection, release environment policy, and the final hosted supply-chain result are external GitHub state and must be verified on the exact release commit.
 
 ## Engineering scorecard
 
 | Assessment | Score | Rationale |
 | --- | ---: | --- |
 | Original baseline | 6.6/10 | Broad capability, insufficient proof and hardening |
-| Verification & Hardening audit | 7.6/10 | Clean gates, readiness semantics, process termination and DB-local chains |
-| Current engineering-maturity release | 8.2/10 | Stronger isolation design, real operations telemetry, signed external checkpoints, focused gates and OSS release controls; deployment and coverage gaps remain |
+| Verification & Hardening | 7.6/10 | Authoritative gates, readiness semantics, hard process termination, and integrity chains |
+| Previous maturity audit | 8.2/10 | Isolation design, telemetry, signed checkpoints, focused gates, and governance |
+| Current production-readiness audit | **8.8/10** | Deployable trusted orchestration, production digest/egress enforcement gates, exhaustive Supported-provider contracts, stronger critical coverage, and operational external anchoring |
 
-Recommendation: the project is credible as `v0.8.x` and can begin narrowly scoped `v0.9.0` work after the final hosted checks pass. It should not move toward `v1.0` until isolated active scanning is deployable without privileged worker access, critical orchestration coverage materially improves, provider certification is exhaustive, and anchors are routinely exported to an independent trust domain.
+## Release recommendation
+
+CYPHERYN is technically positioned for a `v0.9.0` release candidate after the corrected hosted security/supply-chain workflow passes on the exact commit and repository protection settings are confirmed. Do not publish the tag before that evidence exists. `v1.0` should wait for independently enforced scanner egress in a documented production topology, worker orchestration coverage near 75%, warning cleanup, proven external anchor retention/rotation operations, and sustained release-operation evidence.
