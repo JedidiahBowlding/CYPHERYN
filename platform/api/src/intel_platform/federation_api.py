@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -24,7 +24,13 @@ from .federation import (
     node_id,
     receive_assertion,
 )
-from .models import FederatedAssertion, FederationPeer, MembershipRole, User
+from .models import (
+    FederatedAssertion,
+    FederationPeer,
+    FederationRateWindow,
+    MembershipRole,
+    User,
+)
 from .schemas import (
     FederatedAssertionCreate,
     FederatedAssertionRead,
@@ -57,6 +63,42 @@ def _federation_actor(db: Session, peer: FederationPeer) -> User:
         db.add(user)
         db.flush()
     return user
+
+
+def _enforce_rate_limit(
+    db: Session, organization_id: str, issuer_node_id: str, limit: int
+) -> None:
+    now = datetime.now(UTC)
+    window = db.scalar(
+        select(FederationRateWindow)
+        .where(
+            FederationRateWindow.organization_id == organization_id,
+            FederationRateWindow.issuer_node_id == issuer_node_id,
+        )
+        .with_for_update()
+    )
+    if window is None:
+        db.add(
+            FederationRateWindow(
+                organization_id=organization_id,
+                issuer_node_id=issuer_node_id,
+                window_started_at=now,
+                request_count=1,
+            )
+        )
+        db.flush()
+        return
+    started = window.window_started_at
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=UTC)
+    if now - started >= timedelta(minutes=1):
+        window.window_started_at = now
+        window.request_count = 1
+    elif window.request_count >= max(1, limit):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Federation rate limit exceeded")
+    else:
+        window.request_count += 1
+    db.flush()
 
 
 @router.get("/identity")
@@ -253,6 +295,12 @@ def accept_assertion(
     if content_length > settings.federation_max_assertion_bytes:
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Assertion exceeds size limit")
     issuer = str(payload.get("issuer_node_id", ""))
+    _enforce_rate_limit(
+        db,
+        organization_id,
+        issuer[:96],
+        settings.federation_rate_limit_per_minute,
+    )
     peer = db.scalar(
         select(FederationPeer).where(
             FederationPeer.organization_id == organization_id,

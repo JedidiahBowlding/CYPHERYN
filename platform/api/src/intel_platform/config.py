@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     federation_key_path: str = "/run/secrets/cypheryn-federation/node.pem"
     federation_max_assertion_bytes: int = 64 * 1024
     federation_clock_skew_seconds: int = 300
+    federation_rate_limit_per_minute: int = 60
 
     @model_validator(mode="after")
     def validate_authentication(self) -> "Settings":

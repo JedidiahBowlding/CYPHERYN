@@ -10,10 +10,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import httpx
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .models import FederatedAssertion, FederationPeer, FederationReplayNonce
@@ -325,20 +327,58 @@ def receive_assertion(
         expires_at=verification["expires_at"],
         received_at=current,
     )
-    db.add_all(
-        [
-            FederationReplayNonce(
-                issuer_node_id=peer.node_id,
-                nonce=assertion["nonce"],
-                assertion_id=assertion["assertion_id"],
-                expires_at=verification["expires_at"],
-                received_at=current,
-            ),
-            record,
-        ]
-    )
-    db.flush()
+    try:
+        with db.begin_nested():
+            db.add_all(
+                [
+                    FederationReplayNonce(
+                        issuer_node_id=peer.node_id,
+                        nonce=assertion["nonce"],
+                        assertion_id=assertion["assertion_id"],
+                        expires_at=verification["expires_at"],
+                        received_at=current,
+                    ),
+                    record,
+                ]
+            )
+            db.flush()
+    except IntegrityError as exc:
+        raise FederationVerificationError("Federation assertion replay rejected") from exc
     return record
+
+
+def deliver_assertion(
+    base_url: str,
+    organization_id: str,
+    assertion: dict[str, Any],
+    *,
+    timeout_seconds: float = 10.0,
+    transport: httpx.BaseTransport | None = None,
+) -> dict[str, Any]:
+    if not base_url.startswith("https://") and not base_url.startswith("http://127.0.0.1"):
+        raise FederationVerificationError("Federation delivery requires HTTPS")
+    endpoint = (
+        f"{base_url.rstrip('/')}/api/federation/v1/organizations/"
+        f"{organization_id}/assertions/inbound"
+    )
+    try:
+        with httpx.Client(timeout=timeout_seconds, transport=transport) as client:
+            response = client.post(endpoint, json=assertion)
+    except httpx.TimeoutException as exc:
+        raise FederationVerificationError("Federation peer request timed out") from exc
+    except httpx.TransportError as exc:
+        raise FederationVerificationError("Federation peer is unreachable") from exc
+    if response.status_code != 202:
+        raise FederationVerificationError(
+            f"Federation peer rejected assertion with HTTP {response.status_code}"
+        )
+    try:
+        result = response.json()
+    except ValueError as exc:
+        raise FederationVerificationError("Federation peer returned malformed JSON") from exc
+    if result.get("assertion_id") != assertion.get("assertion_id"):
+        raise FederationVerificationError("Federation peer acknowledgement mismatch")
+    return result
 
 
 def main() -> int:

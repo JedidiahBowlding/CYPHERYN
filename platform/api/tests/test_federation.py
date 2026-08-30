@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import create_engine
@@ -12,6 +13,7 @@ from intel_platform.federation import (
     FederationVerificationError,
     corroborate,
     create_assertion,
+    deliver_assertion,
     identity_document,
     receive_assertion,
     verify_assertion,
@@ -186,3 +188,65 @@ def test_suspended_or_revoked_peer_is_rejected(tmp_path) -> None:
                 now=NOW,
             )
     engine.dispose()
+
+
+def test_delivery_handles_success_timeout_unreachable_and_peer_failure() -> None:
+    key = Ed25519PrivateKey.generate()
+    assertion = assertion_for(key)
+
+    def success(request: httpx.Request) -> httpx.Response:
+        assert request.url.scheme == "https"
+        return httpx.Response(202, json={"assertion_id": assertion["assertion_id"]})
+
+    delivered = deliver_assertion(
+        "https://node-b.example",
+        "org-b",
+        assertion,
+        transport=httpx.MockTransport(success),
+    )
+    assert delivered["assertion_id"] == assertion["assertion_id"]
+
+    def timeout(_request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("deadline exceeded")
+
+    with pytest.raises(FederationVerificationError, match="timed out"):
+        deliver_assertion(
+            "https://node-b.example",
+            "org-b",
+            assertion,
+            transport=httpx.MockTransport(timeout),
+        )
+
+    def unreachable(_request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("offline")
+
+    with pytest.raises(FederationVerificationError, match="unreachable"):
+        deliver_assertion(
+            "https://node-b.example",
+            "org-b",
+            assertion,
+            transport=httpx.MockTransport(unreachable),
+        )
+
+    with pytest.raises(FederationVerificationError, match="HTTP 503"):
+        deliver_assertion(
+            "https://node-b.example",
+            "org-b",
+            assertion,
+            transport=httpx.MockTransport(lambda _: httpx.Response(503)),
+        )
+
+
+def test_delivery_rejects_insecure_remote_transport_and_bad_acknowledgement() -> None:
+    assertion = assertion_for(Ed25519PrivateKey.generate())
+    with pytest.raises(FederationVerificationError, match="HTTPS"):
+        deliver_assertion("http://node-b.example", "org-b", assertion)
+    with pytest.raises(FederationVerificationError, match="acknowledgement"):
+        deliver_assertion(
+            "https://node-b.example",
+            "org-b",
+            assertion,
+            transport=httpx.MockTransport(
+                lambda _: httpx.Response(202, json={"assertion_id": "wrong"})
+            ),
+        )

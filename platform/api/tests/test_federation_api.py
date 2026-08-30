@@ -12,6 +12,7 @@ def enable_federation(monkeypatch, key_path):
         federation_display_name="Node B",
         federation_key_path=str(key_path),
         federation_max_assertion_bytes=65536,
+        federation_rate_limit_per_minute=60,
     )
     monkeypatch.setattr("intel_platform.federation_api.get_settings", lambda: settings)
 

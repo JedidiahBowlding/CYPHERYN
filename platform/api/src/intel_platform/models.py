@@ -672,3 +672,15 @@ class FederationReplayNonce(Base):
     assertion_id: Mapped[str] = mapped_column(String(96), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class FederationRateWindow(Base):
+    __tablename__ = "federation_rate_windows"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "issuer_node_id", name="uq_federation_rate_issuer"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    issuer_node_id: Mapped[str] = mapped_column(String(96), nullable=False)
+    window_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    request_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
