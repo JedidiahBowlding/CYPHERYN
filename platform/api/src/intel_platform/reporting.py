@@ -42,6 +42,7 @@ def build_pdf_report(
     brand_name: str = "SignalTrace",
     brand_accent: str = "#147d72",
     brand_logo: bytes | None = None,
+    integrity_anchor: dict | None = None,
 ) -> bytes:
     output = BytesIO()
     document = SimpleDocTemplate(
@@ -173,6 +174,8 @@ def build_pdf_report(
                 _finding_table(findings, styles),
                 Paragraph("Evidence sources", styles["Heading3"]),
                 _source_table(sources, styles),
+                Paragraph("External integrity anchor", styles["Heading3"]),
+                _anchor_table(integrity_anchor, styles),
             ]
         )
     document.build(story, onFirstPage=_footer, onLaterPages=_footer)
@@ -245,6 +248,22 @@ def _source_table(sources: list[EvidenceSource], styles) -> Table:
         for item in sources[:200]
     )
     return _styled_table(rows, [1.2 * inch, 2.4 * inch, 1.35 * inch, 1.9 * inch], styles)
+
+
+def _anchor_table(anchor: dict | None, styles) -> Table:
+    if not anchor:
+        return _styled_table(
+            [["Status", "No external checkpoint available"]], [1.2 * inch, 5.65 * inch], styles
+        )
+    checkpoint = anchor.get("checkpoint") or {}
+    rows = [
+        ["Signing key", anchor.get("signing_key_id", "unknown")],
+        ["Checkpoint time", checkpoint.get("timestamp", "unknown")],
+        ["Chain head", checkpoint.get("chain_head", "unknown")],
+        ["Records", checkpoint.get("record_count", 0)],
+        ["Anchor file", anchor.get("anchor_filename", "unknown")],
+    ]
+    return _styled_table(rows, [1.2 * inch, 5.65 * inch], styles)
 
 
 def _styled_table(rows: list[list], widths: list[float], styles) -> Table:

@@ -12,6 +12,8 @@ SignalTrace follows [Semantic Versioning](https://semver.org/) before and after 
 - Worker/queue/provider operational telemetry, structured correlation IDs, worker health, and Prometheus-compatible metrics.
 - Objective provider support tiers and timestamp-based verification freshness.
 - Signed external evidence-chain checkpoints and offline verification.
+- Automatic on-change and scheduled evidence anchoring with exclusive checkpoint bundles,
+  retained Ed25519 key rotation, read-only API visibility, and JSON/PDF export references.
 - Open-source governance, dependency automation, critical coverage policy, and reproducible release automation.
 
 ### Changed
@@ -28,6 +30,8 @@ SignalTrace follows [Semantic Versioning](https://semver.org/) before and after 
 
 - Scanner containers receive no application environment, Docker socket, host mounts, or repository access.
 - Integrity signing keys remain external to ordinary application database records.
+- The API never receives the private signing-key mount; only the worker can read it, and
+  only the worker can write the separately mounted anchor destination.
 
 ### Known limitations
 

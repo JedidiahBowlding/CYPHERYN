@@ -75,6 +75,11 @@ def port_open(port: int) -> bool:
         return False
 
 
+def configured_path(values: dict[str, str], name: str, default: str) -> Path:
+    value = Path(values.get(name, default))
+    return value if value.is_absolute() else ROOT / value
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--offline", action="store_true", help="Skip live service checks")
@@ -102,6 +107,26 @@ def main() -> int:
         failures += 1
     elif values:
         result("PASS", "Required configuration", "values present and hidden")
+    anchoring_enabled = values.get("PLATFORM_INTEGRITY_ANCHOR_ENABLED", "true").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+    key_directory = configured_path(
+        values, "PLATFORM_ANCHOR_KEY_DIR", "platform/.runtime/anchor-keys"
+    )
+    anchor_directory = configured_path(
+        values, "PLATFORM_ANCHOR_STORE_DIR", "platform/.runtime/anchors"
+    )
+    anchor_ready = (key_directory / "active-key.json").is_file() and anchor_directory.is_dir()
+    result(
+        "PASS" if anchor_ready else ("FAIL" if anchoring_enabled else "WARN"),
+        "External integrity anchoring",
+        "active signing key and independent store available"
+        if anchor_ready
+        else "run docker compose up to initialize the signing key",
+    )
+    failures += int(anchoring_enabled and not anchor_ready)
     if args.offline:
         result("WARN", "Live services", "offline checks skipped")
     else:

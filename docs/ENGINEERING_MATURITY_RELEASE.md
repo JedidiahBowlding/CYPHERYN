@@ -29,13 +29,13 @@ Live verification is fresh for seven days, aging from day 7 through day 29, and 
 
 ## Critical coverage policy
 
-Coverage gates focus on owned security/integrity modules: integrity and redaction at 90%, provider controls at 85%, process termination and scanner isolation at 80%, observability at 85%, and an initial external-anchor threshold of 60% while deterministic destination and rotation coverage expands. A global 50% floor prevents broad regression. Inherited SpiderFoot is excluded from SignalTrace-native thresholds.
+Coverage gates focus on owned security/integrity modules: integrity and redaction at 90%, provider controls at 85%, process termination and scanner isolation at 80%, observability at 85%, and external anchoring at 70%. A global 60% floor prevents broad regression. Inherited SpiderFoot is excluded from SignalTrace-native thresholds.
 
 The low-coverage orchestration, detection, normalization, report, notification, and malware modules remain explicit pre-`0.9.0` work. The project will raise thresholds only alongside behavior-focused tests, never meaningless line execution.
 
 ## External integrity anchoring
 
-SignalTrace can calculate a versioned checkpoint containing scope, chain head, record count, first/last record IDs, timestamp, application version, and SHA-256 algorithm. An external Ed25519 private key signs its canonical JSON. Anchors contain a key identifier and public key; private keys are files or external signer inputs and never ordinary database records.
+SignalTrace automatically calculates versioned checkpoints containing scope, chain head, record count, first/last record IDs, timestamp, application version, and SHA-256 algorithm. An external Ed25519 private key signs canonical JSON. The worker schedules checkpoints when evidence changes and at a configurable interval, writes exclusive immutable anchor bundles to a separately mounted destination, and retains prior keys during rotation. JSON and technical PDF exports reference the latest public checkpoint metadata. Private keys are files outside normal database records and are never mounted into the API.
 
 The provider-neutral destination contract currently includes filesystem storage suitable for a separately mounted or synchronized trust domain. S3 Object Lock, immutable cloud storage, transparency services, or customer verification endpoints can implement the same interface. The offline verifier checks signature, optional expected key identity, record hashes, chain continuity, head, count, and scope.
 

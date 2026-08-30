@@ -16,7 +16,7 @@ THRESHOLDS = {
     "provider_safety.py": 85,
     "providers/threat_intel.py": 90,
     "security_controls.py": 90,
-    "integrity_anchor.py": 60,
+    "integrity_anchor.py": 70,
     "scanner_isolation.py": 80,
     "docker_api_scanner.py": 80,
     "scanner_orchestrator.py": 80,

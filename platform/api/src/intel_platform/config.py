@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
     smtp_use_tls: bool = True
+    integrity_anchor_enabled: bool = False
+    integrity_anchor_key_dir: str = "/run/secrets/signaltrace-anchor"
+    integrity_anchor_store_dir: str = "/anchors"
+    integrity_anchor_interval_minutes: int = 1440
 
     @model_validator(mode="after")
     def validate_authentication(self) -> "Settings":

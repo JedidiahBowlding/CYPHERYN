@@ -143,6 +143,7 @@ def json_export(
     job_events: list[CollectionJobEvent],
     entities: list[Entity],
     relationships: list[Relationship],
+    integrity_anchor: dict | None = None,
 ) -> bytes:
     generated = datetime.now(UTC).isoformat()
     body = {
@@ -194,6 +195,7 @@ def json_export(
             for item in relationships
         ],
         "timeline": timeline_records(sources, changes, findings, job_events),
+        "integrity_anchor": integrity_anchor,
     }
     canonical = json.dumps(body, sort_keys=True, separators=(",", ":")).encode()
     wrapper = {

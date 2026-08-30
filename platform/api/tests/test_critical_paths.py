@@ -511,9 +511,14 @@ def test_reports_preserve_evidence_integrity_and_escape_csv() -> None:
             [event],
             [entity, related],
             [relationship],
+            integrity_anchor={
+                "signing_key_id": "ed25519:test",
+                "checkpoint": {"record_count": 1},
+            },
         )
     )
     assert exported["data"]["evidence_sources"][0]["integrity_hash"] == "c" * 64
+    assert exported["data"]["integrity_anchor"]["signing_key_id"] == "ed25519:test"
     assert len(exported["manifest"]["content_sha256"]) == 64
     timeline = timeline_records([source], [change], [finding], [event])
     assert timeline == sorted(timeline, key=lambda item: item["timestamp"])

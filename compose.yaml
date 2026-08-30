@@ -43,6 +43,10 @@ services:
       PLATFORM_SMTP_PASSWORD: ${PLATFORM_SMTP_PASSWORD:-}
       PLATFORM_SMTP_FROM: ${PLATFORM_SMTP_FROM:-}
       PLATFORM_SMTP_USE_TLS: ${PLATFORM_SMTP_USE_TLS:-true}
+      PLATFORM_INTEGRITY_ANCHOR_ENABLED: ${PLATFORM_INTEGRITY_ANCHOR_ENABLED:-true}
+      PLATFORM_INTEGRITY_ANCHOR_KEY_DIR: /run/secrets/signaltrace-anchor
+      PLATFORM_INTEGRITY_ANCHOR_STORE_DIR: /anchors
+      PLATFORM_INTEGRITY_ANCHOR_INTERVAL_MINUTES: ${PLATFORM_INTEGRITY_ANCHOR_INTERVAL_MINUTES:-1440}
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +55,7 @@ services:
     volumes:
       - quarantine-data:/data/quarantine
       - clamav-data:/data/clamav-db
+      - ${PLATFORM_ANCHOR_STORE_DIR:-./platform/.runtime/anchors}:/anchors:ro
     read_only: true
     tmpfs: [/tmp]
     security_opt: [no-new-privileges:true]
@@ -75,14 +80,38 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      anchor-key-init:
+        condition: service_completed_successfully
     volumes:
       - quarantine-data:/data/quarantine
       - clamav-data:/data/clamav-db
+      - ${PLATFORM_ANCHOR_KEY_DIR:-./platform/.runtime/anchor-keys}:/run/secrets/signaltrace-anchor:ro
+      - ${PLATFORM_ANCHOR_STORE_DIR:-./platform/.runtime/anchors}:/anchors
     read_only: true
     tmpfs: [/tmp]
     security_opt: [no-new-privileges:true]
     extra_hosts:
       - host.docker.internal:host-gateway
+    networks: [backend]
+
+  anchor-key-init:
+    build:
+      context: ./platform/api
+    command:
+      - python
+      - -m
+      - intel_platform.integrity_anchor
+      - initialize
+      - /keys
+      - /anchors
+    user: "0:0"
+    volumes:
+      - ${PLATFORM_ANCHOR_KEY_DIR:-./platform/.runtime/anchor-keys}:/keys
+      - ${PLATFORM_ANCHOR_STORE_DIR:-./platform/.runtime/anchors}:/anchors
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     networks: [backend]
 
   scanner-orchestrator:

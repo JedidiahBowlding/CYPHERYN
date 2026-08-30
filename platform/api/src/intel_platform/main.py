@@ -19,6 +19,7 @@ from .config import get_settings
 from .database import Base, engine, get_db
 from .detection_engine import export_suricata, ingest_network_events, parse_sigma
 from .integrity import verify_audit_event, verify_evidence_source
+from .integrity_anchor import latest_anchor_metadata
 from .job_events import append_job_event
 from .local_ai import LocalNarrativeError, generate_local_narrative
 from .malware_analysis import correlate_hashes, quarantine_file, scan_clamav, scan_yara
@@ -1523,6 +1524,9 @@ def download_pdf_report(
         .order_by(NarrativeSnapshot.created_at.desc())
     )
     organization = db.get(Organization, investigation.organization_id)
+    anchor = latest_anchor_metadata(
+        Path(get_settings().integrity_anchor_store_dir), investigation.id
+    )
     content = build_pdf_report(
         investigation,
         snapshot,
@@ -1534,6 +1538,7 @@ def download_pdf_report(
         brand_name=organization.report_title if organization else "SignalTrace",
         brand_accent=organization.report_accent if organization else "#147d72",
         brand_logo=organization.report_logo if organization else None,
+        integrity_anchor=anchor,
     )
     filename = f"signaltrace-{investigation.id[:8]}-{style}.pdf"
     digest = sha256(content)
@@ -1604,7 +1609,13 @@ def download_evidence_export(
     membership_for(db, user.id, investigation.organization_id)
     data = _export_records(db, investigation)
     if format == "json":
-        content = json_export(investigation, **data)
+        content = json_export(
+            investigation,
+            **data,
+            integrity_anchor=latest_anchor_metadata(
+                Path(get_settings().integrity_anchor_store_dir), investigation.id
+            ),
+        )
         media_type, extension = "application/json", "json"
     elif format == "csv":
         content = findings_csv(data["findings"])

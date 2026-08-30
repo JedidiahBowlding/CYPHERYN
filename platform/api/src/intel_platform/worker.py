@@ -7,6 +7,7 @@ import socket
 import threading
 import time
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from .audit import record_audit
 from .config import get_settings
 from .database import Base, SessionLocal, engine
 from .integrity import seal_evidence_source
+from .integrity_anchor import generate_due_anchors, latest_anchor_metadata
 from .job_events import append_job_event
 from .local_ai import LocalNarrativeError, generate_local_narrative
 from .models import (
@@ -1421,6 +1423,9 @@ def generate_due_reports(session_factory=SessionLocal) -> int:
                 .order_by(NarrativeSnapshot.created_at.desc())
             )
             organization = db.get(Organization, investigation.organization_id)
+            anchor = latest_anchor_metadata(
+                Path(get_settings().integrity_anchor_store_dir), investigation.id
+            )
             content = build_pdf_report(
                 investigation,
                 snapshot,
@@ -1432,6 +1437,7 @@ def generate_due_reports(session_factory=SessionLocal) -> int:
                 brand_name=organization.report_title if organization else "SignalTrace",
                 brand_accent=organization.report_accent if organization else "#147d72",
                 brand_logo=organization.report_logo if organization else None,
+                integrity_anchor=anchor,
             )
             filename = f"signaltrace-{investigation.id[:8]}-{schedule.style}-{now:%Y%m%d-%H%M}.pdf"
             db.add(
@@ -1483,11 +1489,20 @@ def main() -> None:
     print(f"job worker ready: {worker_id}", flush=True)
     while True:
         try:
+            settings = get_settings()
             enqueue_due_schedules()
             enqueue_due_finding_monitors()
             monitor_job_health()
             deliver_pending_notifications()
             generate_due_reports()
+            if settings.integrity_anchor_enabled:
+                generate_due_anchors(
+                    SessionLocal,
+                    key_directory=Path(settings.integrity_anchor_key_dir),
+                    destination_directory=Path(settings.integrity_anchor_store_dir),
+                    interval_minutes=settings.integrity_anchor_interval_minutes,
+                    application_version=os.getenv("SIGNALTRACE_VERSION", "development"),
+                )
             processed = process_one(worker_id)
             if processed is None:
                 time.sleep(1)

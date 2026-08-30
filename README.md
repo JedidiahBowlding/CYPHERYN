@@ -412,9 +412,9 @@ PowerShell uses `py scripts/reset_dev.py`. The utility requires the operator to 
 - Active local scanners require explicitly configured disposable images and run with bounded CPU, memory, PIDs, output, deadline, temporary storage, and environment.
 - The normal worker never mounts the Docker socket. The optional, backend-only [trusted scanner orchestrator](docs/TRUSTED_SCANNER_ORCHESTRATOR.md) exclusively owns container launch and cancellation.
 - Worker health is distinct from API health at `/health/workers`; dependency-free Prometheus metrics are exposed at `/metrics`.
-- Optional signed evidence checkpoints can be retained in a separately controlled trust domain and verified offline.
+- Automatic Ed25519-signed evidence checkpoints are retained outside PostgreSQL, included in JSON and technical PDF exports, support non-destructive key rotation, and can be verified offline against independently controlled immutable storage.
 
-Operational metrics, alert conditions, privacy considerations, and troubleshooting are documented in [the observability guide](docs/OBSERVABILITY.md). The exact five-provider support contract is documented in [the provider certification guide](docs/PROVIDER_CERTIFICATION.md). Scanner isolation, critical coverage, integrity anchoring, and release boundaries are detailed in [the engineering maturity release guide](docs/ENGINEERING_MATURITY_RELEASE.md).
+Operational metrics, alert conditions, privacy considerations, and troubleshooting are documented in [the observability guide](docs/OBSERVABILITY.md). The exact five-provider support contract is documented in [the provider certification guide](docs/PROVIDER_CERTIFICATION.md). Scheduled checkpoints, independent storage, rotation, and offline verification are documented in [the external integrity anchoring guide](docs/EXTERNAL_INTEGRITY_ANCHORING.md). Enforced review and CI requirements are recorded in [the branch protection guide](docs/BRANCH_PROTECTION.md). Scanner isolation, critical coverage, and release boundaries are detailed in [the engineering maturity release guide](docs/ENGINEERING_MATURITY_RELEASE.md).
 
 For production deployment, disable development identity, configure OIDC, rotate every development secret, apply HTTPS and network controls, establish backup/retention policy, and complete an environment-specific security review.
 
