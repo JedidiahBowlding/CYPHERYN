@@ -1,7 +1,7 @@
 {
   "name": "cypheryn-console",
   "description": "CYPHERYN defensive intelligence and OSINT investigation console",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
