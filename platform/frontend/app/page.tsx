@@ -53,6 +53,34 @@ const platformAreas = [
   },
 ];
 
+const architectureLayers = [
+  {
+    title: "Authorized workspace",
+    copy: "Analysts define the target, ownership, purpose, and permitted collection boundary before work begins.",
+  },
+  {
+    title: "Durable collection",
+    copy: "Workers run provider jobs asynchronously, preserve status and retries, and normalize observations into a common model.",
+  },
+  {
+    title: "Evidence and correlation",
+    copy: "Entities, relationships, provider payloads, hashes, timestamps, and claims remain connected in one reviewable record.",
+  },
+  {
+    title: "Verification loop",
+    copy: "Monitoring, rescans, comparisons, alerts, and finding lifecycle controls show what changed and whether remediation held.",
+  },
+];
+
+const securityControls = [
+  ["Authorization first", "Passive and active operations retain scope and authorization context."],
+  ["Isolated active tools", "Higher-risk scanners run through a separately trusted, resource-bounded orchestrator."],
+  ["Secret-conscious operation", "Provider credentials stay encrypted and are excluded from evidence, logs, and tool environments."],
+  ["Tamper-evident evidence", "Linked integrity records and signed checkpoints make unauthorized history changes detectable."],
+  ["Private analyst assistance", "Local AI can explain evidence without making unsupported findings or replacing analyst judgment."],
+  ["Provider truthfulness", "Readiness distinguishes supported, installed, configured, healthy, and live-verified integrations."],
+];
+
 export default function LandingPage() {
   return (
     <main className="landing-page">
@@ -64,6 +92,8 @@ export default function LandingPage() {
         <div>
           <a href="#platform">Platform</a>
           <a href="#capabilities">Capabilities</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#security">Security</a>
           <a href="#workflow">Workflow</a>
           <Link className="landing-login" href="/dashboard">
             Open platform
@@ -226,6 +256,57 @@ export default function LandingPage() {
           </li>
         </ol>
       </section>
+      <section className="landing-architecture" id="architecture">
+        <header>
+          <p className="landing-kicker">How the platform works</p>
+          <h2>A complete path from authorization to verified remediation.</h2>
+          <p>
+            CYPHERYN is not a page of disconnected lookups. It is an operational
+            system that keeps collection, provenance, analysis, and change history
+            together throughout an investigation.
+          </p>
+        </header>
+        <div className="architecture-flow">
+          {architectureLayers.map((layer, index) => (
+            <article key={layer.title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <h3>{layer.title}</h3>
+              <p>{layer.copy}</p>
+            </article>
+          ))}
+        </div>
+        <div className="architecture-note">
+          <strong>Local-first by design</strong>
+          <p>
+            Deploy with containers on macOS, Windows, Linux, or private infrastructure.
+            PostgreSQL preserves operational data, Redis coordinates durable jobs,
+            isolated runners handle active tools, and optional providers extend the
+            platform without becoming a requirement for basic operation.
+          </p>
+        </div>
+      </section>
+      <section className="landing-security" id="security">
+        <header>
+          <div>
+            <p className="landing-kicker">Security boundaries</p>
+            <h2>Built for evidence that has to survive scrutiny.</h2>
+          </div>
+          <p>
+            Cybersecurity software should make its boundaries visible. CYPHERYN
+            records what was authorized, separates observations from conclusions,
+            limits active execution, and tells operators when a capability has
+            actually been verified—not merely listed.
+          </p>
+        </header>
+        <div className="security-grid">
+          {securityControls.map(([title, copy]) => (
+            <article key={title}>
+              <i aria-hidden="true" />
+              <div><h3>{title}</h3><p>{copy}</p></div>
+            </article>
+          ))}
+        </div>
+      </section>
       <section className="landing-assurance">
         <div>
           <p className="landing-kicker">Trust through verification</p>
@@ -238,12 +319,45 @@ export default function LandingPage() {
         </div>
       </section>
       <footer className="landing-footer">
-        <div className="landing-brand">
-          <Image src="/cypheryn-logo.png" alt="" width={1254} height={1254} />
-          <span>CYPHERYN</span>
+        <div className="footer-main">
+          <div className="footer-intro">
+            <div className="landing-brand">
+              <Image src="/cypheryn-logo.png" alt="" width={1254} height={1254} />
+              <span>CYPHERYN</span>
+            </div>
+            <p>
+              Local-first cyber intelligence for attack-surface discovery, threat
+              enrichment, evidence correlation, vulnerability operations, and
+              remediation verification.
+            </p>
+            <small>Authorized intelligence. Evidence-grounded decisions.</small>
+          </div>
+          <div className="footer-links">
+            <div>
+              <strong>Platform</strong>
+              <a href="#capabilities">Capabilities</a>
+              <a href="#architecture">Architecture</a>
+              <a href="#security">Security boundaries</a>
+              <Link href="/dashboard">Open platform</Link>
+            </div>
+            <div>
+              <strong>Resources</strong>
+              <a href="https://github.com/JedidiahBowlding/CYPHERYN" target="_blank" rel="noreferrer">GitHub repository</a>
+              <a href="https://github.com/JedidiahBowlding/CYPHERYN/blob/main/docs/TUTORIAL.md" target="_blank" rel="noreferrer">Operator tutorial</a>
+              <a href="https://github.com/JedidiahBowlding/CYPHERYN/blob/main/README.md" target="_blank" rel="noreferrer">Installation guide</a>
+              <a href="https://github.com/JedidiahBowlding/CYPHERYN/security" target="_blank" rel="noreferrer">Security policy</a>
+            </div>
+            <div>
+              <strong>Use responsibly</strong>
+              <p>Use active capabilities only on systems you own or have explicit permission to assess.</p>
+              <a href="https://github.com/JedidiahBowlding/CYPHERYN/blob/main/SECURITY_BOUNDARIES.md" target="_blank" rel="noreferrer">Read the boundaries →</a>
+            </div>
+          </div>
         </div>
-        <p>Authorized intelligence. Evidence-grounded decisions.</p>
-        <Link href="/dashboard">Enter platform →</Link>
+        <div className="footer-bottom">
+          <span>© 2026 CYPHERYN. Open-source defensive security engineering.</span>
+          <span>Passive-first · Source-linked · Local-first</span>
+        </div>
       </footer>
     </main>
   );
