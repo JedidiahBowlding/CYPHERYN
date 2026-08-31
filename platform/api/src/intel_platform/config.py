@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     local_ai_model: str = "qwen2.5-coder:7b"
     local_ai_timeout_seconds: int = 120
     quarantine_dir: str = "../quarantine"
+    local_import_root: str = "/var/lib/cypheryn/imports"
     malware_max_upload_bytes: int = 25 * 1024 * 1024
     clamav_database_dir: str = "../.runtime/clamav-db"
     smtp_host: str = ""

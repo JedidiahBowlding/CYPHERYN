@@ -2,6 +2,14 @@
 
 Status: **EXPERIMENTAL**. Protocol identifier: `cypheryn-federation-v1`.
 
+The v1 assertion is intentionally closed. It transports fingerprints and bounded
+classification metadata only. `source_category` is one of `attack_surface`,
+`certificate_observation`, `dns_observation`, `malware_analysis`,
+`threat_intelligence`, or `vulnerability_assessment`. Arbitrary evidence checkpoints,
+nested JSON, credentials, personal/customer data, topology, analyst notes,
+authorization records, malware, source code, and full reports are not protocol fields
+and are rejected before signature acceptance.
+
 Endpoints use `/api/federation/v1/`. `identity`, `capabilities`, and `health` describe a
 node. Organization-scoped peer endpoints require organization-administrator authentication.
 Outbound creation requires the same local privilege. Inbound assertions authenticate by

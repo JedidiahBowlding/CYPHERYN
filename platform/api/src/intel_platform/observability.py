@@ -4,6 +4,7 @@ import json
 import logging
 import math
 import threading
+from collections import Counter
 from contextvars import ContextVar
 from datetime import UTC, datetime
 from statistics import mean
@@ -25,6 +26,36 @@ from .models import (
 correlation_id_context: ContextVar[str] = ContextVar("correlation_id", default="")
 logger = logging.getLogger("cypheryn")
 WORKER_STALE_SECONDS = 45
+_federation_lock = threading.Lock()
+_federation_counters: Counter[str] = Counter()
+_federation_delivery_latencies: list[float] = []
+FEDERATION_LATENCY_BUCKETS = (0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+
+
+def record_federation_event(reason: str, *, latency_seconds: float | None = None) -> None:
+    """Record bounded, label-safe process telemetry without assertion subject data."""
+    allowed = {
+        "accepted",
+        "expired",
+        "malformed",
+        "replay",
+        "revoked_peer",
+        "signature_failure",
+        "timeout",
+        "unreachable_peer",
+    }
+    normalized = reason if reason in allowed else "malformed"
+    with _federation_lock:
+        _federation_counters[normalized] += 1
+        if latency_seconds is not None:
+            _federation_delivery_latencies.append(max(0.0, min(latency_seconds, 60.0)))
+            if len(_federation_delivery_latencies) > 10_000:
+                del _federation_delivery_latencies[:1_000]
+
+
+def federation_telemetry_snapshot() -> tuple[dict[str, int], list[float]]:
+    with _federation_lock:
+        return dict(_federation_counters), list(_federation_delivery_latencies)
 
 
 def correlation_id(value: str | None = None) -> str:
@@ -266,6 +297,39 @@ def prometheus_metrics(snapshot: dict) -> str:
         "verified_assertions",
     ):
         lines.append(f"cypheryn_federation_{metric} {int(federation.get(metric, 0))}")
+    federation_events, federation_latencies = federation_telemetry_snapshot()
+    for reason in (
+        "expired",
+        "malformed",
+        "replay",
+        "revoked_peer",
+        "signature_failure",
+        "timeout",
+        "unreachable_peer",
+    ):
+        lines.append(
+            f'cypheryn_federation_rejections_total{{reason="{reason}"}} '
+            f"{federation_events.get(reason, 0)}"
+        )
+    cumulative = 0
+    for boundary in FEDERATION_LATENCY_BUCKETS:
+        cumulative = sum(value <= boundary for value in federation_latencies)
+        lines.append(
+            "cypheryn_federation_delivery_latency_seconds_bucket"
+            f'{{le="{boundary}"}} {cumulative}'
+        )
+    lines.append(
+        "cypheryn_federation_delivery_latency_seconds_bucket"
+        f'{{le="+Inf"}} {len(federation_latencies)}'
+    )
+    lines.append(
+        "cypheryn_federation_delivery_latency_seconds_count "
+        f"{len(federation_latencies)}"
+    )
+    lines.append(
+        "cypheryn_federation_delivery_latency_seconds_sum "
+        f"{sum(federation_latencies):.6f}"
+    )
     for key in ("queued", "running", "failed", "cancelled", "retries", "expired_leases"):
         lines.append(f"cypheryn_jobs_{key} {queue[key]}")
     lines.append(f"cypheryn_oldest_queued_job_seconds {queue['oldest_queued_age_seconds']}")

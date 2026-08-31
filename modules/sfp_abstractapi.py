@@ -13,6 +13,7 @@
 import json
 import time
 import urllib
+from urllib.parse import urlparse
 
 from spiderfoot import SpiderFootEvent, SpiderFootPlugin
 
@@ -262,10 +263,11 @@ class sfp_abstractapi(SpiderFootPlugin):
 
             linkedin_url = data.get('linkedin_url')
             if linkedin_url:
-                if linkedin_url.startswith('linkedin.com'):
-                    linkedin_url = f"https://{linkedin_url}"
-                e = SpiderFootEvent("SOCIAL_MEDIA", f"LinkedIn (Company): <SFURL>{linkedin_url}</SFURL>", self.__name__, event)
-                self.notifyListeners(e)
+                candidate_url = linkedin_url if '://' in linkedin_url else f"https://{linkedin_url}"
+                if (urlparse(candidate_url).hostname or '').lower() in {'linkedin.com', 'www.linkedin.com'}:
+                    linkedin_url = candidate_url
+                    e = SpiderFootEvent("SOCIAL_MEDIA", f"LinkedIn (Company): <SFURL>{linkedin_url}</SFURL>", self.__name__, event)
+                    self.notifyListeners(e)
 
             locality = data.get('locality')
             country = data.get('country')

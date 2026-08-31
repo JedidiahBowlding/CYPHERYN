@@ -92,6 +92,7 @@ class LocalObserverProvider:
     def _tls_fingerprint(address: str, port: int, timeout: float) -> str | None:
         try:
             ssl_context = ssl.create_default_context()
+            ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
             with socket.create_connection((address, port), timeout=timeout) as raw:
                 with ssl_context.wrap_socket(raw, server_hostname=address) as secured:
                     certificate = secured.getpeercert(binary_form=True)
