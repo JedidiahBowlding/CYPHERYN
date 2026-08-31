@@ -163,3 +163,7 @@ cypheryn.com {
 		}
 	}
 }
+
+www.cypheryn.com {
+	redir https://cypheryn.com{uri} permanent
+}
