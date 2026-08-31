@@ -254,7 +254,7 @@ function sf_viz_dendrogram(targetId, data) {
         if (data[1].length > 200) {
             data[1] = data[1].substring(0, 200) + "...";
         }
-        data[1] = data[1].replace("<", "&lt;").replace(">", "&gt;");
+        data[1] = data[1].replaceAll("<", "&lt;").replaceAll(">", "&gt;");
         message = "<table>";
         message += "<tr><td><b>Type:</b></td><td>" + data[10] + "</td></tr>";
         message += "<tr><td><b>Source Module:</b></td><td>" + data[3] + "</td></tr>";

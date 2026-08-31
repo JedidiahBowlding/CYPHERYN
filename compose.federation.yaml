@@ -55,6 +55,24 @@ services:
     depends_on:
       node-a-db: {condition: service_healthy}
       node-a-key-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  node-a-worker:
+    build: {context: ./platform/api}
+    command: ["python", "-m", "intel_platform.worker"]
+    environment:
+      PLATFORM_DATABASE_URL: postgresql+psycopg://cypheryn_a:federation-dev-a@node-a-db/cypheryn_a
+      PLATFORM_FEDERATION_ENABLED: "true"
+      PLATFORM_FEDERATION_DISPLAY_NAME: "CYPHERYN Node A"
+      PLATFORM_FEDERATION_KEY_PATH: /keys/node.pem
+      PLATFORM_ALLOW_DEV_IDENTITY: "true"
+    volumes: [node-a-keys:/keys:ro]
+    depends_on:
+      node-a: {condition: service_healthy}
 
   node-b:
     build: {context: ./platform/api}
@@ -70,6 +88,24 @@ services:
     depends_on:
       node-b-db: {condition: service_healthy}
       node-b-key-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  node-b-worker:
+    build: {context: ./platform/api}
+    command: ["python", "-m", "intel_platform.worker"]
+    environment:
+      PLATFORM_DATABASE_URL: postgresql+psycopg://cypheryn_b:federation-dev-b@node-b-db/cypheryn_b
+      PLATFORM_FEDERATION_ENABLED: "true"
+      PLATFORM_FEDERATION_DISPLAY_NAME: "CYPHERYN Node B"
+      PLATFORM_FEDERATION_KEY_PATH: /keys/node.pem
+      PLATFORM_ALLOW_DEV_IDENTITY: "true"
+    volumes: [node-b-keys:/keys:ro]
+    depends_on:
+      node-b: {condition: service_healthy}
 
 volumes:
   node-a-data:

@@ -116,15 +116,27 @@ def test_target_canonicalization_rejects_unsafe_cases(kind: TargetType, raw: str
     assert error.value.status_code == 422
 
 
-def test_local_repository_and_sbom_paths_are_constrained(tmp_path: Path) -> None:
+def test_local_repository_and_sbom_paths_are_constrained(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "intel_platform.normalization.get_settings",
+        lambda: SimpleNamespace(local_import_root=str(tmp_path)),
+    )
     repository = tmp_path / "owner" / "project"
     repository.mkdir(parents=True)
     sbom = tmp_path / "inventory.json"
     sbom.write_text("{}", encoding="utf-8")
-    assert canonicalize_target(TargetType.REPOSITORY, str(repository)) == str(repository.resolve())
-    assert canonicalize_target(TargetType.SBOM, str(sbom)) == str(sbom.resolve())
+    assert canonicalize_target(TargetType.REPOSITORY, "owner/project") == str(repository.resolve())
+    assert canonicalize_target(TargetType.SBOM, "inventory.json") == str(sbom.resolve())
     with pytest.raises(HTTPException):
-        canonicalize_target(TargetType.SBOM, str(repository))
+        canonicalize_target(TargetType.SBOM, "owner/project")
+    with pytest.raises(HTTPException):
+        canonicalize_target(TargetType.SBOM, "../outside.json")
+    with pytest.raises(HTTPException):
+        canonicalize_target(TargetType.REPOSITORY, str(repository))
 
 
 def test_detection_parsers_handle_valid_invalid_and_partial_input() -> None:

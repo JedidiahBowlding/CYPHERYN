@@ -5,7 +5,27 @@ from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import HTTPException, status
 
+from .config import get_settings
 from .models import TargetType
+
+
+def _resolve_import_path(raw: str) -> Path:
+    """Resolve a caller-supplied relative path inside the configured import root."""
+    candidate = Path(raw)
+    if candidate.is_absolute() or not candidate.parts:
+        raise ValueError("local artifact paths must be relative to the configured import root")
+    root = Path(get_settings().local_import_root).expanduser().resolve(strict=True)
+    current = root
+    for requested_name in candidate.parts:
+        if requested_name in {"", ".", ".."}:
+            raise ValueError("local artifact path escapes the configured import root")
+        match = next((entry for entry in current.iterdir() if entry.name == requested_name), None)
+        if match is None:
+            raise ValueError("local artifact does not exist in the configured import root")
+        current = match.resolve(strict=True)
+        if not current.is_relative_to(root):
+            raise ValueError("local artifact path escapes the configured import root")
+    return current
 
 
 def canonicalize_target(target_type: TargetType, value: str) -> str:
@@ -48,16 +68,6 @@ def canonicalize_target(target_type: TargetType, value: str) -> str:
                 raise ValueError("empty target")
             return " ".join(raw.split())
         if target_type == TargetType.REPOSITORY:
-            local_path = Path(raw).expanduser()
-            if local_path.is_absolute() or local_path.exists():
-                path = local_path.resolve(strict=True)
-                if (
-                    not path.is_dir()
-                    or path in {Path(path.anchor), Path.home()}
-                    or len(path.parts) < 4
-                ):
-                    raise ValueError("local repository must be a specific existing directory")
-                return str(path)
             parsed = urlsplit(raw)
             if parsed.scheme:
                 if (
@@ -68,9 +78,10 @@ def canonicalize_target(target_type: TargetType, value: str) -> str:
                     raise ValueError("repository URL must be https://github.com/owner/repository")
                 path = parsed.path.rstrip("/").removesuffix(".git")
                 return f"https://github.com{path}.git"
-            raise ValueError(
-                "repository must be an existing local directory or an HTTPS GitHub URL"
-            )
+            path = _resolve_import_path(raw)
+            if not path.is_dir():
+                raise ValueError("local repository must be a directory under the import root")
+            return str(path)
         if target_type == TargetType.CONTAINER_IMAGE:
             image = raw.lower()
             if (
@@ -84,7 +95,7 @@ def canonicalize_target(target_type: TargetType, value: str) -> str:
                 raise ValueError("container image must use an explicit tag or digest")
             return image
         if target_type == TargetType.SBOM:
-            path = Path(raw).expanduser().resolve(strict=True)
+            path = _resolve_import_path(raw)
             if (
                 not path.is_file()
                 or path.suffix.lower() not in {".json", ".xml", ".spdx"}
@@ -92,6 +103,6 @@ def canonicalize_target(target_type: TargetType, value: str) -> str:
             ):
                 raise ValueError("SBOM must be a JSON, XML, or SPDX file under 50 MB")
             return str(path)
-    except (ValueError, UnicodeError) as exc:
+    except (OSError, ValueError, UnicodeError) as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "unsupported target type")
