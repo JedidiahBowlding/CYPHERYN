@@ -12,13 +12,20 @@ from .models import TargetType
 def _resolve_import_path(raw: str) -> Path:
     """Resolve a caller-supplied relative path inside the configured import root."""
     candidate = Path(raw)
-    if candidate.is_absolute():
+    if candidate.is_absolute() or not candidate.parts:
         raise ValueError("local artifact paths must be relative to the configured import root")
     root = Path(get_settings().local_import_root).expanduser().resolve(strict=True)
-    resolved = (root / candidate).resolve(strict=True)
-    if not resolved.is_relative_to(root) or resolved == root:
-        raise ValueError("local artifact path escapes the configured import root")
-    return resolved
+    current = root
+    for requested_name in candidate.parts:
+        if requested_name in {"", ".", ".."}:
+            raise ValueError("local artifact path escapes the configured import root")
+        match = next((entry for entry in current.iterdir() if entry.name == requested_name), None)
+        if match is None:
+            raise ValueError("local artifact does not exist in the configured import root")
+        current = match.resolve(strict=True)
+        if not current.is_relative_to(root):
+            raise ValueError("local artifact path escapes the configured import root")
+    return current
 
 
 def canonicalize_target(target_type: TargetType, value: str) -> str:
