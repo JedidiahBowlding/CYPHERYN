@@ -1105,15 +1105,13 @@ class SpiderFoot:
             str: Sanitized URL
         """
         pats = {
-            r'key=\S+': "key=XXX",
-            r'pass=\S+': "pass=XXX",
-            r'user=\S+': "user=XXX",
-            r'password=\S+': "password=XXX"
+            r'(?P<name>api[_-]?key|access[_-]?token|auth[_-]?token|token|secret|key|pass|password|user)=[^&#\s]*':
+                r'\g<name>=XXX',
         }
 
         ret = url
         for pat in pats:
-            ret = re.sub(pat, pats[pat], ret, re.IGNORECASE)
+            ret = re.sub(pat, pats[pat], ret, flags=re.IGNORECASE)
 
         return ret
 

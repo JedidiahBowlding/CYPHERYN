@@ -611,6 +611,17 @@ class TestSpiderFoot(unittest.TestCase):
         new_url = sf.removeUrlCreds(url)
         self.assertNotIn("secret", new_url)
 
+    def test_remove_url_creds_should_redact_provider_token_variants(self):
+        url = "https://provider.invalid/?api_key=one&access-token=two&token=three&safe=value"
+
+        sf = SpiderFoot(self.default_options)
+        new_url = sf.removeUrlCreds(url)
+
+        self.assertNotIn("one", new_url)
+        self.assertNotIn("two", new_url)
+        self.assertNotIn("three", new_url)
+        self.assertIn("safe=value", new_url)
+
     def test_isValidLocalOrLoopbackIp_argument_ip_valid_local_or_loopback_should_return_True(self):
         sf = SpiderFoot(self.default_options)
         self.assertTrue(sf.isValidLocalOrLoopbackIp('127.0.0.1'))
