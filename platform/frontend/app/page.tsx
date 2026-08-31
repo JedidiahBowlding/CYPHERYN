@@ -17,6 +17,40 @@ const features = [
     title: "Local-first intelligence",
     copy: "Keep provider credentials encrypted locally and generate constrained narratives without sending evidence to hosted AI.",
   },
+  {
+    number: "04",
+    title: "Attack-surface discovery",
+    copy: "Map domains, DNS, certificates, public services, identities, and related infrastructure inside an explicitly authorized scope.",
+  },
+  {
+    number: "05",
+    title: "Threat enrichment",
+    copy: "Bring provider verdicts, pulse matches, malware associations, and reputation records into one consistent evidence model.",
+  },
+  {
+    number: "06",
+    title: "Remediation verification",
+    copy: "Rescan known assets, compare evidence snapshots, and show whether an exposure is new, persistent, changed, or resolved.",
+  },
+];
+
+const platformAreas = [
+  {
+    title: "Discover",
+    copy: "Build an inventory from authorized domains, IP addresses, services, certificates, DNS records, and public identities.",
+  },
+  {
+    title: "Enrich",
+    copy: "Query installed intelligence providers and preserve the source, retrieval time, target, payload hash, and authorization context.",
+  },
+  {
+    title: "Correlate",
+    copy: "Connect entities and observations in an evidence graph so analysts can trace why a finding exists and what it affects.",
+  },
+  {
+    title: "Improve",
+    copy: "Prioritize findings, explain likely attack paths, track remediation, schedule rescans, and verify security changes over time.",
+  },
 ];
 
 export default function LandingPage() {
@@ -28,6 +62,7 @@ export default function LandingPage() {
           <span>CYPHERYN</span>
         </Link>
         <div>
+          <a href="#platform">Platform</a>
           <a href="#capabilities">Capabilities</a>
           <a href="#workflow">Workflow</a>
           <Link className="landing-login" href="/dashboard">
@@ -84,6 +119,29 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      <section className="landing-overview" id="platform">
+        <header>
+          <div>
+            <p className="landing-kicker">One evidence workspace</p>
+            <h2>Know what is exposed, why it matters, and whether the fix worked.</h2>
+          </div>
+          <p>
+            CYPHERYN is a local-first cyber-intelligence platform for defenders,
+            security engineers, and authorized assessors. It combines collection,
+            normalization, graph analysis, finding management, and continuous
+            verification without treating a provider response as unquestionable truth.
+          </p>
+        </header>
+        <div className="overview-grid">
+          {platformAreas.map((area, index) => (
+            <article key={area.title}>
+              <span>0{index + 1}</span>
+              <h3>{area.title}</h3>
+              <p>{area.copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
       <section className="landing-features" id="capabilities">
         <header>
           <p className="landing-kicker">Intelligence you can defend</p>
@@ -97,6 +155,39 @@ export default function LandingPage() {
               <p>{feature.copy}</p>
             </article>
           ))}
+        </div>
+      </section>
+      <section className="landing-roles">
+        <header>
+          <p className="landing-kicker">Two perspectives. One authorization boundary.</p>
+          <h2>Understand the attacker&apos;s view. Operate as a defender.</h2>
+          <p>
+            CYPHERYN supports defensive monitoring and authorized offensive analysis.
+            Active collection is scope-controlled, auditable, and separated from the
+            evidence used to support conclusions.
+          </p>
+        </header>
+        <div>
+          <article>
+            <span>Defense</span>
+            <h3>Reduce uncertainty across your environment.</h3>
+            <ul>
+              <li>Inventory externally visible assets and services.</li>
+              <li>Prioritize evidence-backed exposures and threat associations.</li>
+              <li>Track owners, status, remediation notes, and verification history.</li>
+              <li>Detect changes through scheduled monitoring and comparison.</li>
+            </ul>
+          </article>
+          <article>
+            <span>Authorized offense</span>
+            <h3>See how permitted targets appear from the outside.</h3>
+            <ul>
+              <li>Model relationships an attacker could use for reconnaissance.</li>
+              <li>Identify public services, weak posture, and unexpected exposure.</li>
+              <li>Explain plausible attack paths without overstating the evidence.</li>
+              <li>Keep active testing constrained to recorded, approved scope.</li>
+            </ul>
+          </article>
         </div>
       </section>
       <section className="landing-workflow" id="workflow">
@@ -134,6 +225,17 @@ export default function LandingPage() {
             </span>
           </li>
         </ol>
+      </section>
+      <section className="landing-assurance">
+        <div>
+          <p className="landing-kicker">Trust through verification</p>
+          <h2>Built to preserve the difference between data, evidence, and judgment.</h2>
+        </div>
+        <div className="assurance-points">
+          <p><strong>Provenance retained</strong>Provider, target, time, authorization, and payload integrity travel with collected evidence.</p>
+          <p><strong>Capabilities verified</strong>Provider readiness progresses from supported to installed, configured, healthy, and live verified.</p>
+          <p><strong>Changes remain reviewable</strong>Previous and current evidence stay available so a closed finding can be independently checked.</p>
+        </div>
       </section>
       <footer className="landing-footer">
         <div className="landing-brand">
