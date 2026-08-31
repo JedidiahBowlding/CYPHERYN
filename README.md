@@ -26,9 +26,13 @@ The source, issue tracker, and release history are hosted in the [CYPHERYN GitHu
   <img src="docs/images/cypheryn-landing.jpg" alt="CYPHERYN landing page" width="100%">
 </p>
 
-| Operations overview | Authorization-first investigation setup |
-| --- | --- |
-| <img src="docs/images/cypheryn-dashboard.jpg" alt="CYPHERYN operations dashboard" width="100%"> | <img src="docs/images/cypheryn-new-investigation.jpg" alt="CYPHERYN new investigation authorization workflow" width="100%"> |
+### Operations overview
+
+<img src="docs/images/cypheryn-dashboard.jpg" alt="CYPHERYN operations dashboard" width="100%">
+
+### Authorization-first investigation setup
+
+<img src="docs/images/cypheryn-new-investigation.jpg" alt="CYPHERYN new investigation authorization workflow" width="100%">
 
 These screenshots use an empty local workspace and placeholder form text. No provider credentials, private targets, or collected evidence are shown.
 
