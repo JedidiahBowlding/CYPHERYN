@@ -31,6 +31,7 @@ from .models import (
     MembershipRole,
     User,
 )
+from .observability import record_federation_event
 from .schemas import (
     FederatedAssertionCreate,
     FederatedAssertionRead,
@@ -308,6 +309,7 @@ def accept_assertion(
         )
     )
     if peer is None:
+        record_federation_event("malformed")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Unknown federation issuer")
     try:
         record = receive_assertion(
@@ -319,6 +321,17 @@ def accept_assertion(
         )
     except FederationVerificationError as exc:
         db.rollback()
+        message = str(exc).lower()
+        reason = "malformed"
+        if "signature" in message or "identity mismatch" in message:
+            reason = "signature_failure"
+        elif "replay" in message:
+            reason = "replay"
+        elif "expired" in message:
+            reason = "expired"
+        elif "not trusted" in message:
+            reason = "revoked_peer"
+        record_federation_event(reason)
         actor = _federation_actor(db, peer)
         record_audit(
             db,
@@ -333,6 +346,7 @@ def accept_assertion(
         db.commit()
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     actor = _federation_actor(db, peer)
+    record_federation_event("accepted")
     record_audit(
         db,
         organization_id=organization_id,

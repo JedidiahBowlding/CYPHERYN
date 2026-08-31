@@ -61,7 +61,7 @@ def test_two_node_enrollment_delivery_replay_and_revocation(client, tmp_path, mo
         subject_type="domain",
         subject_fingerprint="a" * 64,
         evidence_fingerprint="b" * 64,
-        source_category="node-a-local-observation",
+        source_category="threat_intelligence",
         confidence=75,
         severity="high",
         observation_time=datetime.now(UTC),

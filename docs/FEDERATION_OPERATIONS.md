@@ -23,6 +23,10 @@ and blocks current trust. Preserve the old public key and assertions for histori
 verification. A rotated key is treated as a new node identity until an authenticated key-
 transition protocol is implemented.
 
+The required transition design and compromise procedure are documented in
+`docs/FEDERATION_KEY_CONTINUITY.md`. No implementation may migrate trust automatically
+until that versioned, dual-signature protocol and its concurrency tests are complete.
+
 Back up databases and keys independently. A node restart retains replay nonces and received
 assertions. Loss of a peer never blocks local CYPHERYN. Monitor `cypheryn_federation_*`
 metrics and investigate signature, replay, expiration, and unknown-issuer failures without

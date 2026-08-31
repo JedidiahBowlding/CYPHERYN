@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import secrets
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -19,6 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .models import FederatedAssertion, FederationPeer, FederationReplayNonce
+from .observability import record_federation_event
 
 PROTOCOL_VERSION = "cypheryn-federation-v1"
 SIGNATURE_ALGORITHM = "Ed25519"
@@ -28,6 +30,14 @@ FINGERPRINT_FIELDS = {"subject_fingerprint", "evidence_fingerprint"}
 SEVERITIES = {"info", "low", "medium", "high", "critical", "unknown"}
 ASSERTION_TYPES = {"indicator_assessment", "exposure_observation", "threat_association"}
 SUBJECT_TYPES = {"domain", "ip_address", "url", "sha256", "certificate", "service"}
+SOURCE_CATEGORIES = {
+    "attack_surface",
+    "certificate_observation",
+    "dns_observation",
+    "malware_analysis",
+    "threat_intelligence",
+    "vulnerability_assessment",
+}
 
 
 class FederationVerificationError(ValueError):
@@ -138,7 +148,7 @@ def _validate_shape(assertion: dict[str, Any]) -> None:
         "signature_algorithm",
         "signature",
     }
-    if set(assertion) - (required | {"evidence_checkpoint"}):
+    if set(assertion) - required:
         raise FederationVerificationError("Assertion contains unsupported fields")
     if required - set(assertion):
         raise FederationVerificationError("Assertion is missing required fields")
@@ -150,6 +160,8 @@ def _validate_shape(assertion: dict[str, Any]) -> None:
         raise FederationVerificationError("Unsupported assertion type")
     if assertion["subject_type"] not in SUBJECT_TYPES:
         raise FederationVerificationError("Unsupported subject type")
+    if assertion["source_category"] not in SOURCE_CATEGORIES:
+        raise FederationVerificationError("Unsupported source category")
     if assertion["severity"] not in SEVERITIES:
         raise FederationVerificationError("Unsupported severity")
     if not isinstance(assertion["confidence"], int) or not 0 <= assertion["confidence"] <= 100:
@@ -177,7 +189,6 @@ def create_assertion(
     confidence: int,
     severity: str,
     observation_time: datetime,
-    evidence_checkpoint: dict[str, Any] | None = None,
     now: datetime | None = None,
     lifetime: timedelta = timedelta(days=7),
 ) -> dict[str, Any]:
@@ -196,15 +207,13 @@ def create_assertion(
         "subject_type": subject_type,
         "subject_fingerprint": subject_fingerprint.lower(),
         "evidence_fingerprint": evidence_fingerprint.lower(),
-        "source_category": source_category[:100],
+        "source_category": source_category,
         "confidence": confidence,
         "severity": severity,
         "observation_time": observation_time.astimezone(UTC).isoformat(),
         "nonce": secrets.token_urlsafe(24),
         "signature_algorithm": SIGNATURE_ALGORITHM,
     }
-    if evidence_checkpoint is not None:
-        assertion["evidence_checkpoint"] = evidence_checkpoint
     _validate_shape({**assertion, "signature": "placeholder"})
     assertion["signature"] = base64.b64encode(private_key.sign(canonical_json(assertion))).decode(
         "ascii"
@@ -361,12 +370,15 @@ def deliver_assertion(
         f"{base_url.rstrip('/')}/api/federation/v1/organizations/"
         f"{organization_id}/assertions/inbound"
     )
+    started = time.monotonic()
     try:
         with httpx.Client(timeout=timeout_seconds, transport=transport) as client:
             response = client.post(endpoint, json=assertion)
     except httpx.TimeoutException as exc:
+        record_federation_event("timeout", latency_seconds=time.monotonic() - started)
         raise FederationVerificationError("Federation peer request timed out") from exc
     except httpx.TransportError as exc:
+        record_federation_event("unreachable_peer", latency_seconds=time.monotonic() - started)
         raise FederationVerificationError("Federation peer is unreachable") from exc
     if response.status_code != 202:
         raise FederationVerificationError(
@@ -378,6 +390,7 @@ def deliver_assertion(
         raise FederationVerificationError("Federation peer returned malformed JSON") from exc
     if result.get("assertion_id") != assertion.get("assertion_id"):
         raise FederationVerificationError("Federation peer acknowledgement mismatch")
+    record_federation_event("accepted", latency_seconds=time.monotonic() - started)
     return result
 
 

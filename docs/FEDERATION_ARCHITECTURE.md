@@ -44,6 +44,11 @@ signature result, trust state, fingerprint, receipt time, expiration, and correl
 
 ## Protocol and synchronization
 
+The schema is closed: source categories are enumerated and there is no arbitrary
+evidence or nested-object field. Only SHA-256 subject/evidence fingerprints cross the
+boundary; raw evidence and sensitive operational/customer material cannot be encoded
+as a valid v1 assertion.
+
 The versioned boundary is `/api/federation/v1/`. Identity, health, and capabilities are
 read-only. Peer administration remains organization-authorized. Assertion submission uses
 strict schemas and signature verification before persistence. Synchronization is

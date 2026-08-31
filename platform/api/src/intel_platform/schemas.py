@@ -48,11 +48,15 @@ class FederatedAssertionCreate(BaseModel):
     )
     subject_fingerprint: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
     evidence_fingerprint: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
-    source_category: str = Field(min_length=1, max_length=100)
+    source_category: str = Field(
+        pattern=(
+            r"^(attack_surface|certificate_observation|dns_observation|malware_analysis|"
+            r"threat_intelligence|vulnerability_assessment)$"
+        )
+    )
     confidence: int = Field(ge=0, le=100)
     severity: str = Field(pattern=r"^(info|low|medium|high|critical|unknown)$")
     observation_time: datetime
-    evidence_checkpoint: dict | None = None
 
 
 class FederatedAssertionRead(ApiModel):

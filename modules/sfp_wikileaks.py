@@ -11,6 +11,7 @@
 # -------------------------------------------------------------------------------
 
 import datetime
+from urllib.parse import urlparse
 
 from spiderfoot import SpiderFootEvent, SpiderFootHelpers, SpiderFootPlugin
 
@@ -123,11 +124,12 @@ class sfp_wikileaks(SpiderFootPlugin):
                 keepGoing = False
 
             for link in links:
+                hostname = (urlparse(link).hostname or "").lower().rstrip('.')
                 # We can safely skip search.wikileaks.org and others.
-                if "search.wikileaks.org/" in link:
+                if hostname == "search.wikileaks.org":
                     continue
 
-                if "wikileaks.org/" not in link and "cryptome.org/" not in link:
+                if hostname not in {"wikileaks.org", "www.wikileaks.org", "cryptome.org", "www.cryptome.org"}:
                     continue
 
                 self.debug(f"Found a link: {link}")
