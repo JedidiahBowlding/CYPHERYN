@@ -20,6 +20,18 @@ def request(client: httpx.Client, method: str, path: str, **kwargs) -> httpx.Res
     return response
 
 
+def wait_ready(base_url: str, timeout_seconds: float = 45) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            if httpx.get(f"{base_url}/health/ready", timeout=2).status_code == 200:
+                return
+        except httpx.HTTPError:
+            pass
+        time.sleep(0.5)
+    raise RuntimeError(f"Node did not recover readiness: {base_url}")
+
+
 def create_local_evidence_and_report(client: httpx.Client, suffix: str) -> dict:
     organization = request(
         client, "POST", "/api/v1/organizations", json={"name": f"Node {suffix} Org"}
@@ -83,6 +95,11 @@ def main() -> int:
         identity_b = request(node_b, "GET", "/api/federation/v1/identity").json()
         local_a = create_local_evidence_and_report(node_a, "A")
         local_b = create_local_evidence_and_report(node_b, "B-before-partition")
+
+        subprocess.run([*COMPOSE, "restart", "node-b-db"], check=True)
+        wait_ready("http://127.0.0.1:8102")
+        subprocess.run([*COMPOSE, "restart", "node-b", "node-b-worker"], check=True)
+        wait_ready("http://127.0.0.1:8102")
 
         peer_a_on_b = request(
             node_b,
