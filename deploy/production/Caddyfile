@@ -17,6 +17,17 @@ app.cypheryn.com {
 			reverse_proxy oauth2-proxy:4180
 		}
 
+		# The product landing page is public. Its calls to action point to
+		# authenticated application routes handled below.
+		handle / {
+			reverse_proxy frontend:3000
+		}
+
+		@public_assets path /_next/* /favicon.png /apple-touch-icon.png /cypheryn-logo.png
+		handle @public_assets {
+			reverse_proxy frontend:3000
+		}
+
 		forward_auth oauth2-proxy:4180 {
 			uri /oauth2/auth
 			copy_headers Authorization X-Auth-Request-User X-Auth-Request-Email

@@ -28,3 +28,8 @@ bytes; a base64-encoded 32-byte value is 44 bytes and is not valid when supplied
 The authenticated-emails file is an allowlist with one email address per line. Keep the
 default deployment restricted to named administrators rather than permitting an entire
 public email domain.
+
+The landing page at `https://app.cypheryn.com/` and only the static assets needed to
+render it are public. Platform routes—including Dashboard, Investigations, Settings,
+and API endpoints—remain behind Auth0. Calls to action on the landing page therefore
+start authentication when an unauthenticated visitor enters the platform.
