@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+if [ "$#" -ne 2 ] || [ "$1" != "-u" ]; then
+  echo "usage: cypheryn-katana-auth -u https://authorized-target" >&2
+  exit 64
+fi
+if [ -z "${CYPHERYN_AUTHORIZATION_HEADER:-}" ]; then
+  echo "authenticated Katana credential is missing" >&2
+  exit 78
+fi
+header_file=/tmp/cypheryn-katana-headers
+umask 077
+printf 'Authorization: %s\n' "$CYPHERYN_AUTHORIZATION_HEADER" > "$header_file"
+unset CYPHERYN_AUTHORIZATION_HEADER
+exec katana -u "$2" -silent -jsonl -depth 2 -strategy breadth-first \
+  -field-scope rdn -form-extraction -xhr-extraction -omit-raw -omit-body \
+  -concurrency 2 -parallelism 1 -rate-limit 3 -headers "$header_file"

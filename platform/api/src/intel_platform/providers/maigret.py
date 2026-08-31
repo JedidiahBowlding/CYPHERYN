@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import shutil
 import subprocess
 import tempfile
 from datetime import UTC, datetime
@@ -12,7 +14,11 @@ from sqlalchemy import select
 from ..models import Entity, Relationship
 from ..provider_contract import ProviderCapabilities, ProviderContext, ProviderResult
 
-MAIGRET = Path(__file__).resolve().parents[4] / "tools" / "maigret-venv" / "bin" / "maigret"
+MAIGRET = Path(
+    os.environ.get("PLATFORM_MAIGRET_EXECUTABLE")
+    or shutil.which("maigret")
+    or Path(__file__).resolve().parents[4] / "tools" / "maigret-venv" / "bin" / "maigret"
+)
 
 
 class MaigretProvider:

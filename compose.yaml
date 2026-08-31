@@ -22,6 +22,8 @@ services:
       context: ./platform/api
     restart: unless-stopped
     environment: &api-environment
+      OPENVAS_BRIDGE_URL: ${OPENVAS_BRIDGE_URL:-}
+      OPENVAS_BRIDGE_TOKEN: ${OPENVAS_BRIDGE_TOKEN:-}
       PLATFORM_ENVIRONMENT: ${PLATFORM_ENVIRONMENT:-development}
       PLATFORM_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-cypheryn}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cypheryn}
       PLATFORM_ALLOW_DEV_IDENTITY: ${PLATFORM_ALLOW_DEV_IDENTITY:-true}
@@ -35,6 +37,9 @@ services:
       PLATFORM_LOCAL_AI_TIMEOUT_SECONDS: ${PLATFORM_LOCAL_AI_TIMEOUT_SECONDS:-120}
       PLATFORM_SCANNER_IMAGES: ${PLATFORM_SCANNER_IMAGES:-{}}
       CYPHERYN_VERSION: ${CYPHERYN_VERSION:-development}
+      HOME: /tmp
+      XDG_CACHE_HOME: /tmp/.cache
+      XDG_CONFIG_HOME: /tmp/.config
       PLATFORM_QUARANTINE_DIR: /data/quarantine
       PLATFORM_CLAMAV_DATABASE_DIR: /data/clamav-db
       PLATFORM_SMTP_HOST: ${PLATFORM_SMTP_HOST:-}
@@ -77,6 +82,7 @@ services:
       <<: *api-environment
       PLATFORM_SCANNER_ORCHESTRATOR_URL: ${PLATFORM_SCANNER_ORCHESTRATOR_URL:-http://scanner-orchestrator:8010}
       PLATFORM_SCANNER_ORCHESTRATOR_TOKEN: ${SCANNER_ORCHESTRATOR_TOKEN:-}
+      PLATFORM_SCANNER_NETWORK: ${PLATFORM_SCANNER_NETWORK:-bridge}
     depends_on:
       api:
         condition: service_healthy
@@ -92,7 +98,27 @@ services:
     security_opt: [no-new-privileges:true]
     extra_hosts:
       - host.docker.internal:host-gateway
-    networks: [backend]
+    networks: [backend, edge]
+
+  clamav-updater:
+    image: cypheryn-api
+    command:
+      - freshclam
+      - --daemon
+      - --foreground
+      - --checks=12
+      - --datadir=/data/clamav-db
+      - --log=/tmp/freshclam.log
+      - --stdout
+    restart: unless-stopped
+    user: "10001:10001"
+    volumes:
+      - clamav-data:/data/clamav-db
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [edge]
 
   anchor-key-init:
     build:
@@ -104,7 +130,10 @@ services:
       - initialize
       - /keys
       - /anchors
-    user: "0:0"
+    # The host-backed key directory is deliberately owned by the same non-root
+    # identity used by the worker; initialization and rotation must not require
+    # widening its filesystem permissions.
+    user: "10001:10001"
     volumes:
       - ${PLATFORM_ANCHOR_KEY_DIR:-./platform/.runtime/anchor-keys}:/keys
       - ${PLATFORM_ANCHOR_STORE_DIR:-./platform/.runtime/anchors}:/anchors

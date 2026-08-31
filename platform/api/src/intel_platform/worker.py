@@ -9,7 +9,7 @@ import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.orm import Session
 
 from .analysis import build_analysis
@@ -1299,6 +1299,17 @@ def process_one(
             db.commit()
         except Exception as exc:
             db.rollback()
+            # The attempt row is committed before external execution so SQLite does
+            # not hold a write lock during a long-running provider. A failed attempt
+            # has no payload or integrity seal and must not remain in the evidence
+            # chain, where it would prevent checkpoint generation and restart the
+            # worker supervisor indefinitely.
+            db.execute(
+                delete(EvidenceSource).where(
+                    EvidenceSource.job_id == job_id,
+                    EvidenceSource.integrity_hash.is_(None),
+                )
+            )
             failed = db.get(CollectionJob, job_id)
             if failed:
                 failed.lease_owner = None

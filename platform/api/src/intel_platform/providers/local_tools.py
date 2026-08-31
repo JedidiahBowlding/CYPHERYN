@@ -69,6 +69,8 @@ class LocalToolProvider:
         arguments: list[str],
         *,
         stdin: str | None = None,
+        remote_binary: str | None = None,
+        environment: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
         timeout = 20.0
         if context.deadline_at:
@@ -89,11 +91,17 @@ class LocalToolProvider:
                     os.environ.get("PLATFORM_SCANNER_ORCHESTRATOR_TOKEN", ""),
                 ).run(
                     self.name,
-                    [self.binary, *arguments],
+                    [remote_binary or self.binary, *arguments],
                     ScannerPolicy(
                         image=image,
                         timeout_seconds=timeout,
-                        network="bridge",
+                        network=os.environ.get("PLATFORM_SCANNER_NETWORK", "bridge"),
+                        memory_mb=1536 if self.name in {"zap_passive", "zap_active"} else 512,
+                        # ZAP expands its add-ons and session state beneath /tmp.
+                        # Keep the disposable filesystem bounded, but give this
+                        # scanner enough room to start reliably.
+                        tmpfs_mb=512 if self.name in {"zap_passive", "zap_active"} else 128,
+                        environment=environment or {},
                     ),
                     job_id=context.job.id,
                     target_id=context.target.id,
@@ -293,6 +301,8 @@ class HttpxProvider(LocalToolProvider):
         result = self._run(
             context,
             [
+                "-u",
+                target,
                 "-silent",
                 "-json",
                 "-title",
@@ -303,7 +313,6 @@ class HttpxProvider(LocalToolProvider):
                 "-rate-limit",
                 "5",
             ],
-            stdin=f"{target}\n",
         )
         rows = self._json_lines(result.stdout)[:100]
         entities = []
@@ -535,6 +544,9 @@ class NucleiProvider(LocalToolProvider):
                 "5",
                 "-bulk-size",
                 "5",
+                "-templates",
+                "/opt/nuclei-templates",
+                "-disable-update-check",
             ],
         )
         rows = self._json_lines(result.stdout)[:500]
@@ -726,11 +738,32 @@ class KatanaAuthenticatedProvider(KatanaProvider):
         authorization_header = context.credentials.get("authorization_header", "").strip()
         if not authorization_header:
             raise RuntimeError("Authenticated Katana requires an Authorization header")
-        with tempfile.TemporaryDirectory(prefix="cypheryn-katana-auth-") as directory:
-            header_file = Path(directory) / "headers.txt"
-            header_file.write_text(f"Authorization: {authorization_header}\n")
-            header_file.chmod(0o600)
-            return self._collect(context, ["-headers", str(header_file)])
+        target = self._public_target(context.target.canonical_value)
+        url = target if "://" in target else f"https://{target}"
+        result = self._run(
+            context,
+            ["-u", url],
+            remote_binary="cypheryn-katana-auth",
+            environment={"CYPHERYN_AUTHORIZATION_HEADER": authorization_header},
+        )
+        rows = self._json_lines(result.stdout)[:1000]
+        endpoints: dict[str, dict] = {}
+        for row in rows:
+            request = row.get("request") or {}
+            endpoint = str(request.get("endpoint") or row.get("url") or "")
+            if endpoint.startswith(("http://", "https://")):
+                endpoints[endpoint] = {
+                    "method": request.get("method") or "GET",
+                    "forms": row.get("forms") or [],
+                    "xhr": row.get("xhr") or [],
+                }
+        entities = [
+            self._entity(context, "url", endpoint, {**details, "source": self.name})
+            for endpoint, details in sorted(endpoints.items())
+        ]
+        return self._result(
+            {"target": url, "endpoints": endpoints, "count": len(endpoints)}, entities
+        )
 
 
 class NiktoProvider(LocalToolProvider):
@@ -744,27 +777,25 @@ class NiktoProvider(LocalToolProvider):
     def collect(self, context: ProviderContext) -> ProviderResult:
         target = self._public_target(context.target.canonical_value)
         url = target if "://" in target else f"https://{target}"
-        with tempfile.TemporaryDirectory(prefix="cypheryn-nikto-") as directory:
-            output = Path(directory) / "result.json"
-            self._run(
-                context,
-                [
-                    "-h",
-                    url,
-                    "-Format",
-                    "json",
-                    "-output",
-                    str(output),
-                    "-nointeractive",
-                    "-timeout",
-                    "3",
-                    "-maxtime",
-                    "45s",
-                    "-Tuning",
-                    "23b",
-                ],
-            )
-            payload = json.loads(output.read_text()) if output.exists() else {}
+        result = self._run(
+            context,
+            [
+                "-h",
+                url,
+                "-Format",
+                "json",
+                "-output",
+                "-",
+                "-nointeractive",
+                "-timeout",
+                "3",
+                "-maxtime",
+                "45s",
+                "-Tuning",
+                "23b",
+            ],
+        )
+        payload = json.loads(result.stdout) if result.stdout.strip() else {}
         vulnerabilities = payload.get("vulnerabilities", []) if isinstance(payload, dict) else []
         findings = []
         for item in vulnerabilities[:500]:
@@ -802,6 +833,17 @@ class ZapPassiveProvider(LocalToolProvider):
     def collect(self, context: ProviderContext) -> ProviderResult:
         target = self._public_target(context.target.canonical_value)
         url = target if "://" in target else f"https://{target}"
+        if self.name in configured_scanner_images():
+            result = self._run(
+                context,
+                [url],
+                remote_binary="cypheryn-zap-passive",
+            )
+            try:
+                payload = json.loads(result.stdout)
+            except json.JSONDecodeError as exc:
+                raise RuntimeError("zap_passive returned malformed JSON") from exc
+            return self._normalize_zap(context, url, payload)
         with tempfile.TemporaryDirectory(prefix="cypheryn-zap-") as directory:
             report = Path(directory) / "report.json"
             plan = Path(directory) / "passive.yaml"
@@ -837,7 +879,7 @@ class ZapPassiveProvider(LocalToolProvider):
         return self._normalize_zap(context, url, payload)
 
     def _normalize_zap(self, context: ProviderContext, url: str, payload: dict) -> ProviderResult:
-        entities, findings, endpoints = [], [], set()
+        entities, findings, observations, endpoints = [], [], [], set()
         for site in payload.get("site", []) if isinstance(payload, dict) else []:
             for alert in site.get("alerts", []):
                 risk = str(alert.get("riskdesc") or "informational").split()[0].lower()
@@ -851,29 +893,54 @@ class ZapPassiveProvider(LocalToolProvider):
                     endpoint = str(instance.get("uri") or url)
                     endpoints.add(endpoint)
                     cwe = str(alert.get("cweid") or "").strip()
-                    findings.append(
+                    title = str(alert.get("name") or "ZAP passive alert")[:300]
+                    candidate = {
+                        "rule_id": (
+                            f"web.cwe.{cwe}"
+                            if cwe and cwe != "-1"
+                            else f"zap.{alert.get('pluginid', 'unknown')}"
+                        )[:100],
+                        "title": title,
+                        "description": str(
+                            alert.get("desc")
+                            or alert.get("solution")
+                            or "Web security observation."
+                        ),
+                        "severity": severity,
+                        "confidence": 90,
+                        "asset_value": endpoint,
+                        "entity_value": endpoint,
+                    }
+                    expected_oauth_timestamp = (
+                        title == "Timestamp Disclosure - Unix"
+                        and urlsplit(endpoint).path.startswith("/oauth2/")
+                    )
+                    observations.append(
                         {
-                            "rule_id": (
-                                f"web.cwe.{cwe}"
-                                if cwe and cwe != "-1"
-                                else f"zap.{alert.get('pluginid', 'unknown')}"
-                            )[:100],
-                            "title": str(alert.get("name") or "ZAP passive alert")[:300],
-                            "description": str(
-                                alert.get("desc")
-                                or alert.get("solution")
-                                or "Web security observation."
+                            **candidate,
+                            "classification": (
+                                "expected_oauth_state"
+                                if expected_oauth_timestamp
+                                else "informational"
+                                if severity == "info"
+                                else "finding_candidate"
                             ),
-                            "severity": severity,
-                            "confidence": 90,
-                            "asset_value": endpoint,
-                            "entity_value": endpoint,
                         }
                     )
+                    # Preserve informational scanner output and expected OAuth
+                    # anti-forgery timestamps as evidence without opening risk
+                    # findings for intentional cache/session behavior.
+                    if severity != "info" and not expected_oauth_timestamp:
+                        findings.append(candidate)
         for endpoint in sorted(endpoints):
             entities.append(self._entity(context, "url", endpoint, {"source": self.name}))
         return self._result(
-            {"target": url, "alerts": findings, "endpoint_count": len(endpoints)},
+            {
+                "target": url,
+                "alerts": observations,
+                "endpoint_count": len(endpoints),
+                "finding_count": len(findings),
+            },
             entities,
             findings=findings,
         )
@@ -885,26 +952,15 @@ class ZapActiveProvider(ZapPassiveProvider):
     def collect(self, context: ProviderContext) -> ProviderResult:
         target = self._public_target(context.target.canonical_value)
         url = target if "://" in target else f"https://{target}"
-        with tempfile.TemporaryDirectory(prefix="cypheryn-zap-active-") as directory:
-            report = Path(directory) / "report.json"
-            try:
-                self._run(
-                    context,
-                    [
-                        "-cmd",
-                        "-silent",
-                        "-dir",
-                        directory,
-                        "-quickurl",
-                        url,
-                        "-quickout",
-                        str(report),
-                    ],
-                )
-            except RuntimeError:
-                if not report.exists():
-                    raise
-            payload = json.loads(report.read_text()) if report.exists() else {}
+        result = self._run(
+            context,
+            [url],
+            remote_binary="cypheryn-zap-active",
+        )
+        try:
+            payload = json.loads(result.stdout) if result.stdout.strip() else {}
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("ZAP Active returned malformed JSON") from exc
         return self._normalize_zap(context, url, payload)
 
 
@@ -918,12 +974,24 @@ class TestsslProvider(LocalToolProvider):
 
     def collect(self, context: ProviderContext) -> ProviderResult:
         target = self._public_target(context.target.canonical_value)
-        with tempfile.TemporaryDirectory(prefix="cypheryn-testssl-") as directory:
-            output = Path(directory) / "result.json"
-            self._run(
-                context, ["--quiet", "--warnings", "off", "--jsonfile-pretty", str(output), target]
+        if self.name in configured_scanner_images():
+            result = self._run(
+                context,
+                [target],
+                remote_binary="cypheryn-testssl",
             )
-            rows = json.loads(output.read_text()) if output.exists() else []
+            try:
+                rows = json.loads(result.stdout)
+            except json.JSONDecodeError as exc:
+                raise RuntimeError("testssl returned malformed JSON") from exc
+        else:
+            with tempfile.TemporaryDirectory(prefix="cypheryn-testssl-") as directory:
+                output = Path(directory) / "result.json"
+                self._run(
+                    context,
+                    ["--quiet", "--warnings", "off", "--jsonfile-pretty", str(output), target],
+                )
+                rows = json.loads(output.read_text()) if output.exists() else []
         if isinstance(rows, dict):
             rows = rows.get("scanResult", [rows])
         findings = []

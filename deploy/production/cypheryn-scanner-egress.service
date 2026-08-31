@@ -1,0 +1,13 @@
+[Unit]
+Description=CYPHERYN authorized scanner egress policy
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=CYPHERYN_AUTHORIZED_TARGET_IP=172.31.250.2
+ExecStart=/usr/local/sbin/configure-cypheryn-scanner-egress
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
