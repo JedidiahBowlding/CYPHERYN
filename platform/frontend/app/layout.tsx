@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://cypheryn.com"),
+  alternates: { canonical: "https://cypheryn.com/" },
   title: "CYPHERYN — See the Exposure. Prove the Risk.",
   description:
     "Local-first OSINT, attack-surface monitoring, threat intelligence, evidence graphs, and defensible remediation in one workspace.",
