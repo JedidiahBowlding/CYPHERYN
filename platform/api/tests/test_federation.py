@@ -19,6 +19,7 @@ from intel_platform.federation import (
     verify_assertion,
 )
 from intel_platform.models import Base, FederationPeer
+from intel_platform.observability import federation_telemetry_snapshot
 
 NOW = datetime(2026, 8, 30, 20, 0, tzinfo=UTC)
 SUBJECT = "a" * 64
@@ -31,7 +32,7 @@ def assertion_for(key: Ed25519PrivateKey, **overrides):
         "subject_type": "domain",
         "subject_fingerprint": SUBJECT,
         "evidence_fingerprint": EVIDENCE,
-        "source_category": "local-threat-intelligence",
+        "source_category": "threat_intelligence",
         "confidence": 80,
         "severity": "high",
         "observation_time": NOW - timedelta(minutes=1),
@@ -71,6 +72,7 @@ def test_node_identity_is_cryptographic_and_assertion_round_trips() -> None:
         ("signature_algorithm", "custom-crypto", "algorithm"),
         ("assertion_type", "arbitrary", "assertion type"),
         ("subject_type", "customer_database", "subject type"),
+        ("source_category", "customer-records", "source category"),
         ("subject_fingerprint", "raw-customer-value", "SHA-256"),
         ("confidence", 101, "Confidence"),
     ],
@@ -112,6 +114,31 @@ def test_expired_future_oversized_and_unknown_fields_are_rejected() -> None:
         verify(extra, key)
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "credentials",
+        "api_token",
+        "private_key",
+        "pii",
+        "customer_records",
+        "raw_topology",
+        "evidence_checkpoint",
+        "analyst_notes",
+        "authorization_document",
+        "raw_malware",
+        "source_code",
+        "vulnerability_report",
+    ],
+)
+def test_privacy_boundary_rejects_prohibited_transport_fields(field) -> None:
+    key = Ed25519PrivateKey.generate()
+    assertion = assertion_for(key)
+    assertion[field] = {"nested": {"secret": "must-not-cross-federation"}}
+    with pytest.raises(FederationVerificationError, match="unsupported fields"):
+        verify(assertion, key)
+
+
 def test_corroboration_preserves_agreement_and_disagreement() -> None:
     first_key = Ed25519PrivateKey.generate()
     second_key = Ed25519PrivateKey.generate()
@@ -119,7 +146,7 @@ def test_corroboration_preserves_agreement_and_disagreement() -> None:
     second = assertion_for(
         second_key,
         severity="unknown",
-        source_category="independent-observation",
+        source_category="attack_surface",
         evidence_fingerprint="c" * 64,
     )
     result = corroborate([first, second], now=NOW)
@@ -227,6 +254,11 @@ def test_delivery_handles_success_timeout_unreachable_and_peer_failure() -> None
             assertion,
             transport=httpx.MockTransport(unreachable),
         )
+    counters, latencies = federation_telemetry_snapshot()
+    assert counters["accepted"] >= 1
+    assert counters["timeout"] >= 1
+    assert counters["unreachable_peer"] >= 1
+    assert len(latencies) >= 3
 
     with pytest.raises(FederationVerificationError, match="HTTP 503"):
         deliver_assertion(

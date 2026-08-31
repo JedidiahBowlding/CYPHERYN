@@ -118,6 +118,7 @@ class DomainSecurityProvider:
     def _certificate(domain: str, timeout: float) -> dict:
         try:
             ssl_context = ssl.create_default_context(cafile=certifi.where())
+            ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
             with socket.create_connection((domain, 443), timeout=min(timeout, 8.0)) as raw:
                 with ssl_context.wrap_socket(raw, server_hostname=domain) as tls:
                     certificate = tls.getpeercert()

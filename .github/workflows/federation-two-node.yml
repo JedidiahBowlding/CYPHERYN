@@ -1,0 +1,29 @@
+name: Federation Two Node
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  independence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.13"}
+      - run: python -m pip install 'httpx>=0.28,<1'
+      - name: Start independent nodes
+        run: docker compose -f compose.federation.yaml up -d --build --wait
+      - name: Exercise federation and local operation
+        run: python scripts/test_federation_two_node.py
+      - name: Capture failure diagnostics
+        if: failure()
+        run: docker compose -f compose.federation.yaml logs --no-color --tail=200
+      - name: Remove test environment
+        if: always()
+        run: docker compose -f compose.federation.yaml down -v

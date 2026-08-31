@@ -114,6 +114,7 @@ class DirectVerifierProvider:
     def _tls(host: str) -> dict:
         try:
             ssl_context = ssl.create_default_context(cafile=certifi.where())
+            ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
             with socket.create_connection((host, 443), timeout=3) as raw:
                 with ssl_context.wrap_socket(raw, server_hostname=host) as secured:
                     cert = secured.getpeercert()
