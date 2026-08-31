@@ -130,10 +130,10 @@ services:
       - initialize
       - /keys
       - /anchors
-    # The host-backed key directory is deliberately owned by the same non-root
-    # identity used by the worker; initialization and rotation must not require
-    # widening its filesystem permissions.
-    user: "10001:10001"
+    # This one-shot bootstrap must be able to initialize a newly created host
+    # bind directory. The long-running worker remains non-root and receives the
+    # resulting key directory read-only.
+    user: "0:0"
     volumes:
       - ${PLATFORM_ANCHOR_KEY_DIR:-./platform/.runtime/anchor-keys}:/keys
       - ${PLATFORM_ANCHOR_STORE_DIR:-./platform/.runtime/anchors}:/anchors
