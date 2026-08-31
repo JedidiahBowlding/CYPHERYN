@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /investigations
+Disallow: /findings
+Disallow: /settings
+Disallow: /reports
+Disallow: /notifications
+Disallow: /detections
+Disallow: /oauth2/
+
+Sitemap: https://cypheryn.com/sitemap.xml
