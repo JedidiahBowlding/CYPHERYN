@@ -29,6 +29,9 @@
 .product figure img {
   display: block;
   width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: top;
 }
 
 .product figcaption {
@@ -39,9 +42,9 @@
 
 .gallery {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  margin-top: 18px;
+  grid-template-columns: 1fr;
+  gap: 30px;
+  margin-top: 30px;
 }
 
 @media (max-width: 800px) {
