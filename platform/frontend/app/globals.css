@@ -2168,6 +2168,12 @@ input {
   height: 7px;
   border-radius: 50%;
 }
+
+.graph-filter .entity-dot-domain { background: #25d9ff; }
+.graph-filter .entity-dot-subdomain { background: #6f8cff; }
+.graph-filter .entity-dot-ip-address { background: #f5b94c; }
+.graph-filter .entity-dot-certificate { background: #b58af5; }
+.graph-filter .entity-dot-default { background: #91a0b2; }
 .evidence-graph-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 230px;
@@ -2466,9 +2472,80 @@ input {
     #050816;
 }
 .section-nav {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
   padding: 24px 16px;
   border-right: 1px solid #1a2442;
   background: #070b18;
+}
+.dashboard-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 4px 24px;
+  padding: 11px 10px;
+  border: 1px solid rgba(64, 217, 194, 0.32);
+  border-radius: 8px;
+  background: rgba(64, 217, 194, 0.1);
+  color: #86eadc;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.dashboard-nav-label {
+  margin: 0 12px 8px;
+  color: #53647c;
+  font: 700 8px var(--font-geist-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.workspace-navigation {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #1a2442;
+}
+.workspace-navigation > strong {
+  display: block;
+  margin: 0 12px 10px;
+  overflow: hidden;
+  color: #c9d5e2;
+  font-size: 10px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-navigation nav a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.workspace-navigation nav a b {
+  min-width: 24px;
+  padding: 2px 5px;
+  border-radius: 10px;
+  background: #152033;
+  color: #7f91a8;
+  font: 700 8px var(--font-geist-mono);
+  text-align: center;
+}
+.list-dashboard-main {
+  min-width: 0;
+}
+.list-dashboard-main .list-wrap {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+.dashboard-detail-page {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+.dashboard-detail-page .detail-wrap {
+  width: min(1180px, calc(100% - 72px));
+  min-width: 0;
 }
 .section-nav > .workflow-brand {
   margin: 0 8px 32px;
@@ -2576,6 +2653,9 @@ input {
     display: block;
   }
   .section-nav {
+    position: static;
+    height: auto;
+    overflow: visible;
     padding: 14px;
   }
   .section-nav > .workflow-brand {
@@ -2584,6 +2664,24 @@ input {
   .section-nav nav {
     flex-direction: row;
     overflow: auto;
+  }
+  .dashboard-new {
+    margin: 0 0 14px;
+  }
+  .dashboard-nav-label,
+  .workspace-navigation > strong {
+    margin-left: 0;
+  }
+  .workspace-navigation {
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+  .dashboard-detail-page {
+    display: block;
+  }
+  .dashboard-detail-page .detail-wrap {
+    width: calc(100% - 28px);
+    margin-top: 26px;
   }
   .section-nav nav a {
     white-space: nowrap;
