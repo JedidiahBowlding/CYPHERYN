@@ -7,25 +7,64 @@ app.cypheryn.com {
 	encode zstd gzip
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{http.request.uuid}'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; media-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests"
+		X-Frame-Options "DENY"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), publickey-credentials-get=(self), usb=()"
+		Cross-Origin-Resource-Policy "same-origin"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Embedder-Policy "require-corp"
 		-Server
 	}
 
 	route {
+		@empty_oauth_callback {
+			path /oauth2/callback
+			query ""
+		}
+		respond @empty_oauth_callback "Invalid OAuth callback" 400
+
 		handle /oauth2/* {
-			reverse_proxy oauth2-proxy:4180
+			header {
+				Cache-Control "no-store, max-age=0"
+				Pragma "no-cache"
+				Expires "0"
+			}
+			reverse_proxy oauth2-proxy:4180 {
+				header_down -Cache-Control
+				header_down -Pragma
+				header_down -Expires
+			}
 		}
 
 		# The product landing page is public. Its calls to action point to
 		# authenticated application routes handled below.
 		handle / {
-			reverse_proxy frontend:3000
+			header Cache-Control "public, max-age=300, stale-while-revalidate=60"
+			reverse_proxy frontend:3000 {
+				header_down -Cache-Control
+				header_up Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{http.request.uuid}'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; media-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests"
+			}
 		}
 
-		@public_assets path /_next/* /favicon.png /apple-touch-icon.png /cypheryn-logo.png
+		@public_assets path /_next/* /favicon.png /apple-touch-icon.png /cypheryn-logo.png /og.png
 		handle @public_assets {
-			reverse_proxy frontend:3000
+			header Cache-Control "public, max-age=31536000, immutable"
+			reverse_proxy frontend:3000 {
+				header_down -Cache-Control
+				header_up Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{http.request.uuid}'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; media-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests"
+			}
+		}
+
+		# Search-engine metadata is public by design and contains no account data.
+		@public_metadata path /robots.txt /sitemap.xml
+		handle @public_metadata {
+			header Cache-Control "public, max-age=3600"
+			reverse_proxy frontend:3000 {
+				header_down -Cache-Control
+				header_up Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{http.request.uuid}'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; media-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests"
+			}
 		}
 
 		forward_auth oauth2-proxy:4180 {
@@ -33,24 +72,104 @@ app.cypheryn.com {
 			copy_headers Authorization X-Auth-Request-User X-Auth-Request-Email
 			@unauthorized status 401
 			handle_response @unauthorized {
+				header {
+					Cache-Control "no-store, max-age=0"
+					Pragma "no-cache"
+					Expires "0"
+				}
 				redir * /oauth2/start?rd={scheme}://{host}{uri}
 			}
 		}
 
 		@api path /api/* /health/* /metrics
-		handle @api {
+		@federation path /api/federation/v1/*
+		handle @federation {
+			request_body {
+				max_size 64KB
+			}
+			header Cache-Control "no-store"
 			reverse_proxy api:8000 {
+				header_down -Cache-Control
+				header_up -X-Dev-Subject
+				header_up -X-Dev-Email
+			}
+		}
+
+		handle @api {
+			header Cache-Control "no-store"
+			reverse_proxy api:8000 {
+				header_down -Cache-Control
 				header_up -X-Dev-Subject
 				header_up -X-Dev-Email
 			}
 		}
 
 		handle {
-			reverse_proxy frontend:3000
+			header Cache-Control "no-store"
+			reverse_proxy frontend:3000 {
+				header_down -Cache-Control
+				header_up Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{http.request.uuid}'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; media-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests"
+			}
 		}
 	}
 }
 
 cypheryn.com {
-	redir https://app.cypheryn.com{uri} permanent
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{http.request.uuid}'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; media-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), publickey-credentials-get=(self), usb=()"
+		Cross-Origin-Resource-Policy "same-origin"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Embedder-Policy "require-corp"
+		-Server
+	}
+
+	route {
+		# Keep the product website public on the apex domain.
+		handle / {
+			header Cache-Control "public, max-age=300, stale-while-revalidate=60"
+			reverse_proxy frontend:3000 {
+				header_down -Cache-Control
+				header_up Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{http.request.uuid}'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; media-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests"
+			}
+		}
+
+		@public_assets path /_next/* /favicon.png /apple-touch-icon.png /cypheryn-logo.png /og.png
+		handle @public_assets {
+			header Cache-Control "public, max-age=31536000, immutable"
+			reverse_proxy frontend:3000 {
+				header_down -Cache-Control
+				header_up Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{http.request.uuid}'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; media-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests"
+			}
+		}
+
+		@public_metadata path /robots.txt /sitemap.xml
+		handle @public_metadata {
+			header Cache-Control "public, max-age=3600"
+			reverse_proxy frontend:3000 {
+				header_down -Cache-Control
+				header_up Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'nonce-{http.request.uuid}'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; media-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests"
+			}
+		}
+
+		# Known application routes belong on the authenticated app subdomain.
+		@app_route path /assets* /dashboard* /detections* /exposure-graph* /findings* /identity* /intelligence* /investigations* /malware* /notifications* /reports* /settings*
+		handle @app_route {
+			redir https://app.cypheryn.com{uri} permanent
+		}
+
+		# Unknown website paths are public 404s and never trigger authentication.
+		handle {
+			respond "Not found" 404
+		}
+	}
+}
+
+www.cypheryn.com {
+	redir https://cypheryn.com{uri} permanent
 }
