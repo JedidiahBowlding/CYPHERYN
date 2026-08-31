@@ -8,6 +8,7 @@ import EvidenceGraph, {
   GraphEntity,
   GraphRelationship,
 } from "./EvidenceGraph";
+import DashboardNav from "../../_components/DashboardNav";
 
 const API = process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
 const headers = {
@@ -509,18 +510,28 @@ export default function InvestigationWorkspace({
   const webPosture = data.entities.find(
     (entity) => entity.entity_type === "web_posture",
   );
+  const workspaceLinks = [
+    { label: "Overview", path: `/investigations/${id}` },
+    { label: "Graph", path: `/investigations/${id}/graph`, count: data.entities.length },
+    { label: "Entities", path: `/investigations/${id}/entities`, count: data.entities.length },
+    {
+      label: "Relationships",
+      path: `/investigations/${id}/relationships`,
+      count: data.relationships.length,
+    },
+    { label: "Jobs", path: `/investigations/${id}/jobs`, count: data.jobs.length },
+    {
+      label: "Monitoring",
+      path: `/investigations/${id}/monitoring`,
+      count: data.monitor_schedules?.length ?? 0,
+    },
+  ];
   return (
-    <main className="detail-page">
-      <header className="detail-top">
-        <Link className="workflow-brand" href="/">
-          <span>S</span>CYPHERYN
-        </Link>
-        <nav>
-          <Link href="/investigations">Investigations</Link>
-          <b>/</b>
-          <span>{data.investigation.name}</span>
-        </nav>
-      </header>
+    <main className="detail-page dashboard-detail-page">
+      <DashboardNav
+        workspaceName={data.investigation.name}
+        workspaceLinks={workspaceLinks}
+      />
       <div className={`detail-wrap section-${section}`}>
         <section className="detail-title">
           <div>
@@ -642,44 +653,6 @@ export default function InvestigationWorkspace({
           }
           statusMessage={analysisMessage}
         />
-        <nav className="detail-tabs">
-          <Link
-            className={section === "overview" ? "active" : ""}
-            href={`/investigations/${id}`}
-          >
-            Overview
-          </Link>
-          <Link
-            className={section === "graph" ? "active" : ""}
-            href={`/investigations/${id}/graph`}
-          >
-            Graph <b>{data.entities.length}</b>
-          </Link>
-          <Link
-            className={section === "entities" ? "active" : ""}
-            href={`/investigations/${id}/entities`}
-          >
-            Entities <b>{data.entities.length}</b>
-          </Link>
-          <Link
-            className={section === "relationships" ? "active" : ""}
-            href={`/investigations/${id}/relationships`}
-          >
-            Relationships <b>{data.relationships.length}</b>
-          </Link>
-          <Link
-            className={section === "jobs" ? "active" : ""}
-            href={`/investigations/${id}/jobs`}
-          >
-            Jobs <b>{data.jobs.length}</b>
-          </Link>
-          <Link
-            className={section === "monitoring" ? "active" : ""}
-            href={`/investigations/${id}/monitoring`}
-          >
-            Monitoring <b>{data.monitor_schedules?.length ?? 0}</b>
-          </Link>
-        </nav>
         <section className="detail-panel monitoring-panel" id="monitoring">
           <header>
             <div>
@@ -1417,7 +1390,9 @@ function AnalysisPanel({
                     key={item.id}
                     title={`${item.risk_score}/100 · ${new Date(item.created_at).toLocaleString()}`}
                   >
-                    <i style={{ height: `${Math.max(4, item.risk_score)}%` }} />
+                    <i
+                      className={`risk-height-${Math.min(100, Math.max(5, Math.ceil(item.risk_score / 5) * 5))}`}
+                    />
                     <small>{item.risk_score}</small>
                   </span>
                 ))}

@@ -47,6 +47,13 @@ const palette: Record<string, string> = {
   certificate: "#b58af5",
 };
 
+const paletteClasses: Record<string, string> = {
+  domain: "entity-dot-domain",
+  subdomain: "entity-dot-subdomain",
+  ip_address: "entity-dot-ip-address",
+  certificate: "entity-dot-certificate",
+};
+
 export default function EvidenceGraph({
   entities,
   relationships,
@@ -247,7 +254,7 @@ export default function EvidenceGraph({
             aria-pressed={visibleTypes.has(type)}
             onClick={() => toggleType(type)}
           >
-            <i style={{ background: palette[type] ?? "#91a0b2" }} />
+            <i className={paletteClasses[type] ?? "entity-dot-default"} />
             {type.replaceAll("_", " ")}
           </button>
         ))}
