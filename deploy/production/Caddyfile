@@ -19,6 +19,12 @@ app.cypheryn.com {
 	}
 
 	route {
+		@empty_oauth_callback {
+			path /oauth2/callback
+			query ""
+		}
+		respond @empty_oauth_callback "Invalid OAuth callback" 400
+
 		handle /oauth2/* {
 			header {
 				Cache-Control "no-store, max-age=0"
