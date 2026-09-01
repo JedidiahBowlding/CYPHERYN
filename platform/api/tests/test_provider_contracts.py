@@ -12,6 +12,7 @@ from intel_platform.provider_contract import (
     ProviderContext,
     ProviderHttpError,
 )
+from intel_platform.providers.local_tools import ZapPassiveProvider
 from intel_platform.providers.threat_intel import (
     AbuseChProvider,
     AlienVaultOtxProvider,
@@ -170,6 +171,56 @@ def install_transport(monkeypatch: pytest.MonkeyPatch, handler) -> None:
         "intel_platform.providers.threat_intel.httpx.Client",
         lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs),
     )
+
+
+def test_zap_preserves_expected_observations_without_opening_findings() -> None:
+    provider = ZapPassiveProvider()
+    ctx = ProviderContext(
+        db=FakeDb(),
+        job=SimpleNamespace(
+            investigation_id="investigation",
+            provider="zap_passive",
+            cancellation_requested_at=None,
+        ),
+        target=SimpleNamespace(target_type=SimpleNamespace(value="domain")),
+    )
+    payload = {
+        "site": [
+            {
+                "alerts": [
+                    {
+                        "name": "Timestamp Disclosure - Unix",
+                        "riskdesc": "Low (Medium)",
+                        "cweid": "497",
+                        "instances": [{"uri": "https://example.test/oauth2/start"}],
+                    },
+                    {
+                        "name": "Storable and Cacheable Content",
+                        "riskdesc": "Informational (Low)",
+                        "cweid": "524",
+                        "instances": [{"uri": "https://example.test/app.css"}],
+                    },
+                    {
+                        "name": "CSP unsafe inline script",
+                        "riskdesc": "Medium (High)",
+                        "cweid": "693",
+                        "instances": [{"uri": "https://example.test/"}],
+                    },
+                ]
+            }
+        ]
+    }
+
+    result = provider._normalize_zap(ctx, "https://example.test", payload)
+
+    candidates = result.metadata["finding_candidates"]
+    assert [item["title"] for item in candidates] == ["CSP unsafe inline script"]
+    classifications = {
+        item["title"]: item["classification"] for item in result.redacted_payload["alerts"]
+    }
+    assert classifications["Timestamp Disclosure - Unix"] == "expected_oauth_state"
+    assert classifications["Storable and Cacheable Content"] == "informational"
+    assert result.redacted_payload["finding_count"] == 1
 
 
 def collect_response(monkeypatch: pytest.MonkeyPatch, case: ContractCase, response_factory):

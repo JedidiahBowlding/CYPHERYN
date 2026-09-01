@@ -26,13 +26,14 @@ from intel_platform.models import (
     TargetType,
     User,
 )
-from intel_platform.provider_contract import registry
+from intel_platform.provider_contract import ProviderCapabilities, registry
 from intel_platform.providers import register_builtin_providers
 from intel_platform.worker import (
     enqueue_due_finding_monitors,
     enqueue_due_schedules,
     generate_due_reports,
     monitor_job_health,
+    process_one,
     regenerate_monitoring_summary,
 )
 
@@ -290,3 +291,35 @@ def test_monitoring_summary_and_due_report_are_persisted(session_factory, monkey
         assert artifact.filename.startswith("cypheryn-")
         assert artifact.content.startswith(b"%PDF")
         assert len(artifact.sha256) == 64
+
+
+def test_failed_provider_removes_unsealed_attempt_evidence(
+    session_factory, monkeypatch
+) -> None:
+    user_id, _org_id, _auth_id, investigation_id, target_id = seed_scope(session_factory)
+
+    class FailingProvider:
+        name = "safe_mock"
+        version = "test"
+        capabilities = ProviderCapabilities(target_types=frozenset({"domain"}))
+
+        def collect(self, _context):
+            raise RuntimeError("bounded provider failure")
+
+    monkeypatch.setattr(registry, "get", lambda _name: FailingProvider())
+    with session_factory() as db:
+        job = CollectionJob(
+            investigation_id=investigation_id,
+            target_id=target_id,
+            requested_by_id=user_id,
+            provider="safe_mock",
+            status=JobStatus.QUEUED,
+        )
+        db.add(job)
+        db.commit()
+
+    processed = process_one("failure-cleanup-worker", session_factory)
+    assert processed is not None
+    assert processed.status == JobStatus.QUEUED
+    with session_factory() as db:
+        assert db.scalar(select(func.count(EvidenceSource.id))) == 0

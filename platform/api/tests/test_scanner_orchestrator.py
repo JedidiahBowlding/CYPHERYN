@@ -166,6 +166,24 @@ def test_production_requires_digest_and_managed_active_egress(monkeypatch) -> No
     assert client.post("/v1/executions", headers=headers, json=request).status_code == 202
 
 
+def test_artifactless_tls_and_passive_zap_wrappers_are_allowlisted() -> None:
+    assert scanner_orchestrator.SCANNER_BINARIES["testssl"] == "cypheryn-testssl"
+    assert (
+        scanner_orchestrator.SCANNER_BINARIES["zap_passive"]
+        == "cypheryn-zap-passive"
+    )
+    assert scanner_orchestrator.SCANNER_BINARIES["nikto"] == "cypheryn-nikto"
+    assert {"testssl", "zap_passive", "nikto"} <= scanner_orchestrator.ACTIVE_SCANNERS
+
+
+def test_production_accepts_immutable_local_scanner_image_id(monkeypatch) -> None:
+    monkeypatch.setenv("PLATFORM_ENVIRONMENT", "production")
+    ScannerPolicy(
+        image="sha256:" + "b" * 64,
+        network="cypheryn-egress-owned-targets",
+    ).validate()
+
+
 def test_orchestrator_cancellation_reaches_the_container_runner(monkeypatch) -> None:
     monkeypatch.setenv("SCANNER_ORCHESTRATOR_TOKEN", TOKEN)
     monkeypatch.setenv("PLATFORM_SCANNER_IMAGES", '{"nmap":"cypheryn/nmap:1.0.0"}')

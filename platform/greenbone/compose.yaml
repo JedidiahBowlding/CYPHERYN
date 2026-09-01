@@ -298,6 +298,26 @@ services:
       - gvmd
       - ospd-openvas
 
+  cypheryn-openvas-bridge:
+    image: registry.community.greenbone.net/community/gvm-tools
+    entrypoint: ["python3"]
+    command: ["/opt/cypheryn/remote_bridge.py"]
+    restart: unless-stopped
+    user: "1001:1001"
+    env_file: ${OPENVAS_BRIDGE_ENV_FILE:-./bridge.env}
+    ports:
+      - "${OPENVAS_BRIDGE_BIND:-127.0.0.1}:9393:9393"
+    volumes:
+      - gvmd_socket_vol:/run/gvmd
+      - ./gmp_bridge.py:/opt/cypheryn/gmp_bridge.py:ro
+      - ./remote_bridge.py:/opt/cypheryn/remote_bridge.py:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      - gvmd
+
 volumes:
   gpg_data_vol:
   scap_data_vol:

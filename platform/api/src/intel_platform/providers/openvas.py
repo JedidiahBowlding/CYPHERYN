@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import time
 from datetime import UTC, datetime
 from functools import cached_property
 from pathlib import Path
+
+import httpx
 
 from ..provider_contract import ProviderCapabilities, ProviderContext, ProviderResult
 from .local_tools import LocalToolProvider
@@ -25,14 +28,30 @@ class OpenVasProvider(LocalToolProvider):
         supports_cancellation=False,
     )
 
+    def __init__(self) -> None:
+        # The remote bridge owns its Greenbone service account. CYPHERYN only
+        # receives a narrowly scoped bridge token, so no user-entered provider
+        # credentials are needed in that deployment mode.
+        if os.environ.get("OPENVAS_BRIDGE_URL"):
+            self.capabilities = ProviderCapabilities(
+                target_types=frozenset({"domain", "ip_address"}),
+                passive_only=False,
+                requires_credentials=False,
+                supports_cancellation=False,
+            )
+
     @cached_property
     def available(self) -> bool:
-        return shutil.which("docker") is not None and COMPOSE_FILE.is_file()
+        return bool(os.environ.get("OPENVAS_BRIDGE_URL")) or (
+            shutil.which("docker") is not None and COMPOSE_FILE.is_file()
+        )
 
     @cached_property
     def version(self) -> str | None:
         if not self.available:
             return None
+        if os.environ.get("OPENVAS_BRIDGE_URL"):
+            return "Remote Greenbone Community Containers"
         docker = shutil.which("docker")
         if not docker:
             return None
@@ -68,6 +87,27 @@ class OpenVasProvider(LocalToolProvider):
 
     def _bridge(self, context: ProviderContext, payload: dict) -> dict:
         timeout = min(30.0, self._seconds_remaining(context))
+        remote_url = os.environ.get("OPENVAS_BRIDGE_URL", "").rstrip("/")
+        if remote_url:
+            token = os.environ.get("OPENVAS_BRIDGE_TOKEN", "")
+            if len(token) < 32:
+                raise RuntimeError("OpenVAS bridge token is not configured")
+            try:
+                response = httpx.post(
+                    f"{remote_url}/v1/bridge",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json=payload,
+                    timeout=timeout,
+                    follow_redirects=False,
+                )
+                response.raise_for_status()
+                result = response.json()
+            except (httpx.HTTPError, ValueError) as exc:
+                raise RuntimeError("Remote Greenbone bridge request failed") from exc
+            if not result.get("ok"):
+                error = str(result.get("error") or "request failed")[:300]
+                raise RuntimeError(f"Greenbone: {error}")
+            return dict(result.get("data") or {})
         docker = shutil.which("docker")
         if not docker:
             raise RuntimeError("Docker is not installed")
@@ -108,17 +148,17 @@ class OpenVasProvider(LocalToolProvider):
         target = self._public_target(context.target.canonical_value)
         username = str(context.credentials.get("username") or "").strip()
         password = str(context.credentials.get("password") or "")
-        if not username or not password:
+        if not os.environ.get("OPENVAS_BRIDGE_URL") and (not username or not password):
             raise RuntimeError("OpenVAS username and password are required")
 
         request = {
-            "username": username,
-            "password": password,
             "target": target,
             "task_name": (
                 f"CYPHERYN-{context.job.investigation_id}-{context.target.id}-{context.job.id}"
             ),
         }
+        if not os.environ.get("OPENVAS_BRIDGE_URL"):
+            request.update({"username": username, "password": password})
         while True:
             try:
                 latest = self._bridge(context, request)
