@@ -16,3 +16,26 @@ Inventory captured 2026-08-31 UTC from `/opt/cypheryn` at base commit
 
 Production remains unreproducible until the legitimate changes are reviewed, merged,
 built from exact `main`, and redeployed with a signed/hashed deployment manifest.
+
+## Exact deployment manifest
+
+After deployment, create the manifest from the clean checkout and running Compose
+project. The environment file is used only for Compose interpolation; its values
+are never copied into the manifest.
+
+```bash
+sudo python3 scripts/deployment_manifest.py \
+  --repository /opt/cypheryn \
+  --output /opt/cypheryn/deployments/$(date -u +%Y%m%dT%H%M%SZ)-manifest.json \
+  --operator newblockdev \
+  --version 0.9.0 \
+  --database-migration-state sqlalchemy-metadata-at-HEAD \
+  --env-file /etc/cypheryn/production.env \
+  --compose-file /opt/cypheryn/compose.yaml \
+  --compose-file /opt/cypheryn/compose.production.yaml \
+  --caddy-file /opt/cypheryn/deploy/production/Caddyfile
+```
+
+The command refuses a dirty Git tree and writes the manifest with mode `0600`.
+Record the database schema mechanism honestly: CYPHERYN currently initializes
+SQLAlchemy metadata at startup and does not claim an Alembic revision.
