@@ -84,6 +84,10 @@ class DockerApiScannerRunner:
                 json={
                     "Image": policy.image,
                     "Cmd": list(command),
+                    # Raw-packet scanners need uid 0 in their isolated user
+                    # namespace to activate the two explicitly bounded network
+                    # capabilities. All other scanners retain the image user.
+                    "User": "0:0" if policy.capabilities else "",
                     "Env": [f"{key}={value}" for key, value in policy.environment.items()],
                     "AttachStdout": True,
                     "AttachStderr": True,
@@ -95,6 +99,7 @@ class DockerApiScannerRunner:
                     "HostConfig": {
                         "ReadonlyRootfs": True,
                         "CapDrop": ["ALL"],
+                        "CapAdd": list(policy.capabilities),
                         "SecurityOpt": ["no-new-privileges:true"],
                         "NanoCpus": int(policy.cpu_limit * 1_000_000_000),
                         "Memory": policy.memory_mb * 1024 * 1024,

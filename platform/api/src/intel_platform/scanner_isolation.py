@@ -15,7 +15,7 @@ from pathlib import Path
 from .process_isolation import MAX_CAPTURE_BYTES
 
 IMAGE_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._/:@-]{0,299}$")
-DIGEST_PATTERN = re.compile(r"@sha256:[a-f0-9]{64}$")
+DIGEST_PATTERN = re.compile(r"(?:@sha256:|^sha256:)[a-f0-9]{64}$")
 SAFE_ENV_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
 
 
@@ -42,6 +42,7 @@ class ScannerPolicy:
     tmpfs_mb: int = 128
     network: str = "none"
     environment: Mapping[str, str] = field(default_factory=dict)
+    capabilities: tuple[str, ...] = ()
 
     def validate(self) -> None:
         if not IMAGE_PATTERN.fullmatch(self.image) or "latest" in self.image.rsplit("/", 1)[-1]:
@@ -49,7 +50,7 @@ class ScannerPolicy:
         production = os.environ.get("PLATFORM_ENVIRONMENT", "development").lower() == "production"
         if production and not DIGEST_PATTERN.search(self.image):
             raise ScannerIsolationError(
-                "Production scanner images must be pinned by an immutable SHA-256 digest"
+                "Production scanner images must be a registry digest or immutable local image ID"
             )
         if not 0.1 <= self.cpu_limit <= 16:
             raise ScannerIsolationError("Scanner CPU limit must be between 0.1 and 16")
@@ -71,6 +72,8 @@ class ScannerPolicy:
             raise ScannerIsolationError("The unrestricted Docker bridge is forbidden in production")
         if any(not SAFE_ENV_PATTERN.fullmatch(key) for key in self.environment):
             raise ScannerIsolationError("Scanner environment contains an invalid variable name")
+        if any(value not in {"NET_ADMIN", "NET_RAW"} for value in self.capabilities):
+            raise ScannerIsolationError("Scanner requested a forbidden Linux capability")
 
 
 @dataclass(frozen=True)

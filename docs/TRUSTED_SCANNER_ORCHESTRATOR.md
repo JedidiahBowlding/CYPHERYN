@@ -59,15 +59,20 @@ PLATFORM_ENVIRONMENT=production
 PLATFORM_SCANNER_IMAGES={"nmap":"registry.example/cypheryn-nmap@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
 ```
 
+For images reviewed and built directly on a single trusted scanner node, an immutable local image
+ID (`sha256:<64 hex characters>`) is also accepted. Registry digests remain preferable for fleets
+because every node can independently pull and verify the same artifact.
+
 The label is a fail-closed deployment assertion, not an egress firewall. Create and label that
 network only after an external gateway or dedicated scanner node actually enforces the authorized
 destination policy. CYPHERYN refuses an absent, inaccessible, or unlabeled managed network.
 
-The initial remote-execution allowlist covers output-stream-compatible adapters: Subfinder,
-ProjectDiscovery HTTPX, Naabu, Nmap, RustScan, Masscan, Nuclei, Katana, and DNS Twist. Adapters that
-currently exchange host-side temporary files (authenticated Katana, Nikto, ZAP, and testssl.sh)
-remain fail-closed until they gain an artifact-transfer contract; the orchestrator never mounts a
-worker directory merely to make those adapters run.
+The remote-execution allowlist covers output-stream-compatible adapters: Subfinder,
+ProjectDiscovery HTTPX, Naabu, Nmap, RustScan, Masscan, Nuclei, Katana, DNS Twist, TestSSL, and
+ZAP Passive. CYPHERYN's TestSSL and ZAP Passive scanner images use narrow wrappers that emit their
+bounded JSON report on stdout, so no worker directory or host path is mounted. Adapters that still
+require host-side temporary files (authenticated Katana, Nikto, and ZAP Active) remain fail-closed
+until they gain the same artifact contract.
 
 Start the profile:
 

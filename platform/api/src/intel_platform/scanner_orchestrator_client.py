@@ -49,21 +49,24 @@ class ScannerOrchestratorClient:
     ) -> ScannerExecutionResult:
         policy.validate()
         headers = {"Authorization": f"Bearer {self.token}"}
+        policy_payload: dict[str, object] = {
+            "cpu_limit": policy.cpu_limit,
+            "memory_mb": policy.memory_mb,
+            "pids_limit": policy.pids_limit,
+            "timeout_seconds": policy.timeout_seconds,
+            "output_limit_bytes": policy.output_limit_bytes,
+            "tmpfs_mb": policy.tmpfs_mb,
+            "network": policy.network,
+        }
+        if policy.environment:
+            policy_payload["environment"] = dict(policy.environment)
         request = {
             "provider": provider,
             "command": list(command),
             "job_id": job_id,
             "target_id": target_id,
             "authorization_id": authorization_id,
-            "policy": {
-                "cpu_limit": policy.cpu_limit,
-                "memory_mb": policy.memory_mb,
-                "pids_limit": policy.pids_limit,
-                "timeout_seconds": policy.timeout_seconds,
-                "output_limit_bytes": policy.output_limit_bytes,
-                "tmpfs_mb": policy.tmpfs_mb,
-                "network": policy.network,
-            },
+            "policy": policy_payload,
         }
         timeout = httpx.Timeout(10.0, connect=5.0)
         try:

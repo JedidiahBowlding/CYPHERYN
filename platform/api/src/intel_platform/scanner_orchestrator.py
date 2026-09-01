@@ -30,7 +30,12 @@ SCANNER_BINARIES = {
     "masscan": "masscan",
     "nuclei": "nuclei",
     "katana": "katana",
+    "katana_authenticated": "cypheryn-katana-auth",
     "dnstwist": "dnstwist",
+    "nikto": "cypheryn-nikto",
+    "zap_passive": "cypheryn-zap-passive",
+    "zap_active": "cypheryn-zap-active",
+    "testssl": "cypheryn-testssl",
 }
 ACTIVE_SCANNERS = {
     "projectdiscovery_httpx",
@@ -40,6 +45,11 @@ ACTIVE_SCANNERS = {
     "masscan",
     "nuclei",
     "katana",
+    "katana_authenticated",
+    "nikto",
+    "zap_passive",
+    "zap_active",
+    "testssl",
 }
 
 
@@ -51,6 +61,7 @@ class ExecutionPolicyRequest(BaseModel):
     output_limit_bytes: int = 2_000_000
     tmpfs_mb: int = 128
     network: str = "none"
+    environment: dict[str, str] = Field(default_factory=dict, max_length=8)
 
 
 class ExecutionRequest(BaseModel):
@@ -140,7 +151,21 @@ def create_execution(
         raise HTTPException(status_code=422, detail="Scanner command is not allowlisted")
     if any(len(item) > 4096 for item in request.command):
         raise HTTPException(status_code=422, detail="Scanner argument exceeds the size limit")
-    policy = ScannerPolicy(image=image, **request.policy.model_dump())
+    allowed_environment = (
+        {"CYPHERYN_AUTHORIZATION_HEADER"}
+        if request.provider == "katana_authenticated"
+        else set()
+    )
+    if set(request.policy.environment) - allowed_environment or any(
+        len(value) > 8192 for value in request.policy.environment.values()
+    ):
+        raise HTTPException(status_code=422, detail="Scanner environment is not allowlisted")
+    capabilities = ("NET_ADMIN", "NET_RAW") if request.provider == "masscan" else ()
+    policy = ScannerPolicy(
+        image=image,
+        capabilities=capabilities,
+        **request.policy.model_dump(),
+    )
     try:
         policy.validate()
     except ScannerIsolationError as exc:
