@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+import yaml
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,25 @@ from intel_platform.integrity import seal_audit_event, seal_evidence_source
 from intel_platform.models import AuditEvent, Base, EvidenceSource
 from intel_platform.process_isolation import MAX_CAPTURE_BYTES, run_isolated_process
 from intel_platform.schema_upgrade import upgrade_existing_schema
+
+
+def test_anchor_key_initializer_drops_privileges_before_key_operations() -> None:
+    root = Path(__file__).resolve().parents[3]
+    compose = yaml.safe_load((root / "compose.yaml").read_text(encoding="utf-8"))
+    initializer = compose["services"]["anchor-key-init"]
+
+    assert initializer["user"] == "0:0"
+    assert initializer["cap_drop"] == ["ALL"]
+    assert set(initializer["cap_add"]) == {
+        "CHOWN",
+        "DAC_OVERRIDE",
+        "SETGID",
+        "SETUID",
+    }
+    assert initializer["read_only"] is True
+    command = " ".join(initializer["command"])
+    assert command.index("chown -R 10001:10001") < command.index("runuser -u appuser")
+    assert command.index("runuser -u appuser") < command.index("integrity_anchor")
 
 
 def test_evidence_integrity_detects_mutation(tmp_path: Path) -> None:

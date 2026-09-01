@@ -124,15 +124,15 @@ services:
     build:
       context: ./platform/api
     command:
-      - python
-      - -m
-      - intel_platform.integrity_anchor
-      - initialize
-      - /keys
-      - /anchors
-    # This one-shot bootstrap must be able to initialize a newly created host
-    # bind directory. The long-running worker remains non-root and receives the
-    # resulting key directory read-only.
+      - sh
+      - -c
+      - >-
+        chown -R 10001:10001 /keys /anchors &&
+        exec runuser -u appuser -- python -m intel_platform.integrity_anchor
+        initialize /keys /anchors
+    # Docker creates fresh host bind directories as root. This one-shot service
+    # receives only the capabilities needed to normalize directory ownership,
+    # then drops to appuser before reading or generating any key material.
     user: "0:0"
     volumes:
       - ${PLATFORM_ANCHOR_KEY_DIR:-./platform/.runtime/anchor-keys}:/keys
@@ -140,6 +140,7 @@ services:
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, SETGID, SETUID]
     security_opt: [no-new-privileges:true]
     networks: [backend]
 

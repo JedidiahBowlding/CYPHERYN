@@ -221,6 +221,18 @@ def test_compose_grants_docker_socket_only_to_orchestrator() -> None:
     assert "SCANNER_ORCHESTRATOR_TOKEN" not in services["api"]["environment"]
 
 
+def test_production_caddy_keeps_public_edge_as_default_gateway() -> None:
+    root = Path(__file__).resolve().parents[3]
+    production = yaml.safe_load(
+        (root / "compose.production.yaml").read_text(encoding="utf-8")
+    )
+    networks = production["services"]["caddy"]["networks"]
+
+    assert networks["edge"]["gw_priority"] > networks["scanner-egress"].get(
+        "gw_priority", 0
+    )
+
+
 def test_worker_client_uses_token_and_does_not_select_an_image() -> None:
     requests: list[httpx.Request] = []
 
