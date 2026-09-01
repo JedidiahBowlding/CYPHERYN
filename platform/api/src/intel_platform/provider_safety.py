@@ -31,7 +31,13 @@ def controls_for(db: Session, organization_id: str, provider: str) -> ProviderCo
     if configuration is None:
         return ProviderControls(
             enabled=True,
-            timeout_seconds=300 if provider == "openvas" else 180 if provider == "maigret" else 20,
+            timeout_seconds=(
+                300
+                if provider == "openvas"
+                else 180
+                if provider in {"maigret", "testssl", "zap_passive"}
+                else 20
+            ),
         )
     values = configuration.settings or {}
     return ProviderControls(

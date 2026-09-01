@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 1 ]; then
+  echo 'usage: cypheryn-testssl <authorized-target>' >&2
+  exit 64
+fi
+
+case "$1" in
+  *[!A-Za-z0-9.:/_-]*|'')
+    echo 'target contains unsupported characters' >&2
+    exit 64
+    ;;
+esac
+
+report=/tmp/cypheryn-testssl.json
+# Keep the production check bounded and non-destructive: protocol negotiation
+# plus HTTP/TLS security headers. Vulnerability probes and exhaustive cipher
+# enumeration are intentionally excluded from this assessment profile.
+testssl.sh --quiet --warnings off --protocols --headers --jsonfile-pretty "$report" "$1" >/dev/null 2>&1 || status=$?
+if [ ! -s "$report" ]; then
+  echo "testssl did not produce a JSON report (exit ${status:-0})" >&2
+  exit "${status:-1}"
+fi
+cat "$report"

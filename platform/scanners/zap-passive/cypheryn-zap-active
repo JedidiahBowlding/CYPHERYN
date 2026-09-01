@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+if [ "$#" -ne 1 ]; then
+  echo "usage: cypheryn-zap-active https://authorized-target" >&2
+  exit 64
+fi
+report=/tmp/cypheryn-zap-active.json
+/zap/zap.sh -cmd -silent -dir /tmp/zap-home -quickurl "$1" -quickout "$report" >/dev/null
+cat "$report"
