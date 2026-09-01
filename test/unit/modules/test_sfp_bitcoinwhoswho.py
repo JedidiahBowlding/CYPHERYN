@@ -1,5 +1,6 @@
 import pytest
 import unittest
+from unittest.mock import Mock
 
 from modules.sfp_bitcoinwhoswho import sfp_bitcoinwhoswho
 from sflib import SpiderFoot
@@ -48,3 +49,18 @@ class TestModuleBitcoinwhoswho(unittest.TestCase):
 
         self.assertIsNone(result)
         self.assertTrue(module.errorState)
+
+    def test_query_suppresses_url_logging_for_path_credential(self):
+        module = sfp_bitcoinwhoswho()
+        module.opts = {
+            **module.opts,
+            'api_key': 'super-secret-path-key',
+            '_fetchtimeout': 30,
+        }
+        module.sf = Mock()
+        module.sf.fetchUrl.return_value = {'content': None}
+        module.info = Mock()
+
+        module.query('1BitcoinAddress')
+
+        self.assertTrue(module.sf.fetchUrl.call_args.kwargs['noLog'])
