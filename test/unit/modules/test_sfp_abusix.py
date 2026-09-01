@@ -1,5 +1,6 @@
 import pytest
 import unittest
+from unittest.mock import Mock
 
 from modules.sfp_abusix import sfp_abusix
 from sflib import SpiderFoot
@@ -47,3 +48,17 @@ class TestModuleAbusix(unittest.TestCase):
 
         self.assertIsNone(result)
         self.assertTrue(module.errorState)
+
+    def test_query_does_not_log_api_key(self):
+        module = sfp_abusix()
+        module.opts = {**module.opts, 'api_key': 'super-secret-abusix-key'}
+        module.sf = Mock()
+        module.sf.validIP.return_value = True
+        module.sf.validIP6.return_value = False
+        module.sf.resolveHost.return_value = []
+        module.debug = Mock()
+
+        module.query('192.0.2.10')
+
+        logged = ' '.join(call.args[0] for call in module.debug.call_args_list)
+        self.assertNotIn('super-secret-abusix-key', logged)

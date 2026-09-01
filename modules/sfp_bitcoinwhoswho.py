@@ -77,6 +77,9 @@ class sfp_bitcoinwhoswho(SpiderFootPlugin):
             f"https://bitcoinwhoswho.com/api/scam/{self.opts['api_key']}?{qs}",
             timeout=self.opts["_fetchtimeout"],
             useragent="SpiderFoot",
+            # This legacy API places its credential in the URL path, where a
+            # query-parameter redactor cannot identify it safely.
+            noLog=True,
         )
 
         if res["content"] is None:

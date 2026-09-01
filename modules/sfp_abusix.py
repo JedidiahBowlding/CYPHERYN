@@ -163,12 +163,14 @@ class sfp_abusix(SpiderFootPlugin):
         else:
             lookup = f"{qaddr}.{self.opts['api_key']}.combined.mail.abusix.zone"
 
-        self.debug(f"Checking Abusix Mail Intelligence blacklist: {lookup}")
+        # ``lookup`` embeds the provider credential as a DNS label. Never send
+        # it to application logs, including at debug level.
+        self.debug(f"Checking Abusix Mail Intelligence blacklist for: {qaddr}")
 
         try:
             return self.sf.resolveHost(lookup)
         except Exception as e:
-            self.debug(f"Abusix Mail Intelligence did not resolve {qaddr} / {lookup}: {e}")
+            self.debug(f"Abusix Mail Intelligence did not resolve {qaddr}: {e}")
 
         return None
 

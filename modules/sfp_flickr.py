@@ -158,7 +158,7 @@ class sfp_flickr(SpiderFootPlugin):
             self.error("Failed to obtain API key")
             return
 
-        self.debug(f"Retrieved API key: {api_key}")
+        self.debug("Retrieved Flickr API credential")
 
         # Query API for event data
         hosts = list()
