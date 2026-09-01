@@ -2,8 +2,9 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import SectionPage from "../_components/SectionPage";
+import { platformApiUrl } from "../_lib/platformApi";
 
-const API = process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
+const API = platformApiUrl();
 const headers = {
   "Content-Type": "application/json",
   "X-Dev-Subject": "local-analyst",

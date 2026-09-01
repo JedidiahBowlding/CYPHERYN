@@ -3,8 +3,9 @@
 import Link from "next/link";
 import {useEffect,useState} from "react";
 import DashboardNav from "../_components/DashboardNav";
+import {platformApiUrl} from "../_lib/platformApi";
 
-const API=process.env.NEXT_PUBLIC_PLATFORM_API_URL??"http://localhost:8000";
+const API=platformApiUrl();
 const headers={"X-Dev-Subject":"local-analyst","X-Dev-Email":"analyst@cypheryn.local"};
 type Investigation={id:string;name:string;description:string;status:string;created_at:string};
 
