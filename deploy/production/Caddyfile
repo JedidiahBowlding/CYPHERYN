@@ -92,6 +92,7 @@ app.cypheryn.com {
 				header_down -Cache-Control
 				header_up -X-Dev-Subject
 				header_up -X-Dev-Email
+				header_up X-Cypheryn-Proxy-Secret {$AUTH_PROXY_SECRET}
 			}
 		}
 
@@ -101,6 +102,7 @@ app.cypheryn.com {
 				header_down -Cache-Control
 				header_up -X-Dev-Subject
 				header_up -X-Dev-Email
+				header_up X-Cypheryn-Proxy-Secret {$AUTH_PROXY_SECRET}
 			}
 		}
 

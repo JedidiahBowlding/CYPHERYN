@@ -3,6 +3,8 @@ services:
     environment:
       PLATFORM_ENVIRONMENT: production
       PLATFORM_ALLOW_DEV_IDENTITY: "false"
+      PLATFORM_TRUSTED_AUTH_PROXY: "true"
+      PLATFORM_AUTH_PROXY_SECRET: ${AUTH_PROXY_SECRET:?Set a random 32+ character proxy authentication secret}
       PLATFORM_OIDC_ISSUER: ${PLATFORM_OIDC_ISSUER:?Set the Auth0 issuer URL}
       PLATFORM_OIDC_AUDIENCE: ${PLATFORM_OIDC_AUDIENCE:?Set the Auth0 client ID}
       PLATFORM_OIDC_JWKS_URL: ${PLATFORM_OIDC_JWKS_URL:?Set the Auth0 JWKS URL}
@@ -58,6 +60,7 @@ services:
     restart: unless-stopped
     environment:
       ACME_EMAIL: ${ACME_EMAIL:?Set the ACME account email}
+      AUTH_PROXY_SECRET: ${AUTH_PROXY_SECRET:?Set a random 32+ character proxy authentication secret}
     depends_on:
       api:
         condition: service_healthy
