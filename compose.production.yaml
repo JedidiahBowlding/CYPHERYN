@@ -78,7 +78,11 @@ services:
     cap_add: [NET_BIND_SERVICE]
     security_opt: [no-new-privileges:true]
     networks:
-      edge: {}
+      # Keep the normal edge network as Caddy's default route so ACME renewal
+      # and other public HTTPS operations are not captured by the deliberately
+      # restricted scanner-egress policy network.
+      edge:
+        gw_priority: 1
       scanner-egress:
         ipv4_address: 172.31.250.2
         aliases:
