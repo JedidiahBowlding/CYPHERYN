@@ -3,7 +3,8 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import SectionPage from "./SectionPage";
 import FindingHelp from "./FindingHelp";
-const API = process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
+import { platformApiUrl } from "../_lib/platformApi";
+const API = platformApiUrl();
 const headers = {
   "X-Dev-Subject": "local-analyst",
   "X-Dev-Email": "analyst@cypheryn.local",

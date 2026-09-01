@@ -2,8 +2,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-const API_URL =
-  process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
+import { platformApiUrl } from "../../_lib/platformApi";
+const API_URL = platformApiUrl();
 type Target = { id: string; canonical_value: string; target_type: string };
 async function api<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {

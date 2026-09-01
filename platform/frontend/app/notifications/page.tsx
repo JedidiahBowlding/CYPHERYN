@@ -2,8 +2,9 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import SectionPage from "../_components/SectionPage";
+import { platformApiUrl } from "../_lib/platformApi";
 
-const API = process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
+const API = platformApiUrl();
 const headers = { "X-Dev-Subject": "local-analyst", "X-Dev-Email": "analyst@cypheryn.local" };
 type Organization = { id: string; name: string };
 type Notification = { id: string; event_type: string; severity: string; title: string; message: string; occurrence_count: number; last_seen_at: string; read_at: string | null; external_suppressed_reason: string; email_status: string; webhook_status: string };

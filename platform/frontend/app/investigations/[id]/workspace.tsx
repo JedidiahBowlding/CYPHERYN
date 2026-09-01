@@ -9,8 +9,9 @@ import EvidenceGraph, {
   GraphRelationship,
 } from "./EvidenceGraph";
 import DashboardNav from "../../_components/DashboardNav";
+import { platformApiUrl } from "../../_lib/platformApi";
 
-const API = process.env.NEXT_PUBLIC_PLATFORM_API_URL ?? "http://localhost:8000";
+const API = platformApiUrl();
 const headers = {
   "Content-Type": "application/json",
   "X-Dev-Subject": "local-analyst",
