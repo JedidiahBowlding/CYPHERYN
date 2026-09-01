@@ -26,7 +26,7 @@ are never copied into the manifest.
 ```bash
 sudo python3 scripts/deployment_manifest.py \
   --repository /opt/cypheryn \
-  --output /opt/cypheryn/deployments/$(date -u +%Y%m%dT%H%M%SZ)-manifest.json \
+  --output /var/lib/cypheryn/deployments/$(date -u +%Y%m%dT%H%M%SZ)-manifest.json \
   --operator newblockdev \
   --version 0.9.0 \
   --database-migration-state sqlalchemy-metadata-at-HEAD \
@@ -37,5 +37,7 @@ sudo python3 scripts/deployment_manifest.py \
 ```
 
 The command refuses a dirty Git tree and writes the manifest with mode `0600`.
+Keep generated manifests outside the checkout, as shown above, so recording a
+deployment cannot make the production Git tree dirty.
 Record the database schema mechanism honestly: CYPHERYN currently initializes
 SQLAlchemy metadata at startup and does not claim an Alembic revision.

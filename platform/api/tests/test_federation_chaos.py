@@ -11,6 +11,7 @@ from intel_platform.federation import (
     create_assertion,
     deliver_assertion,
 )
+from intel_platform.observability import federation_telemetry_snapshot
 
 
 def assertion() -> dict:
@@ -28,18 +29,31 @@ def assertion() -> dict:
 
 
 @pytest.mark.parametrize(
-    ("failure", "message"),
+    ("failure", "message", "reason"),
     [
-        (httpx.ReadTimeout("delayed response"), "timed out"),
-        (httpx.ReadError("packet loss"), "unreachable"),
-        (httpx.RemoteProtocolError("dropped connection"), "unreachable"),
-        (httpx.ConnectError("temporary DNS failure"), "unreachable"),
-        (httpx.ConnectError("network partition"), "unreachable"),
-        (httpx.ConnectTimeout("extended peer outage"), "timed out"),
+        (httpx.ReadTimeout("delayed response"), "timed out", "timeout"),
+        (httpx.ReadError("packet loss"), "unreachable", "unreachable_peer"),
+        (
+            httpx.RemoteProtocolError("dropped connection"),
+            "unreachable",
+            "unreachable_peer",
+        ),
+        (
+            httpx.ConnectError("temporary DNS failure"),
+            "unreachable",
+            "unreachable_peer",
+        ),
+        (
+            httpx.ConnectError("network partition"),
+            "unreachable",
+            "unreachable_peer",
+        ),
+        (httpx.ConnectTimeout("extended peer outage"), "timed out", "timeout"),
     ],
 )
-def test_network_failures_do_not_interrupt_local_operation(failure, message) -> None:
+def test_network_failures_do_not_interrupt_local_operation(failure, message, reason) -> None:
     local_operations = []
+    counters_before, _ = federation_telemetry_snapshot()
 
     def failed_delivery(_request: httpx.Request) -> httpx.Response:
         raise failure
@@ -55,6 +69,9 @@ def test_network_failures_do_not_interrupt_local_operation(failure, message) -> 
     local_operations.append("evidence")
     local_operations.append("report")
     assert local_operations == ["collection", "evidence", "report"]
+    counters_after, latencies = federation_telemetry_snapshot()
+    assert counters_after[reason] == counters_before.get(reason, 0) + 1
+    assert latencies
 
 
 def test_asymmetric_connectivity_and_restart_retry_are_bounded() -> None:

@@ -156,12 +156,38 @@ def main() -> int:
             f"/api/federation/v1/organizations/{local_b['organization']['id']}/peers/{peer_a_on_b['id']}",
             json={"status": "revoked"},
         )
+        post_revocation = request(
+            node_a,
+            "POST",
+            f"/api/federation/v1/organizations/{local_a['organization']['id']}/assertions",
+            json={
+                "assertion_type": "indicator_assessment",
+                "subject_type": "domain",
+                "subject_fingerprint": "c" * 64,
+                "evidence_fingerprint": "d" * 64,
+                "source_category": "attack_surface",
+                "confidence": 60,
+                "severity": "medium",
+                "observation_time": datetime.now(UTC).isoformat(),
+            },
+        ).json()
+        revoked_delivery = node_b.post(inbound, headers=HEADERS, json=post_revocation)
+        if revoked_delivery.status_code != 422 or "not trusted" not in revoked_delivery.text:
+            raise RuntimeError("Revoked peer delivery was not explicitly rejected")
 
     subprocess.run([*COMPOSE, "stop", "node-a", "node-a-worker"], check=True)
     with httpx.Client(base_url="http://127.0.0.1:8102", timeout=10) as node_b:
         request(node_b, "GET", "/health/ready")
         create_local_evidence_and_report(node_b, "B-after-node-A-stop")
-        request(node_b, "GET", "/api/federation/v1/health")
+        federation_health = request(node_b, "GET", "/api/federation/v1/health").json()
+        if federation_health != {"status": "ready", "federation_enabled": True}:
+            raise RuntimeError(f"Node B federation health was inaccurate: {federation_health}")
+        try:
+            httpx.get("http://127.0.0.1:8101/health/ready", timeout=2)
+        except httpx.TransportError:
+            pass
+        else:
+            raise RuntimeError("Stopped Node A was unexpectedly reachable")
     print("Two-node federation independence test passed")
     return 0
 
