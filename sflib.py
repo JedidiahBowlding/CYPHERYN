@@ -168,13 +168,13 @@ class SpiderFoot:
 
         if val.lower().startswith('http://') or val.lower().startswith('https://'):
             try:
-                self.info(f"Downloading configuration data from: {val}")
+                self.info(f"Downloading configuration data from: {self.removeUrlCreds(val)}")
                 session = self.getSession()
                 res = session.get(val)
 
                 return res.content.decode('utf-8')
             except BaseException as e:
-                self.error(f"Unable to open option URL, {val}: {e}")
+                self.error(f"Unable to open option URL, {self.removeUrlCreds(val)}: {e}")
                 return None
 
         return val
@@ -966,12 +966,11 @@ class SpiderFoot:
         Returns:
             sock
         """
-        s = socket.socket()
-        s.settimeout(int(timeout))
-        s.connect((host, int(port)))
-        sock = ssl.wrap_socket(s)
-        sock.do_handshake()
-        return sock
+        context = ssl.create_default_context()
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        raw_socket = socket.create_connection((host, int(port)), int(timeout))
+        raw_socket.settimeout(int(timeout))
+        return context.wrap_socket(raw_socket, server_hostname=host)
 
     def parseCert(self, rawcert: str, fqdn: str = None, expiringdays: int = 30) -> dict:
         """Parse a PEM-format SSL certificate.
@@ -1265,10 +1264,10 @@ class SpiderFoot:
             for k in list(headers.keys()):
                 header[k] = str(headers[k])
 
-        request_log.append(f"proxy={self.socksProxy}")
+        request_log.append(f"proxy={'configured' if self.socksProxy else 'none'}")
         request_log.append(f"user-agent={header['User-Agent']}")
         request_log.append(f"timeout={timeout}")
-        request_log.append(f"cookies={cookies}")
+        request_log.append(f"cookies={'present' if cookies else 'none'}")
 
         if sizeLimit or headOnly:
             if noLog:
@@ -1286,9 +1285,9 @@ class SpiderFoot:
                 )
             except Exception as e:
                 if noLog:
-                    self.debug(f"Unexpected exception ({e}) occurred fetching (HEAD only) URL: {url}", exc_info=True)
+                    self.debug(f"Unexpected exception ({e}) occurred fetching (HEAD only) URL: {self.removeUrlCreds(url)}", exc_info=True)
                 else:
-                    self.error(f"Unexpected exception ({e}) occurred fetching (HEAD only) URL: {url}", exc_info=True)
+                    self.error(f"Unexpected exception ({e}) occurred fetching (HEAD only) URL: {self.removeUrlCreds(url)}", exc_info=True)
 
                 return result
 
@@ -1330,9 +1329,9 @@ class SpiderFoot:
 
                 except Exception as e:
                     if noLog:
-                        self.debug(f"Unexpected exception ({e}) occurred fetching (HEAD only) URL: {result['realurl']}", exc_info=True)
+                        self.debug(f"Unexpected exception ({e}) occurred fetching (HEAD only) URL: {self.removeUrlCreds(result['realurl'])}", exc_info=True)
                     else:
-                        self.error(f"Unexpected exception ({e}) occurred fetching (HEAD only) URL: {result['realurl']}", exc_info=True)
+                        self.error(f"Unexpected exception ({e}) occurred fetching (HEAD only) URL: {self.removeUrlCreds(result['realurl'])}", exc_info=True)
 
                     return result
 
@@ -1367,13 +1366,13 @@ class SpiderFoot:
                     verify=verify
                 )
         except requests.exceptions.RequestException as e:
-            self.error(f"Failed to connect to {url}: {e}")
+            self.error(f"Failed to connect to {self.removeUrlCreds(url)}: {e}")
             return result
         except Exception as e:
             if noLog:
-                self.debug(f"Unexpected exception ({e}) occurred fetching URL: {url}", exc_info=True)
+                self.debug(f"Unexpected exception ({e}) occurred fetching URL: {self.removeUrlCreds(url)}", exc_info=True)
             else:
-                self.error(f"Unexpected exception ({e}) occurred fetching URL: {url}", exc_info=True)
+                self.error(f"Unexpected exception ({e}) occurred fetching URL: {self.removeUrlCreds(url)}", exc_info=True)
 
             return result
 
@@ -1427,7 +1426,7 @@ class SpiderFoot:
                     result["content"] = res.content
 
         except Exception as e:
-            self.error(f"Unexpected exception ({e}) occurred parsing response for URL: {url}", exc_info=True)
+            self.error(f"Unexpected exception ({e}) occurred parsing response for URL: {self.removeUrlCreds(url)}", exc_info=True)
             result['content'] = None
             result['status'] = str(e)
 

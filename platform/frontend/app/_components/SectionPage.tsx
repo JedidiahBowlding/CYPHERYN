@@ -1,6 +1,4 @@
-"use client";
-import Link from "next/link";
-import {usePathname} from "next/navigation";
 import {ReactNode} from "react";
-const navigation=[["Overview","/"],["Investigations","/investigations"],["Exposure graph","/exposure-graph"],["Assets","/assets"],["Intelligence","/intelligence"],["Identity","/identity"],["Malware","/malware"],["Detections","/detections"],["Findings","/findings"],["Notifications","/notifications"],["Reports","/reports"],["Settings","/settings"]];
-export default function SectionPage({title,eyebrow,description,children,action}:{title:string;eyebrow:string;description:string;children?:ReactNode;action?:ReactNode}){const pathname=usePathname();return <main className="section-page"><aside className="section-nav"><Link className="workflow-brand" href="/"><span>S</span>CYPHERYN</Link><nav>{navigation.map(([label,path])=><Link className={path===pathname?"active":""} href={path} key={path}>{label}</Link>)}</nav></aside><section className="section-main"><header className="section-header"><div className="section-heading"><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="section-description">{description}</p></div>{action}</header>{children}</section></main>}
+import DashboardNav from "./DashboardNav";
+
+export default function SectionPage({title,eyebrow,description,children,action}:{title:string;eyebrow:string;description:string;children?:ReactNode;action?:ReactNode}){return <main className="section-page"><DashboardNav/><section className="section-main"><header className="section-header"><div className="section-heading"><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="section-description">{description}</p></div>{action}</header>{children}</section></main>}

@@ -1,0 +1,43 @@
+name: Federation PostgreSQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  concurrency:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: federation_test
+          POSTGRES_USER: federation_test
+          POSTGRES_PASSWORD: federation_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U federation_test -d federation_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: platform/api/pyproject.toml
+      - name: Install API dependencies
+        working-directory: platform/api
+        run: python -m pip install -e '.[dev]'
+      - name: Exercise PostgreSQL federation races
+        working-directory: platform/api
+        env:
+          FEDERATION_TEST_DATABASE_URL: postgresql+psycopg://federation_test:federation_test@127.0.0.1:5432/federation_test
+        run: python -m pytest tests/test_federation_postgres.py -q

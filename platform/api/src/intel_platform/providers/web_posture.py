@@ -80,6 +80,7 @@ class WebPostureProvider:
     @staticmethod
     def _certificate(host: str, timeout: float) -> dict:
         ssl_context = ssl.create_default_context(cafile=certifi.where())
+        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
         with socket.create_connection((host, 443), timeout=timeout) as raw_socket:
             with ssl_context.wrap_socket(raw_socket, server_hostname=host) as tls_socket:
                 certificate = tls_socket.getpeercert()
