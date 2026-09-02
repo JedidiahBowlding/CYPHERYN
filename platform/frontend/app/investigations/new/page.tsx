@@ -2,10 +2,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { platformApiUrl } from "../../_lib/platformApi";
 const API_URL = platformApiUrl();
 type Target = { id: string; canonical_value: string; target_type: string };
+type Organization = { id: string; name: string };
 async function api<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     method: "POST",
@@ -33,15 +34,34 @@ export default function NewInvestigation() {
   >("idle");
   const [message, setMessage] = useState("");
   const [created, setCreated] = useState<Target | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizationId, setOrganizationId] = useState("new");
+  useEffect(() => {
+    fetch(`${API_URL}/api/v1/organizations`, {
+      headers: {
+        "X-Dev-Subject": "local-analyst",
+        "X-Dev-Email": "analyst@cypheryn.local",
+      },
+      cache: "no-store",
+    })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((items: Organization[]) => {
+        setOrganizations(items);
+        if (items.length) setOrganizationId(items[0].id);
+      })
+      .catch(() => setOrganizations([]));
+  }, []);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("saving");
     setMessage("");
     const data = new FormData(event.currentTarget);
     try {
-      const organization = await api<{ id: string }>("/api/v1/organizations", {
-        name: data.get("organization"),
-      });
+      const organization = organizationId === "new"
+        ? await api<{ id: string }>("/api/v1/organizations", {
+            name: data.get("organization"),
+          })
+        : { id: organizationId };
       const investigation = await api<{ id: string }>(
         `/api/v1/organizations/${organization.id}/investigations`,
         { name: data.get("name"), description: data.get("description") },
@@ -132,14 +152,31 @@ export default function NewInvestigation() {
               />
             </label>
             <label>
-              Organization
-              <input
-                name="organization"
-                required
-                minLength={2}
-                placeholder="Example Corporation"
-              />
+              Organization workspace
+              <select
+                aria-label="Investigation organization"
+                value={organizationId}
+                onChange={(event) => setOrganizationId(event.target.value)}
+              >
+                {organizations.map((organization) => (
+                  <option value={organization.id} key={organization.id}>
+                    {organization.name} · use saved providers
+                  </option>
+                ))}
+                <option value="new">Create a new organization</option>
+              </select>
             </label>
+            {organizationId === "new" && (
+              <label>
+                New organization name
+                <input
+                  name="organization"
+                  required
+                  minLength={2}
+                  placeholder="Example Corporation"
+                />
+              </label>
+            )}
             <label>
               Description
               <textarea

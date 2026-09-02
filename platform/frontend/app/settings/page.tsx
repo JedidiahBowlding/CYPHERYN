@@ -22,6 +22,7 @@ type Controls = {
   last_error: string | null;
 };
 type Provider = { name: string; requires_credentials: boolean };
+type Organization = { id: string; name: string };
 type SavedProvider = {
   provider: string;
   enabled: boolean;
@@ -61,6 +62,7 @@ const defaults: Controls = {
 
 export default function Page() {
   const [organizationId, setOrganizationId] = useState("");
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [provider, setProvider] = useState("safe_mock");
   const [providers, setProviders] = useState<Provider[]>([]);
   const [savedProviders, setSavedProviders] = useState<SavedProvider[]>([]);
@@ -92,6 +94,7 @@ export default function Page() {
           fetch(`${API}/api/v1/providers`, { headers }).then((r) => r.json()),
         ]);
         setProviders(p);
+        setOrganizations(o);
         if (o[0]) {
           setOrganizationId(o[0].id);
           await loadSaved(o[0].id);
@@ -200,6 +203,31 @@ export default function Page() {
       eyebrow="Organization controls"
       description="Configure provider credentials and defensive collection limits."
     >
+      <section className="provider-controls organization-context" aria-labelledby="organization-context-title">
+        <header>
+          <div>
+            <h2 id="organization-context-title">Organization workspace</h2>
+            <p>Credentials and provider controls apply only to the selected organization.</p>
+          </div>
+          <select
+            aria-label="Settings organization"
+            value={organizationId}
+            onChange={async (event) => {
+              const id = event.target.value;
+              setOrganizationId(id);
+              setSavedProviders([]);
+              setMessage("");
+              await loadSaved(id);
+            }}
+          >
+            {organizations.map((organization) => (
+              <option value={organization.id} key={organization.id}>
+                {organization.name}
+              </option>
+            ))}
+          </select>
+        </header>
+      </section>
       {assurance && (
         <section className="platform-assurance" aria-labelledby="platform-assurance-title">
           <header>

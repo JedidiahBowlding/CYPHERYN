@@ -1103,7 +1103,10 @@ def request_finding_verification(
         provider=provider.name,
         profile="passive" if provider.capabilities.passive_only else "active",
         status=JobStatus.QUEUED,
-        max_attempts=20 if provider.name == "openvas" else 3,
+        # A vulnerability scan is one durable remote operation. Retrying it
+        # twenty times can create duplicate Greenbone tasks and hide a stuck
+        # cancellation; the provider resumes its deterministic task instead.
+        max_attempts=3,
     )
     db.add(job)
     db.flush()

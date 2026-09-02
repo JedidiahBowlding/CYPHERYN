@@ -11,6 +11,17 @@ class ProviderBlockedError(RuntimeError):
     pass
 
 
+def default_timeout_seconds(provider: str) -> int:
+    """Return a realistic wall-clock budget for each collection class."""
+    if provider == "openvas":
+        return 900
+    if provider in {"nuclei", "maigret", "testssl", "zap_passive", "zap_active"}:
+        return 180
+    if provider in {"nmap", "naabu", "rustscan", "masscan", "nikto", "katana"}:
+        return 90
+    return 20
+
+
 @dataclass(frozen=True)
 class ProviderControls:
     enabled: bool = True
@@ -31,20 +42,16 @@ def controls_for(db: Session, organization_id: str, provider: str) -> ProviderCo
     if configuration is None:
         return ProviderControls(
             enabled=True,
-            timeout_seconds=(
-                300
-                if provider == "openvas"
-                else 180
-                if provider in {"maigret", "testssl", "zap_passive"}
-                else 20
-            ),
+            timeout_seconds=default_timeout_seconds(provider),
         )
     values = configuration.settings or {}
     return ProviderControls(
         enabled=configuration.enabled,
         kill_switch=bool(values.get("kill_switch", False)),
         jobs_per_hour=max(1, min(int(values.get("jobs_per_hour", 60)), 10000)),
-        timeout_seconds=max(1, min(int(values.get("timeout_seconds", 20)), 300)),
+        timeout_seconds=max(
+            1, min(int(values.get("timeout_seconds", default_timeout_seconds(provider))), 900)
+        ),
         failure_threshold=max(1, min(int(values.get("failure_threshold", 3)), 20)),
         cooldown_seconds=max(1, min(int(values.get("cooldown_seconds", 300)), 86400)),
     )

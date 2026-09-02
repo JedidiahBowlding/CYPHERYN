@@ -794,6 +794,7 @@ class NiktoProvider(LocalToolProvider):
                 "-Tuning",
                 "23b",
             ],
+            remote_binary="cypheryn-nikto",
         )
         payload = json.loads(result.stdout) if result.stdout.strip() else {}
         vulnerabilities = payload.get("vulnerabilities", []) if isinstance(payload, dict) else []
@@ -840,7 +841,7 @@ class ZapPassiveProvider(LocalToolProvider):
                 remote_binary="cypheryn-zap-passive",
             )
             try:
-                payload = json.loads(result.stdout)
+                payload = self._json_document(result.stdout)
             except json.JSONDecodeError as exc:
                 raise RuntimeError("zap_passive returned malformed JSON") from exc
             return self._normalize_zap(context, url, payload)
@@ -877,6 +878,21 @@ class ZapPassiveProvider(LocalToolProvider):
                     raise
             payload = json.loads(report.read_text()) if report.exists() else {}
         return self._normalize_zap(context, url, payload)
+
+    @staticmethod
+    def _json_document(output: str) -> dict:
+        """Decode a JSON report even when a scanner emits bounded startup noise."""
+        decoder = json.JSONDecoder()
+        for offset, character in enumerate(output):
+            if character != "{":
+                continue
+            try:
+                payload, end = decoder.raw_decode(output[offset:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict) and not output[offset + end :].strip():
+                return payload
+        raise json.JSONDecodeError("no JSON object found", output, 0)
 
     def _normalize_zap(self, context: ProviderContext, url: str, payload: dict) -> ProviderResult:
         entities, findings, observations, endpoints = [], [], [], set()

@@ -585,7 +585,11 @@ export default function InvestigationWorkspace({
                 {availableProviders.map((item) => (
                   <option value={item.name} key={item.name}>
                     {item.name.replaceAll("_", " ")}
-                    {item.requires_credentials ? " · credentials saved" : ""}
+                    {item.requires_credentials
+                      ? configured.get(item.name)?.credentials_configured
+                        ? " · credentials saved"
+                        : " · credentials required"
+                      : ""}
                   </option>
                 ))}
               </select>
