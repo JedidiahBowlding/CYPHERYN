@@ -54,6 +54,9 @@ const paletteClasses: Record<string, string> = {
   certificate: "entity-dot-certificate",
 };
 
+const MIN_GRAPH_SCALE = 0.55;
+const MAX_GRAPH_SCALE = 8;
+
 export default function EvidenceGraph({
   entities,
   relationships,
@@ -191,8 +194,11 @@ export default function EvidenceGraph({
     const focus = svgPoint(event.currentTarget, event.clientX, event.clientY);
     setView((current) => {
       const nextScale = Math.min(
-        2.2,
-        Math.max(0.55, current.scale * (event.deltaY > 0 ? 0.9 : 1.1)),
+        MAX_GRAPH_SCALE,
+        Math.max(
+          MIN_GRAPH_SCALE,
+          current.scale * (event.deltaY > 0 ? 0.88 : 1.14),
+        ),
       );
       const anchorX = (focus.x - current.x) / current.scale;
       const anchorY = (focus.y - current.y) / current.scale;
@@ -278,8 +284,11 @@ export default function EvidenceGraph({
           (first.y + second.y) / 2,
         );
         const nextScale = Math.min(
-          2.2,
-          Math.max(0.55, activePinch.originScale * (distance / activePinch.distance)),
+          MAX_GRAPH_SCALE,
+          Math.max(
+            MIN_GRAPH_SCALE,
+            activePinch.originScale * (distance / activePinch.distance),
+          ),
         );
         setView({
           x: center.x - activePinch.anchorX * nextScale,
