@@ -54,6 +54,18 @@ const paletteClasses: Record<string, string> = {
   certificate: "entity-dot-certificate",
 };
 
+const compactTypeLabels: Record<string, string> = {
+  ip_address: "IP",
+  dns_record: "DNS",
+  email_address: "Email",
+  phone_number: "Phone",
+  social_profile: "Social",
+};
+
+function compactTypeLabel(type: string) {
+  return compactTypeLabels[type] ?? type.replaceAll("_", "");
+}
+
 const MIN_GRAPH_SCALE = 0.55;
 const MAX_GRAPH_SCALE = 8;
 
@@ -342,8 +354,12 @@ export default function EvidenceGraph({
               </select>
             </label>
           )}
-          <button onClick={() => setView({ x: 0, y: 0, scale: 1 })}>
-            Fit graph
+          <button
+            aria-label="Fit graph to default view"
+            title="Fit graph to default view"
+            onClick={() => setView({ x: 0, y: 0, scale: 1 })}
+          >
+            Reset
           </button>
           <span>
             {visible.length} nodes · {edges.length} edges
@@ -354,11 +370,13 @@ export default function EvidenceGraph({
         {types.map((type) => (
           <button
             key={type}
+            aria-label={`Filter ${type.replaceAll("_", " ")}`}
             aria-pressed={visibleTypes.has(type)}
+            title={type.replaceAll("_", " ")}
             onClick={() => toggleType(type)}
           >
             <i className={paletteClasses[type] ?? "entity-dot-default"} />
-            {type.replaceAll("_", " ")}
+            {compactTypeLabel(type)}
           </button>
         ))}
       </div>
