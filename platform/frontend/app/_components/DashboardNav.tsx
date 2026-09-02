@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const primaryNavigation = [
@@ -39,7 +40,13 @@ export default function DashboardNav({
   return (
     <aside className="section-nav dashboard-nav">
       <Link className="workflow-brand" href="/">
-        <span>S</span>CYPHERYN
+        <Image
+          src="/cypheryn-logo.png"
+          alt="CYPHERYN shield"
+          width={1254}
+          height={1254}
+        />
+        <span>CYPHERYN</span>
       </Link>
       <Link className="dashboard-new" href="/investigations/new">
         ＋ New investigation

@@ -12,7 +12,12 @@ from pathlib import Path
 
 import httpx
 
-from ..provider_contract import ProviderCapabilities, ProviderContext, ProviderResult
+from ..provider_contract import (
+    ProviderCancelledError,
+    ProviderCapabilities,
+    ProviderContext,
+    ProviderResult,
+)
 from .local_tools import LocalToolProvider
 
 GREENBONE_DIR = Path(__file__).resolve().parents[4] / "greenbone"
@@ -144,6 +149,12 @@ class OpenVasProvider(LocalToolProvider):
             raise RuntimeError(f"Greenbone: {error[:300]}")
         return dict(response.get("data") or {})
 
+    @staticmethod
+    def _raise_if_cancelled(context: ProviderContext) -> None:
+        context.db.refresh(context.job, attribute_names=["cancellation_requested_at"])
+        if context.job.cancellation_requested_at is not None:
+            raise ProviderCancelledError("OpenVAS scan was cancelled")
+
     def collect(self, context: ProviderContext) -> ProviderResult:
         target = self._public_target(context.target.canonical_value)
         username = str(context.credentials.get("username") or "").strip()
@@ -160,6 +171,7 @@ class OpenVasProvider(LocalToolProvider):
         if not os.environ.get("OPENVAS_BRIDGE_URL"):
             request.update({"username": username, "password": password})
         while True:
+            self._raise_if_cancelled(context)
             try:
                 latest = self._bridge(context, request)
                 break
@@ -179,6 +191,7 @@ class OpenVasProvider(LocalToolProvider):
                     ) from exc
                 time.sleep(min(10.0, self._seconds_remaining(context) - 7.0))
         while latest.get("status") not in {"Done", "Stopped", "Interrupted"}:
+            self._raise_if_cancelled(context)
             if self._seconds_remaining(context) <= 7:
                 progress = int(latest.get("progress") or 0)
                 raise TimeoutError(f"OpenVAS scan is still running ({progress}% complete)")

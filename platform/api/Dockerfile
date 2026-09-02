@@ -1,7 +1,6 @@
 FROM debian:bookworm-slim AS security-tools
 
 ARG TRUFFLEHOG_VERSION=3.97.1
-ARG TRIVY_VERSION=0.74.0
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl unzip \
@@ -21,9 +20,6 @@ RUN set -eux; \
     fetch_tar trufflesecurity trufflehog "v${TRUFFLEHOG_VERSION}" \
       "trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz" \
       "trufflehog_${TRUFFLEHOG_VERSION}_checksums.txt" trufflehog; \
-    fetch_tar aquasecurity trivy "v${TRIVY_VERSION}" \
-      "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
-      "trivy_${TRIVY_VERSION}_checksums.txt" trivy; \
     true
 
 # The newest upstream release binaries can lag newly fixed Go stdlib/module
@@ -37,7 +33,6 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /src /out
 
-COPY --from=security-tools /out/trivy /out/trivy
 COPY --from=security-tools /out/trufflehog /out/trufflehog
 COPY build_patched_go_tool.sh /usr/local/bin/build-patched-go-tool
 
@@ -51,6 +46,8 @@ RUN sh /usr/local/bin/build-patched-go-tool subfinder projectdiscovery/subfinder
       b360529eebcd29345e44b3a9da3b2b0c04a13ff2 ./cmd/subfinder
 RUN sh /usr/local/bin/build-patched-go-tool syft anchore/syft \
       91a0032987d91b7411b52f6f5c185c5e7f775495 ./cmd/syft
+RUN GOEXPERIMENT=jsonv2 sh /usr/local/bin/build-patched-go-tool trivy aquasecurity/trivy \
+      e1fd17a0ea4a8cf24bc4b4dd7e2cfbf4bb31b994 ./cmd/trivy
 
 FROM python:3.13-slim
 

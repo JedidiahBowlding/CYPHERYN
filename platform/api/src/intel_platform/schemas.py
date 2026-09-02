@@ -316,7 +316,7 @@ class CollectionJobEventRead(ApiModel):
 class ProviderControlSettings(BaseModel):
     kill_switch: bool = False
     jobs_per_hour: int = Field(default=60, ge=1, le=10000)
-    timeout_seconds: int = Field(default=20, ge=1, le=300)
+    timeout_seconds: int = Field(default=20, ge=1, le=900)
     failure_threshold: int = Field(default=3, ge=1, le=20)
     cooldown_seconds: int = Field(default=300, ge=1, le=86400)
     collection_url: str | None = None

@@ -114,7 +114,7 @@ export default function ReportsPage() {
         <label>Report title<input value={brandTitle} onChange={(event) => setBrandTitle(event.target.value)} /></label>
         <label>Accent color<input type="color" value={brandAccent} onChange={(event) => setBrandAccent(event.target.value)} /></label>
         <label>PNG or JPEG logo<input type="file" accept="image/png,image/jpeg" onChange={(event) => readLogo(event.target.files?.[0])} /></label>
-        <button onClick={saveBranding}>Save branding</button>
+        <button aria-label="Save report branding" title="Save report branding" onClick={saveBranding}>Save</button>
       </section>
       <div className="record-grid report-grid">
         {investigations.map((investigation) => (
@@ -123,13 +123,13 @@ export default function ReportsPage() {
             <h2>{investigation.name}</h2>
             <p>Includes provider timestamps, direct observations, resolved findings, and lifecycle history.</p>
             <div className="report-downloads">
-              <button onClick={() => download(investigation, "executive")}>Executive PDF</button>
-              <button onClick={() => download(investigation, "technical")}>Technical PDF</button>
+              <button aria-label="Download executive PDF" title="Download executive PDF" onClick={() => download(investigation, "executive")}>Executive</button>
+              <button aria-label="Download technical PDF" title="Download technical PDF" onClick={() => download(investigation, "technical")}>Technical</button>
               <button onClick={() => download(investigation, "json")}>JSON</button>
-              <button onClick={() => download(investigation, "csv")}>Findings CSV</button>
-              <button onClick={() => download(investigation, "stix")}>STIX 2.1</button>
-              <button onClick={() => download(investigation, "timeline")}>Timeline CSV</button>
-              <button onClick={() => schedule(investigation)}>Schedule weekly PDF</button>
+              <button aria-label="Download findings CSV" title="Download findings CSV" onClick={() => download(investigation, "csv")}>Findings</button>
+              <button aria-label="Download STIX 2.1" title="Download STIX 2.1" onClick={() => download(investigation, "stix")}>STIX</button>
+              <button aria-label="Download timeline CSV" title="Download timeline CSV" onClick={() => download(investigation, "timeline")}>Timeline</button>
+              <button aria-label="Schedule weekly PDF" title="Schedule weekly PDF" onClick={() => schedule(investigation)}>Schedule</button>
             </div>
           </article>
         ))}

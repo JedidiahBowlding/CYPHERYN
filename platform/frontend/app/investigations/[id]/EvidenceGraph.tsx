@@ -54,6 +54,21 @@ const paletteClasses: Record<string, string> = {
   certificate: "entity-dot-certificate",
 };
 
+const compactTypeLabels: Record<string, string> = {
+  ip_address: "IP",
+  dns_record: "DNS",
+  email_address: "Email",
+  phone_number: "Phone",
+  social_profile: "Social",
+};
+
+function compactTypeLabel(type: string) {
+  return compactTypeLabels[type] ?? type.replaceAll("_", "");
+}
+
+const MIN_GRAPH_SCALE = 0.55;
+const MAX_GRAPH_SCALE = 8;
+
 export default function EvidenceGraph({
   entities,
   relationships,
@@ -83,6 +98,13 @@ export default function EvidenceGraph({
     y: number;
     originX: number;
     originY: number;
+  } | null>(null);
+  const touchPoints = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{
+    distance: number;
+    anchorX: number;
+    anchorY: number;
+    originScale: number;
   } | null>(null);
   const selectedSource = sources.find(
     (source) => source.id === selectedSourceId,
@@ -181,27 +203,118 @@ export default function EvidenceGraph({
   }
   function wheel(event: WheelEvent<SVGSVGElement>) {
     event.preventDefault();
-    const next = Math.min(
-      2.2,
-      Math.max(0.55, view.scale * (event.deltaY > 0 ? 0.9 : 1.1)),
-    );
-    setView((current) => ({ ...current, scale: next }));
+    const focus = svgPoint(event.currentTarget, event.clientX, event.clientY);
+    setView((current) => {
+      const nextScale = Math.min(
+        MAX_GRAPH_SCALE,
+        Math.max(
+          MIN_GRAPH_SCALE,
+          current.scale * (event.deltaY > 0 ? 0.88 : 1.14),
+        ),
+      );
+      const anchorX = (focus.x - current.x) / current.scale;
+      const anchorY = (focus.y - current.y) / current.scale;
+      return {
+        x: focus.x - anchorX * nextScale,
+        y: focus.y - anchorY * nextScale,
+        scale: nextScale,
+      };
+    });
+  }
+  function svgPoint(svg: SVGSVGElement, clientX: number, clientY: number) {
+    const point = svg.createSVGPoint();
+    point.x = clientX;
+    point.y = clientY;
+    const matrix = svg.getScreenCTM();
+    return matrix ? point.matrixTransform(matrix.inverse()) : point;
   }
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
+    if (event.pointerType === "touch") {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      touchPoints.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const points = Array.from(touchPoints.current.values());
+      if (points.length === 2) {
+        const [first, second] = points;
+        const center = svgPoint(
+          event.currentTarget,
+          (first.x + second.x) / 2,
+          (first.y + second.y) / 2,
+        );
+        pinch.current = {
+          distance: Math.max(
+            1,
+            Math.hypot(second.x - first.x, second.y - first.y),
+          ),
+          anchorX: (center.x - view.x) / view.scale,
+          anchorY: (center.y - view.y) / view.scale,
+          originScale: view.scale,
+        };
+        drag.current = null;
+      } else if (
+        points.length === 1 &&
+        !(event.target as Element).closest("[data-node]")
+      ) {
+        const point = svgPoint(event.currentTarget, event.clientX, event.clientY);
+        drag.current = {
+          x: point.x,
+          y: point.y,
+          originX: view.x,
+          originY: view.y,
+        };
+      }
+      return;
+    }
     if ((event.target as Element).closest("[data-node]")) return;
     event.currentTarget.setPointerCapture(event.pointerId);
+    const point = svgPoint(event.currentTarget, event.clientX, event.clientY);
     drag.current = {
-      x: event.clientX,
-      y: event.clientY,
+      x: point.x,
+      y: point.y,
       originX: view.x,
       originY: view.y,
     };
   }
   function pointerMove(event: PointerEvent<SVGSVGElement>) {
+    if (event.pointerType === "touch" && touchPoints.current.has(event.pointerId)) {
+      event.preventDefault();
+      touchPoints.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const points = Array.from(touchPoints.current.values());
+      const activePinch = pinch.current;
+      if (points.length >= 2 && activePinch) {
+        const [first, second] = points;
+        const distance = Math.hypot(second.x - first.x, second.y - first.y);
+        const center = svgPoint(
+          event.currentTarget,
+          (first.x + second.x) / 2,
+          (first.y + second.y) / 2,
+        );
+        const nextScale = Math.min(
+          MAX_GRAPH_SCALE,
+          Math.max(
+            MIN_GRAPH_SCALE,
+            activePinch.originScale * (distance / activePinch.distance),
+          ),
+        );
+        setView({
+          x: center.x - activePinch.anchorX * nextScale,
+          y: center.y - activePinch.anchorY * nextScale,
+          scale: nextScale,
+        });
+        return;
+      }
+    }
     const activeDrag = drag.current;
     if (!activeDrag) return;
-    const nextX = activeDrag.originX + (event.clientX - activeDrag.x);
-    const nextY = activeDrag.originY + (event.clientY - activeDrag.y);
+    const point = svgPoint(event.currentTarget, event.clientX, event.clientY);
+    const nextX = activeDrag.originX + (point.x - activeDrag.x);
+    const nextY = activeDrag.originY + (point.y - activeDrag.y);
     setView((current) => ({
       ...current,
       x: nextX,
@@ -212,6 +325,8 @@ export default function EvidenceGraph({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    touchPoints.current.delete(event.pointerId);
+    if (touchPoints.current.size < 2) pinch.current = null;
     drag.current = null;
   }
   return (
@@ -219,7 +334,7 @@ export default function EvidenceGraph({
       <header>
         <div>
           <h2>Interactive evidence graph</h2>
-          <p>Pan, zoom, filter, and inspect synthetic evidence</p>
+          <p>Drag or use one finger to pan; scroll or pinch with two fingers to zoom</p>
         </div>
         <div className="graph-actions">
           {sources.length > 0 && (
@@ -239,8 +354,12 @@ export default function EvidenceGraph({
               </select>
             </label>
           )}
-          <button onClick={() => setView({ x: 0, y: 0, scale: 1 })}>
-            Fit graph
+          <button
+            aria-label="Fit graph to default view"
+            title="Fit graph to default view"
+            onClick={() => setView({ x: 0, y: 0, scale: 1 })}
+          >
+            Reset
           </button>
           <span>
             {visible.length} nodes · {edges.length} edges
@@ -251,11 +370,13 @@ export default function EvidenceGraph({
         {types.map((type) => (
           <button
             key={type}
+            aria-label={`Filter ${type.replaceAll("_", " ")}`}
             aria-pressed={visibleTypes.has(type)}
+            title={type.replaceAll("_", " ")}
             onClick={() => toggleType(type)}
           >
             <i className={paletteClasses[type] ?? "entity-dot-default"} />
-            {type.replaceAll("_", " ")}
+            {compactTypeLabel(type)}
           </button>
         ))}
       </div>

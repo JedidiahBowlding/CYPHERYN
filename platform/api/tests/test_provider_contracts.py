@@ -12,7 +12,7 @@ from intel_platform.provider_contract import (
     ProviderContext,
     ProviderHttpError,
 )
-from intel_platform.providers.local_tools import ZapPassiveProvider
+from intel_platform.providers.local_tools import NiktoProvider, ZapPassiveProvider
 from intel_platform.providers.threat_intel import (
     AbuseChProvider,
     AlienVaultOtxProvider,
@@ -221,6 +221,32 @@ def test_zap_preserves_expected_observations_without_opening_findings() -> None:
     assert classifications["Timestamp Disclosure - Unix"] == "expected_oauth_state"
     assert classifications["Storable and Cacheable Content"] == "informational"
     assert result.redacted_payload["finding_count"] == 1
+
+
+def test_zap_accepts_bounded_scanner_noise_before_json() -> None:
+    payload = ZapPassiveProvider._json_document('startup notice\n{"site":[]}\n')
+    assert payload == {"site": []}
+
+
+def test_nikto_uses_the_orchestrator_allowlisted_wrapper(monkeypatch) -> None:
+    provider = NiktoProvider()
+    captured: dict[str, object] = {}
+
+    def fake_run(_context, arguments, **kwargs):
+        captured["arguments"] = arguments
+        captured.update(kwargs)
+        return SimpleNamespace(stdout='{"vulnerabilities":[]}', stderr="", returncode=0)
+
+    monkeypatch.setattr(provider, "_public_target", lambda value: value)
+    monkeypatch.setattr(provider, "_run", fake_run)
+    provider.collect(
+        ProviderContext(
+            db=FakeDb(),
+            job=SimpleNamespace(investigation_id="investigation", provider="nikto"),
+            target=SimpleNamespace(canonical_value="https://example.test"),
+        )
+    )
+    assert captured["remote_binary"] == "cypheryn-nikto"
 
 
 def collect_response(monkeypatch: pytest.MonkeyPatch, case: ContractCase, response_factory):

@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     oidc_audience: str = "cypheryn"
     oidc_jwks_url: str = ""
     allow_dev_identity: bool = False
+    trusted_auth_proxy: bool = False
+    auth_proxy_secret: str = ""
     cors_origins: list[str] = Field(default_factory=list)
     provider_encryption_key: str = ""
     local_ai_url: str = "http://127.0.0.1:11434"
@@ -48,6 +50,11 @@ class Settings(BaseSettings):
     def validate_authentication(self) -> "Settings":
         if self.environment.lower() == "production" and self.allow_dev_identity:
             raise ValueError("PLATFORM_ALLOW_DEV_IDENTITY cannot be enabled in production")
+        if self.trusted_auth_proxy and len(self.auth_proxy_secret) < 32:
+            raise ValueError(
+                "PLATFORM_AUTH_PROXY_SECRET must contain at least 32 characters "
+                "when trusted proxy authentication is enabled"
+            )
         return self
 
 

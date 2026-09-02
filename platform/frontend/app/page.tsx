@@ -96,7 +96,7 @@ export default function LandingPage() {
           <a href="#security">Security</a>
           <a href="#workflow">Workflow</a>
           <Link className="landing-login" href="/dashboard">
-            Open platform
+            Log in to dashboard
           </Link>
         </div>
       </nav>
@@ -115,7 +115,7 @@ export default function LandingPage() {
           </p>
           <div className="hero-actions">
             <Link href="/investigations/new">Start an investigation</Link>
-            <Link href="/dashboard">View live dashboard →</Link>
+            <Link href="/dashboard">Log in to dashboard →</Link>
           </div>
           <dl>
             <div>
@@ -338,7 +338,7 @@ export default function LandingPage() {
               <a href="#capabilities">Capabilities</a>
               <a href="#architecture">Architecture</a>
               <a href="#security">Security boundaries</a>
-              <Link href="/dashboard">Open platform</Link>
+              <Link href="/dashboard">Log in to dashboard</Link>
             </div>
             <div>
               <strong>Resources</strong>

@@ -1,3 +1,4 @@
+import hmac
 from dataclasses import dataclass
 
 import jwt
@@ -25,6 +26,23 @@ def get_principal(
         subject = request.headers.get("X-Dev-Subject")
         if subject:
             return Principal(subject=subject, email=request.headers.get("X-Dev-Email"))
+
+    # The public production API is reached through Caddy after oauth2-proxy has
+    # authenticated the browser session. Identity headers alone are never
+    # trusted: Caddy adds a private shared secret at the final API hop, and the
+    # API compares it in constant time before accepting the asserted subject.
+    if settings.trusted_auth_proxy:
+        supplied_secret = request.headers.get("X-Cypheryn-Proxy-Secret", "")
+        subject = request.headers.get("X-Auth-Request-User", "").strip()
+        if (
+            supplied_secret
+            and subject
+            and hmac.compare_digest(supplied_secret, settings.auth_proxy_secret)
+        ):
+            return Principal(
+                subject=subject,
+                email=request.headers.get("X-Auth-Request-Email"),
+            )
 
     authorization = request.headers.get("Authorization", "")
     if not authorization.startswith("Bearer "):
