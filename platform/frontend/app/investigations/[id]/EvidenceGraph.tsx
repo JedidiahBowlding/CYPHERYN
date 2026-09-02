@@ -87,10 +87,8 @@ export default function EvidenceGraph({
   const touchPoints = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{
     distance: number;
-    centerX: number;
-    centerY: number;
-    originX: number;
-    originY: number;
+    anchorX: number;
+    anchorY: number;
     originScale: number;
   } | null>(null);
   const selectedSource = sources.find(
@@ -190,11 +188,27 @@ export default function EvidenceGraph({
   }
   function wheel(event: WheelEvent<SVGSVGElement>) {
     event.preventDefault();
-    const next = Math.min(
-      2.2,
-      Math.max(0.55, view.scale * (event.deltaY > 0 ? 0.9 : 1.1)),
-    );
-    setView((current) => ({ ...current, scale: next }));
+    const focus = svgPoint(event.currentTarget, event.clientX, event.clientY);
+    setView((current) => {
+      const nextScale = Math.min(
+        2.2,
+        Math.max(0.55, current.scale * (event.deltaY > 0 ? 0.9 : 1.1)),
+      );
+      const anchorX = (focus.x - current.x) / current.scale;
+      const anchorY = (focus.y - current.y) / current.scale;
+      return {
+        x: focus.x - anchorX * nextScale,
+        y: focus.y - anchorY * nextScale,
+        scale: nextScale,
+      };
+    });
+  }
+  function svgPoint(svg: SVGSVGElement, clientX: number, clientY: number) {
+    const point = svg.createSVGPoint();
+    point.x = clientX;
+    point.y = clientY;
+    const matrix = svg.getScreenCTM();
+    return matrix ? point.matrixTransform(matrix.inverse()) : point;
   }
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
     if (event.pointerType === "touch") {
@@ -207,15 +221,18 @@ export default function EvidenceGraph({
       const points = Array.from(touchPoints.current.values());
       if (points.length === 2) {
         const [first, second] = points;
+        const center = svgPoint(
+          event.currentTarget,
+          (first.x + second.x) / 2,
+          (first.y + second.y) / 2,
+        );
         pinch.current = {
           distance: Math.max(
             1,
             Math.hypot(second.x - first.x, second.y - first.y),
           ),
-          centerX: (first.x + second.x) / 2,
-          centerY: (first.y + second.y) / 2,
-          originX: view.x,
-          originY: view.y,
+          anchorX: (center.x - view.x) / view.scale,
+          anchorY: (center.y - view.y) / view.scale,
           originScale: view.scale,
         };
         drag.current = null;
@@ -223,9 +240,10 @@ export default function EvidenceGraph({
         points.length === 1 &&
         !(event.target as Element).closest("[data-node]")
       ) {
+        const point = svgPoint(event.currentTarget, event.clientX, event.clientY);
         drag.current = {
-          x: event.clientX,
-          y: event.clientY,
+          x: point.x,
+          y: point.y,
           originX: view.x,
           originY: view.y,
         };
@@ -234,9 +252,10 @@ export default function EvidenceGraph({
     }
     if ((event.target as Element).closest("[data-node]")) return;
     event.currentTarget.setPointerCapture(event.pointerId);
+    const point = svgPoint(event.currentTarget, event.clientX, event.clientY);
     drag.current = {
-      x: event.clientX,
-      y: event.clientY,
+      x: point.x,
+      y: point.y,
       originX: view.x,
       originY: view.y,
     };
@@ -253,15 +272,18 @@ export default function EvidenceGraph({
       if (points.length >= 2 && activePinch) {
         const [first, second] = points;
         const distance = Math.hypot(second.x - first.x, second.y - first.y);
-        const centerX = (first.x + second.x) / 2;
-        const centerY = (first.y + second.y) / 2;
+        const center = svgPoint(
+          event.currentTarget,
+          (first.x + second.x) / 2,
+          (first.y + second.y) / 2,
+        );
         const nextScale = Math.min(
           2.2,
           Math.max(0.55, activePinch.originScale * (distance / activePinch.distance)),
         );
         setView({
-          x: activePinch.originX + (centerX - activePinch.centerX),
-          y: activePinch.originY + (centerY - activePinch.centerY),
+          x: center.x - activePinch.anchorX * nextScale,
+          y: center.y - activePinch.anchorY * nextScale,
           scale: nextScale,
         });
         return;
@@ -269,8 +291,9 @@ export default function EvidenceGraph({
     }
     const activeDrag = drag.current;
     if (!activeDrag) return;
-    const nextX = activeDrag.originX + (event.clientX - activeDrag.x);
-    const nextY = activeDrag.originY + (event.clientY - activeDrag.y);
+    const point = svgPoint(event.currentTarget, event.clientX, event.clientY);
+    const nextX = activeDrag.originX + (point.x - activeDrag.x);
+    const nextY = activeDrag.originY + (point.y - activeDrag.y);
     setView((current) => ({
       ...current,
       x: nextX,
