@@ -38,7 +38,7 @@ jobs:
       - name: Validate inherited Python on Windows
         if: runner.os == 'Windows'
         run: python -m compileall -q sf.py spiderfoot modules
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v7
         if: runner.os != 'Windows'
         with:
           fail_ci_if_error: false
