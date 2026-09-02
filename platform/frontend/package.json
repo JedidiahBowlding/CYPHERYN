@@ -22,7 +22,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.54.2",
     "@cloudflare/workers-types": "5.20260829.1",
-    "@eslint/js": "9.39.4",
+    "@eslint/js": "10.0.1",
     "@next/eslint-plugin-next": "16.2.6",
     "@openai/sites-vite-plugin": "0.1.0",
     "@tailwindcss/postcss": "4.2.1",
