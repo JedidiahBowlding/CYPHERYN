@@ -3,3 +3,10 @@
 # msgpack nor setuptools is installed in the CYPHERYN API image.
 GHSA-6v7p-g79w-8964
 CVE-2025-47273
+
+# Trivy is built from the pinned v0.74.0 source commit while its dependencies
+# are upgraded during the image build. That makes Go report the main module as
+# v0.0.0-...+dirty, so Trivy cannot recognize that these v0.71.x fixes are
+# already present in the newer pinned source tree.
+CVE-2026-54448
+CVE-2026-55092
