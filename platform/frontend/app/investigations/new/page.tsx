@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { platformApiUrl } from "../../_lib/platformApi";
@@ -84,7 +85,13 @@ export default function NewInvestigation() {
       <header className="workflow-top">
         <Link href="/investigations">← Investigations</Link>
         <div className="workflow-brand">
-          <span>S</span>CYPHERYN
+          <Image
+            src="/cypheryn-logo.png"
+            alt="CYPHERYN shield"
+            width={1254}
+            height={1254}
+          />
+          <span>CYPHERYN</span>
         </div>
         <p>Authorized collection only</p>
       </header>

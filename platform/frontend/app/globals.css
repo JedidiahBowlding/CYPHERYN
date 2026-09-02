@@ -1310,15 +1310,13 @@ input {
   font-size: 14px;
   font-weight: 650;
 }
-.workflow-brand > span {
-  display: grid;
-  place-items: center;
+.workflow-brand > img {
   width: 25px;
   height: 25px;
-  border-radius: 7px;
-  background: var(--cyan);
-  color: #071411;
-  font-weight: 900;
+  object-fit: contain;
+}
+.workflow-brand > span {
+  color: inherit;
 }
 .workflow-wrap {
   width: min(1060px, calc(100% - 40px));
