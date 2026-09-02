@@ -52,6 +52,7 @@ from .observability import (
 from .provider_contract import ProviderCancelledError, ProviderContext, registry
 from .provider_safety import (
     ProviderBlockedError,
+    counts_toward_circuit_breaker,
     enforce_enqueue,
     enforce_execution,
     record_failure,
@@ -1317,7 +1318,12 @@ def process_one(
                 failed.error_summary = redact_text(str(exc))[:500]
                 failed_investigation = db.get(Investigation, failed.investigation_id)
                 cancelled = isinstance(exc, (ProviderCancelledError, ScannerCancelledError))
-                if failed_investigation and not cancelled:
+                blocked = isinstance(exc, ProviderBlockedError)
+                if (
+                    failed_investigation
+                    and not cancelled
+                    and counts_toward_circuit_breaker(exc)
+                ):
                     record_failure(
                         db,
                         failed_investigation.organization_id,
@@ -1335,7 +1341,7 @@ def process_one(
                         from_status=JobStatus.RUNNING,
                         message="Provider execution terminated after cancellation",
                     )
-                elif failed.attempt >= failed.max_attempts:
+                elif blocked or failed.attempt >= failed.max_attempts:
                     failed.status = JobStatus.FAILED
                     failed.ended_at = now_utc()
                     append_job_event(
