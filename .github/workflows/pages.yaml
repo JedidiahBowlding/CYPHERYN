@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - project-site/**
+      - docs/images/cypheryn-*.jpg
       - .github/workflows/pages.yaml
   workflow_dispatch:
 
