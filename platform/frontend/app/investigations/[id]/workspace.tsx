@@ -592,6 +592,8 @@ export default function InvestigationWorkspace({
             </label>
             <div className="collection-buttons">
               <button
+                aria-label={`Run ${effectiveProvider.replaceAll("_", " ")}`}
+                title={`Run ${effectiveProvider.replaceAll("_", " ")}`}
                 onClick={collect}
                 disabled={
                   enqueueing ||
@@ -601,14 +603,16 @@ export default function InvestigationWorkspace({
               >
                 {enqueueing
                   ? "Queueing…"
-                  : `▶ Run ${effectiveProvider.replaceAll("_", " ")}`}
+                  : "▶ Run"}
               </button>
               <button
+                aria-label={`Run all ready providers (${readyProviders.length})`}
+                title="Run all ready providers"
                 className="queue-all-button"
                 onClick={collectAllReady}
                 disabled={enqueueing || !readyProviders.length}
               >
-                Run all ready ({readyProviders.length})
+                All ({readyProviders.length})
               </button>
             </div>
             {effectiveProvider === "zap_active" && (
@@ -672,8 +676,8 @@ export default function InvestigationWorkspace({
                 <option value="1440">Daily</option>
                 <option value="10080">Weekly</option>
               </select>
-              <button onClick={createMonitor} disabled={!selectedTarget}>
-                Monitor {effectiveProvider.replaceAll("_", " ")}
+              <button aria-label={`Monitor ${effectiveProvider.replaceAll("_", " ")}`} title={`Monitor ${effectiveProvider.replaceAll("_", " ")}`} onClick={createMonitor} disabled={!selectedTarget}>
+                Monitor
               </button>
             </div>
           </header>
@@ -792,8 +796,8 @@ export default function InvestigationWorkspace({
                 required
                 placeholder="Add an authorized target"
               />
-              <button disabled={addingTarget}>
-                {addingTarget ? "Adding…" : "+ Add target"}
+              <button aria-label="Add authorized target" title="Add authorized target" disabled={addingTarget}>
+                {addingTarget ? "Adding…" : "+ Add"}
               </button>
               <small>
                 Uses this investigation’s existing authorization record.
@@ -1007,8 +1011,8 @@ export default function InvestigationWorkspace({
                 Queue synthetic collection to create normalized entities and
                 relationships without touching a real external provider.
               </p>
-              <button onClick={collect} disabled={enqueueing}>
-                {enqueueing ? "Queueing…" : "Queue safe mock collection"}
+              <button aria-label="Queue safe mock collection" title="Queue safe mock collection" onClick={collect} disabled={enqueueing}>
+                {enqueueing ? "Queueing…" : "Queue"}
               </button>
             </div>
           ) : (
@@ -1298,18 +1302,18 @@ function AnalysisPanel({
           </button>
           {snapshot && (
             <>
-              <button onClick={onNarrate} disabled={narrating}>
+              <button aria-label={narrative ? "Refresh local AI narrative" : "Generate local AI narrative"} title={narrative ? "Refresh local AI narrative" : "Generate local AI narrative"} onClick={onNarrate} disabled={narrating}>
                 {narrating
-                  ? "Local AI working…"
+                  ? "Working…"
                   : narrative
-                    ? "Refresh local AI"
-                    : "Generate local AI"}
+                    ? "Refresh"
+                    : "Generate"}
               </button>
-              <button onClick={() => onDownload("executive")}>
-                Executive PDF
+              <button aria-label="Download executive PDF" title="Download executive PDF" onClick={() => onDownload("executive")}>
+                Executive
               </button>
-              <button onClick={() => onDownload("technical")}>
-                Technical PDF
+              <button aria-label="Download technical PDF" title="Download technical PDF" onClick={() => onDownload("technical")}>
+                Technical
               </button>
             </>
           )}
@@ -1332,8 +1336,8 @@ function AnalysisPanel({
               ? "The local AI text belongs to an older analysis."
               : ""}
           </span>
-          <button onClick={onGenerate} disabled={generating}>
-            Update now
+          <button aria-label="Update risk analysis" title="Update risk analysis" onClick={onGenerate} disabled={generating}>
+            Update
           </button>
         </div>
       )}

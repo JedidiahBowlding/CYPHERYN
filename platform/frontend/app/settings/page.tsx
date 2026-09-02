@@ -441,8 +441,12 @@ export default function Page() {
             {controls.consecutive_failures} consecutive failures
             {controls.last_error ? ` · ${controls.last_error}` : ""}
           </span>
-          <button disabled={!organizationId || saving}>
-            {saving ? "Saving…" : "Save provider"}
+          <button
+            aria-label="Save provider credentials"
+            title="Save provider credentials"
+            disabled={!organizationId || saving}
+          >
+            {saving ? "Saving…" : "Save"}
           </button>
         </footer>
         {message && (

@@ -458,8 +458,13 @@ export default function LiveDataPage({ mode }: { mode: Mode }) {
               onChange={(event) => setStixFile(event.target.files?.[0] ?? null)}
             />
           </label>
-          <button type="submit" disabled={!stixFile || workspaces.length === 0}>
-            Import bundle
+          <button
+            type="submit"
+            aria-label="Import STIX bundle"
+            title="Import STIX bundle"
+            disabled={!stixFile || workspaces.length === 0}
+          >
+            Import
           </button>
           {stixMessage && <output>{stixMessage}</output>}
         </form>
@@ -680,10 +685,10 @@ export default function LiveDataPage({ mode }: { mode: Mode }) {
                 </button>
               )}
               {f.status !== "risk_accepted" && (
-                <button onClick={() => acceptRisk(f.id)}>Accept risk (30 days)</button>
+                <button onClick={() => acceptRisk(f.id)} aria-label="Accept risk for 30 days" title="Accept risk for 30 days">Accept</button>
               )}
               {f.status !== "false_positive" && (
-                <button onClick={() => markFalsePositive(f.id)}>False positive</button>
+                <button onClick={() => markFalsePositive(f.id)} aria-label="Mark false positive" title="Mark false positive">Dismiss</button>
               )}
               {f.status !== "open" && (
                 <button onClick={() => updateFinding(f.id, { status: "open" })}>
@@ -713,7 +718,7 @@ export default function LiveDataPage({ mode }: { mode: Mode }) {
             <p>Snapshot generated from the current persisted workspace.</p>
             <div className="record-actions">
               <Link href={`/investigations/${w.investigation.id}`}>Review</Link>
-              <button onClick={() => download(w)}>Download JSON</button>
+              <button onClick={() => download(w)} aria-label="Download JSON" title="Download JSON">Download</button>
             </div>
           </article>
         ))}

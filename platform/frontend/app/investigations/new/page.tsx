@@ -256,12 +256,16 @@ export default function NewInvestigation() {
           )}
           <footer className="form-actions">
             <Link href="/investigations">Cancel</Link>
-            <button disabled={status === "saving" || status === "complete"}>
+            <button
+              aria-label="Create authorized investigation"
+              title="Create authorized investigation"
+              disabled={status === "saving" || status === "complete"}
+            >
               {status === "saving"
                 ? "Creating…"
                 : status === "complete"
                   ? "Created"
-                  : "Create authorized investigation"}
+                  : "Create"}
             </button>
           </footer>
         </form>
