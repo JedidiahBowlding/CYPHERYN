@@ -49,7 +49,7 @@ RUN sh /usr/local/bin/build-patched-go-tool syft anchore/syft \
 RUN GOEXPERIMENT=jsonv2 sh /usr/local/bin/build-patched-go-tool trivy aquasecurity/trivy \
       e1fd17a0ea4a8cf24bc4b4dd7e2cfbf4bb31b994 ./cmd/trivy
 
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
