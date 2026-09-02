@@ -84,6 +84,15 @@ export default function EvidenceGraph({
     originX: number;
     originY: number;
   } | null>(null);
+  const touchPoints = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{
+    distance: number;
+    centerX: number;
+    centerY: number;
+    originX: number;
+    originY: number;
+    originScale: number;
+  } | null>(null);
   const selectedSource = sources.find(
     (source) => source.id === selectedSourceId,
   );
@@ -188,6 +197,41 @@ export default function EvidenceGraph({
     setView((current) => ({ ...current, scale: next }));
   }
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
+    if (event.pointerType === "touch") {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      touchPoints.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const points = Array.from(touchPoints.current.values());
+      if (points.length === 2) {
+        const [first, second] = points;
+        pinch.current = {
+          distance: Math.max(
+            1,
+            Math.hypot(second.x - first.x, second.y - first.y),
+          ),
+          centerX: (first.x + second.x) / 2,
+          centerY: (first.y + second.y) / 2,
+          originX: view.x,
+          originY: view.y,
+          originScale: view.scale,
+        };
+        drag.current = null;
+      } else if (
+        points.length === 1 &&
+        !(event.target as Element).closest("[data-node]")
+      ) {
+        drag.current = {
+          x: event.clientX,
+          y: event.clientY,
+          originX: view.x,
+          originY: view.y,
+        };
+      }
+      return;
+    }
     if ((event.target as Element).closest("[data-node]")) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = {
@@ -198,6 +242,31 @@ export default function EvidenceGraph({
     };
   }
   function pointerMove(event: PointerEvent<SVGSVGElement>) {
+    if (event.pointerType === "touch" && touchPoints.current.has(event.pointerId)) {
+      event.preventDefault();
+      touchPoints.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const points = Array.from(touchPoints.current.values());
+      const activePinch = pinch.current;
+      if (points.length >= 2 && activePinch) {
+        const [first, second] = points;
+        const distance = Math.hypot(second.x - first.x, second.y - first.y);
+        const centerX = (first.x + second.x) / 2;
+        const centerY = (first.y + second.y) / 2;
+        const nextScale = Math.min(
+          2.2,
+          Math.max(0.55, activePinch.originScale * (distance / activePinch.distance)),
+        );
+        setView({
+          x: activePinch.originX + (centerX - activePinch.centerX),
+          y: activePinch.originY + (centerY - activePinch.centerY),
+          scale: nextScale,
+        });
+        return;
+      }
+    }
     const activeDrag = drag.current;
     if (!activeDrag) return;
     const nextX = activeDrag.originX + (event.clientX - activeDrag.x);
@@ -212,6 +281,8 @@ export default function EvidenceGraph({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    touchPoints.current.delete(event.pointerId);
+    if (touchPoints.current.size < 2) pinch.current = null;
     drag.current = null;
   }
   return (
@@ -219,7 +290,7 @@ export default function EvidenceGraph({
       <header>
         <div>
           <h2>Interactive evidence graph</h2>
-          <p>Pan, zoom, filter, and inspect synthetic evidence</p>
+          <p>Drag or use one finger to pan; scroll or pinch with two fingers to zoom</p>
         </div>
         <div className="graph-actions">
           {sources.length > 0 && (
