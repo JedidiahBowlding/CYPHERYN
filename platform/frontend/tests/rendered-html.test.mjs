@@ -59,7 +59,7 @@ test("public legal pages render without application state", async () => {
     assert.equal(response.status, 200, path);
     const html = await response.text();
     assert.match(html, expected);
-    assert.match(html, /REQUIRES REVIEW BY QUALIFIED COUNSEL/);
+    assert.doesNotMatch(html, /REQUIRES REVIEW BY QUALIFIED COUNSEL/);
     assert.match(html, /href="\/terms"/);
     assert.match(html, /href="\/responsible-use"/);
     assert.match(html, /href="\/privacy"/);

@@ -9,7 +9,6 @@ export default function LegalDocument({ title, version, children }: { title: str
         <span>Legal &amp; responsible use</span>
       </header>
       <article className="legal-document">
-        <p className="legal-kicker">REQUIRES REVIEW BY QUALIFIED COUNSEL BEFORE PRODUCTION RELIANCE</p>
         <h1>{title}</h1>
         <dl className="legal-meta"><div><dt>Version</dt><dd>{version}</dd></div><div><dt>Effective</dt><dd>September 3, 2026</dd></div><div><dt>Last updated</dt><dd>September 3, 2026</dd></div></dl>
         {children}

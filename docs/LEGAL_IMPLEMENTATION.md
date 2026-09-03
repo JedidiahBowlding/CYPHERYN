@@ -1,6 +1,6 @@
 # CYPHERYN Legal and Responsible-Use Implementation
 
-> **REQUIRES REVIEW BY QUALIFIED COUNSEL BEFORE PRODUCTION RELIANCE.** This document describes product controls, not legal advice or a guarantee against liability.
+The operator reported qualified-counsel approval for the v1.0 production release on September 3, 2026. This document describes product controls, not legal advice or a guarantee against liability.
 
 ## Existing system audit
 
@@ -75,4 +75,4 @@ Automated tests cover rejection before acceptance, rejection of an unchecked sub
 - Governing law, venue, operator legal identity, age/eligibility, termination, warranty, indemnity, export/sanctions, and paid-service terms are intentionally not fabricated.
 - Deployment-specific privacy controller, contact, retention schedule, subprocessors, international transfers, and statutory rights need jurisdiction-aware review.
 - Auth0 Universal Login branding should link to the published policies.
-- Counsel should approve all substantive policy language and the rollout/reacceptance strategy before reliance.
+- Preserve counsel's approved copy and release record outside the application repository, and obtain renewed review before material policy changes.
