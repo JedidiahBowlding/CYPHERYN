@@ -1658,6 +1658,9 @@ input {
 .investigation-row time {
   color: #607082;
 }
+.investigation-recency-mobile {
+  display: none;
+}
 @media (max-width: 760px) {
   .workflow-top,
   .list-top {
@@ -1701,6 +1704,9 @@ input {
   .investigation-row > span:nth-child(4),
   .investigation-row > span:nth-child(5) {
     display: none;
+  }
+  .investigation-recency-mobile {
+    display: block;
   }
 }
 
