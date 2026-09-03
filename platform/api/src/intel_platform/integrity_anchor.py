@@ -86,7 +86,13 @@ def create_evidence_checkpoint(
     sources = list(
         db.scalars(
             select(EvidenceSource)
-            .where(EvidenceSource.investigation_id == investigation_id)
+            .where(
+                EvidenceSource.investigation_id == investigation_id,
+                # Providers reserve a draft row before long-running external
+                # execution so cancellation stays responsive. Only sealed
+                # records are evidence and participate in the chain.
+                EvidenceSource.integrity_hash.is_not(None),
+            )
             .order_by(EvidenceSource.retrieved_at, EvidenceSource.id)
         )
     )

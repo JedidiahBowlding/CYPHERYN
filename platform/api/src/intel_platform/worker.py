@@ -896,6 +896,15 @@ def recover_expired_jobs(db: Session) -> int:
         )
     )
     for job in jobs:
+        # A worker can die after reserving an EvidenceSource but before sealing
+        # it. That row is an attempt draft, not evidence, and would otherwise
+        # block integrity checkpoints forever after lease recovery.
+        db.execute(
+            delete(EvidenceSource).where(
+                EvidenceSource.job_id == job.id,
+                EvidenceSource.integrity_hash.is_(None),
+            )
+        )
         job.lease_owner = None
         job.lease_expires_at = None
         if job.cancellation_requested_at:
@@ -1514,6 +1523,27 @@ def generate_due_reports(session_factory=SessionLocal) -> int:
     return generated
 
 
+def generate_due_anchors_safely(settings, worker_id: str) -> None:
+    """Keep an integrity incident observable without starving the job queue."""
+    if not settings.integrity_anchor_enabled:
+        return
+    try:
+        generate_due_anchors(
+            SessionLocal,
+            key_directory=Path(settings.integrity_anchor_key_dir),
+            destination_directory=Path(settings.integrity_anchor_store_dir),
+            interval_minutes=settings.integrity_anchor_interval_minutes,
+            application_version=os.getenv("CYPHERYN_VERSION", "development"),
+        )
+    except Exception as exc:
+        structured_log(
+            "integrity_anchor.generation_failed",
+            severity="error",
+            worker_id=worker_id,
+            error=str(exc)[:500],
+        )
+
+
 def main() -> None:
     Base.metadata.create_all(bind=engine)
     upgrade_existing_schema()
@@ -1541,14 +1571,7 @@ def main() -> None:
             monitor_job_health()
             deliver_pending_notifications()
             generate_due_reports()
-            if settings.integrity_anchor_enabled:
-                generate_due_anchors(
-                    SessionLocal,
-                    key_directory=Path(settings.integrity_anchor_key_dir),
-                    destination_directory=Path(settings.integrity_anchor_store_dir),
-                    interval_minutes=settings.integrity_anchor_interval_minutes,
-                    application_version=os.getenv("CYPHERYN_VERSION", "development"),
-                )
+            generate_due_anchors_safely(settings, worker_id)
             processed = process_one(worker_id)
             if processed is None:
                 time.sleep(1)

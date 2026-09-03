@@ -60,10 +60,34 @@ from intel_platform.worker import (
     claim_next_job,
     compare_redacted_payloads,
     execute_safe_mock,
+    generate_due_anchors_safely,
     reconcile_findings,
     record_evidence_change,
     recover_expired_jobs,
 )
+
+
+def test_anchor_failure_does_not_escape_or_starve_collection(monkeypatch) -> None:
+    events = []
+    monkeypatch.setattr(
+        "intel_platform.worker.generate_due_anchors",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("chain mismatch")),
+    )
+    monkeypatch.setattr(
+        "intel_platform.worker.structured_log",
+        lambda event, **details: events.append((event, details)),
+    )
+    settings = SimpleNamespace(
+        integrity_anchor_enabled=True,
+        integrity_anchor_key_dir="/var/lib/cypheryn-test/keys",
+        integrity_anchor_store_dir="/var/lib/cypheryn-test/anchors",
+        integrity_anchor_interval_minutes=60,
+    )
+
+    generate_due_anchors_safely(settings, "worker-test")
+
+    assert events[0][0] == "integrity_anchor.generation_failed"
+    assert events[0][1]["error"] == "chain mismatch"
 
 
 @pytest.fixture
@@ -579,12 +603,25 @@ def test_worker_recovers_cancelled_failed_and_retryable_leases(session_factory) 
                 max_attempts=3,
             ),
         ]
-        db.add_all(jobs)
+        unsealed_attempt = EvidenceSource(
+            id="unsealed-attempt",
+            investigation_id="inv",
+            job_id="retry",
+            target_id="target",
+            authorization_id="auth",
+            provider="openvas",
+            query="example.test",
+            redacted_payload={},
+            retrieved_at=expired,
+            retain_until=expired + timedelta(days=1),
+        )
+        db.add_all([*jobs, unsealed_attempt])
         db.commit()
         assert recover_expired_jobs(db) == 3
         assert db.get(CollectionJob, "cancel").status == JobStatus.CANCELLED
         assert db.get(CollectionJob, "failed").status == JobStatus.FAILED
         assert db.get(CollectionJob, "retry").status == JobStatus.QUEUED
+        assert db.get(EvidenceSource, "unsealed-attempt") is None
         assert {event.event_type for event in db.scalars(select(CollectionJobEvent))} == {
             "cancelled",
             "failed",
