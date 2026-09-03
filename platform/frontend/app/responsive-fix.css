@@ -1,1 +1,128 @@
-@media(max-width:760px){.section-nav nav{overflow-x:auto!important;scrollbar-width:thin}.section-nav nav a{flex:0 0 auto!important}}
+/* Final mobile containment layer.
+ * Several feature styles predate the application-wide readability increase and
+ * still carry desktop-sized intrinsic widths. Keep this file imported last so
+ * narrow screens get a consistent, readable layout without clipping content.
+ */
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.section-main,
+.section-main > *,
+.section-grid,
+.section-grid > *,
+.record-grid,
+.record-grid > *,
+.provider-controls,
+.provider-controls > *,
+.detection-actions,
+.detection-actions > *,
+.malware-analysis-grid,
+.malware-analysis-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+main :where(h1, h2, h3, p, li, label, span, strong, b, code, time, a) {
+  overflow-wrap: anywhere;
+}
+
+main :where(input, select, textarea, button) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 760px) {
+  .section-nav nav {
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .section-nav nav a {
+    flex: 0 0 auto !important;
+  }
+
+  .report-controls,
+  .report-branding,
+  .provider-controls > header,
+  .provider-controls > footer,
+  .platform-assurance > header,
+  .notification-preferences > header,
+  .notification-list > header,
+  .detection-records > header,
+  .malware-results > header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .report-controls select,
+  .report-status {
+    width: 100%;
+    max-width: none;
+  }
+
+  .report-branding,
+  .record-grid.report-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-branding > *,
+  .record-grid.report-grid > *,
+  .detection-actions form,
+  .malware-analysis-grid form {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .provider-controls > header > span {
+    align-self: flex-start;
+  }
+
+  .provider-controls > footer button,
+  .detection-actions button,
+  .malware-analysis-grid button {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .control-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .control-switches,
+  .detection-selectors,
+  .malware-controls {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .section-main {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .report-branding,
+  .report-controls,
+  .detection-actions form,
+  .malware-analysis-grid form,
+  .provider-controls > header,
+  .provider-controls > footer,
+  .control-fields,
+  .control-switches {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .report-downloads,
+  .malware-result-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
