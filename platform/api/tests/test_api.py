@@ -53,6 +53,14 @@ def test_organization_is_tenant_scoped(client: TestClient) -> None:
     ]
 
     app.dependency_overrides[get_principal] = lambda: Principal(subject="outsider")
+    assert client.post(
+        "/api/v1/legal/acceptance",
+        json={
+            "accepted": True,
+            "terms_version": "1.0",
+            "responsible_use_version": "1.0",
+        },
+    ).status_code == 200
     assert client.get("/api/v1/organizations").json() == []
     hidden = client.get(f"/api/v1/organizations/{organization['id']}/investigations")
     assert hidden.status_code == 404
@@ -343,6 +351,7 @@ def test_finding_verification_requires_two_clean_observations(
             "basis": "Authorized finding verification test",
             "passive_allowed": True,
             "active_allowed": True,
+            "active_scope_confirmed": True,
             "valid_from": (now - timedelta(minutes=1)).isoformat(),
             "valid_until": (now + timedelta(days=1)).isoformat(),
         },
@@ -667,6 +676,7 @@ def test_zap_active_requires_per_run_approval(client: TestClient) -> None:
             "basis": "Owner-authorized web assessment",
             "passive_allowed": True,
             "active_allowed": True,
+            "active_scope_confirmed": True,
             "valid_from": (now - timedelta(minutes=1)).isoformat(),
             "valid_until": (now + timedelta(days=1)).isoformat(),
         },

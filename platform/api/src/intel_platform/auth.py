@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from .config import Settings, get_settings
 from .database import get_db
+from .legal import CURRENT_AGREEMENTS, current_acceptance
 from .models import Membership, MembershipRole, User
 
 
@@ -70,11 +71,17 @@ def get_current_user(
     principal: Principal = Depends(get_principal), db: Session = Depends(get_db)
 ) -> User:
     user = db.scalar(select(User).where(User.external_subject == principal.subject))
-    if user is None:
-        user = User(external_subject=principal.subject, email=principal.email)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    if user is None or current_acceptance(db, user.id) is None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            {
+                "code": "legal_acceptance_required",
+                "message": "Accept the current Terms and Responsible Use Policy to continue.",
+                "terms_version": CURRENT_AGREEMENTS.terms_version,
+                "responsible_use_version": CURRENT_AGREEMENTS.responsible_use_version,
+                "acceptance_url": "/legal-acceptance",
+            },
+        )
     return user
 
 

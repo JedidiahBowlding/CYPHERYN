@@ -47,3 +47,31 @@ test("keeps security guidance and cross-platform scripts in source", async () =>
   assert.match(providerSettings, /organization\.id\.slice\(0, 8\)/);
   assert.match(providerSettings, /New jobs will use this key/);
 });
+
+test("public legal pages render without application state", async () => {
+  for (const [path, expected] of [
+    ["/terms", /CYPHERYN Terms of Service/],
+    ["/responsible-use", /CYPHERYN Responsible Use Policy/],
+    ["/privacy", /CYPHERYN Privacy Policy/],
+    ["/security", /Responsible Disclosure/],
+  ]) {
+    const response = await render(path);
+    assert.equal(response.status, 200, path);
+    const html = await response.text();
+    assert.match(html, expected);
+    assert.match(html, /REQUIRES REVIEW BY QUALIFIED COUNSEL/);
+    assert.match(html, /href="\/terms"/);
+    assert.match(html, /href="\/responsible-use"/);
+    assert.match(html, /href="\/privacy"/);
+  }
+});
+
+test("legal acceptance is affirmative and versioned", async () => {
+  const response = await render("/legal-acceptance");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Review responsible-use terms/);
+  assert.match(html, /type="checkbox"/);
+  assert.match(html, /Terms of Service/);
+  assert.match(html, /Responsible Use Policy/);
+});

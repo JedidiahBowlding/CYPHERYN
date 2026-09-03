@@ -350,12 +350,16 @@ export default function LandingPage() {
             <div>
               <strong>Use responsibly</strong>
               <p>Use active capabilities only on systems you own or have explicit permission to assess.</p>
-              <a href="https://github.com/JedidiahBowlding/CYPHERYN/blob/main/SECURITY_BOUNDARIES.md" target="_blank" rel="noreferrer">Read the boundaries →</a>
+              <Link href="/terms">Terms</Link>
+              <Link href="/responsible-use">Responsible Use</Link>
+              <Link href="/privacy">Privacy</Link>
+              <Link href="/security">Security</Link>
+              <a href="https://github.com/JedidiahBowlding/CYPHERYN/issues" target="_blank" rel="noreferrer">Contact</a>
             </div>
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 CYPHERYN. Open-source defensive security engineering.</span>
+          <span>© {new Date().getUTCFullYear()} CYPHERYN. Open-source defensive security engineering.</span>
           <span>Passive-first · Source-linked · Local-first</span>
         </div>
       </footer>

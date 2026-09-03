@@ -32,6 +32,22 @@ def wait_ready(base_url: str, timeout_seconds: float = 45) -> None:
     raise RuntimeError(f"Node did not recover readiness: {base_url}")
 
 
+def accept_current_legal_agreements(client: httpx.Client) -> None:
+    """Accept the versions advertised by this independently deployed node."""
+    status = request(client, "GET", "/api/v1/legal/status").json()
+    if status["required"]:
+        request(
+            client,
+            "POST",
+            "/api/v1/legal/acceptance",
+            json={
+                "accepted": True,
+                "terms_version": status["terms_version"],
+                "responsible_use_version": status["responsible_use_version"],
+            },
+        )
+
+
 def create_local_evidence_and_report(client: httpx.Client, suffix: str) -> dict:
     organization = request(
         client, "POST", "/api/v1/organizations", json={"name": f"Node {suffix} Org"}
@@ -93,6 +109,8 @@ def main() -> int:
     ) as node_b:
         identity_a = request(node_a, "GET", "/api/federation/v1/identity").json()
         identity_b = request(node_b, "GET", "/api/federation/v1/identity").json()
+        accept_current_legal_agreements(node_a)
+        accept_current_legal_agreements(node_b)
         local_a = create_local_evidence_and_report(node_a, "A")
         local_b = create_local_evidence_and_report(node_b, "B-before-partition")
 

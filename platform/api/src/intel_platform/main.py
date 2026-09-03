@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from .analysis import build_analysis
 from .audit import record_audit
-from .auth import get_current_user, membership_for, require_writer
+from .auth import Principal, get_current_user, get_principal, membership_for, require_writer
 from .config import get_settings
 from .database import Base, engine, get_db
 from .detection_engine import export_suricata, ingest_network_events, parse_sigma
@@ -22,6 +22,7 @@ from .federation_api import router as federation_router
 from .integrity import verify_audit_event, verify_evidence_source
 from .integrity_anchor import latest_anchor_metadata
 from .job_events import append_job_event
+from .legal import CURRENT_AGREEMENTS, current_acceptance
 from .local_ai import LocalNarrativeError, generate_local_narrative
 from .malware_analysis import correlate_hashes, quarantine_file, scan_clamav, scan_yara
 from .models import (
@@ -39,6 +40,7 @@ from .models import (
     Finding,
     Investigation,
     JobStatus,
+    LegalAcceptance,
     MalwareSample,
     Membership,
     MembershipRole,
@@ -96,6 +98,8 @@ from .schemas import (
     InvestigationCreate,
     InvestigationRead,
     InvestigationWorkspace,
+    LegalAcceptanceCreate,
+    LegalAcceptanceStatus,
     MalwareHashRequest,
     MalwareSampleRead,
     MonitorScheduleCreate,
@@ -158,6 +162,67 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 app.include_router(federation_router)
+
+
+@app.get("/api/v1/legal/status", response_model=LegalAcceptanceStatus)
+def legal_status(
+    principal: Principal = Depends(get_principal), db: Session = Depends(get_db)
+) -> LegalAcceptanceStatus:
+    user = db.scalar(select(User).where(User.external_subject == principal.subject))
+    acceptance = current_acceptance(db, user.id) if user else None
+    return LegalAcceptanceStatus(
+        required=acceptance is None,
+        accepted=acceptance is not None,
+        terms_version=CURRENT_AGREEMENTS.terms_version,
+        responsible_use_version=CURRENT_AGREEMENTS.responsible_use_version,
+        effective_date=CURRENT_AGREEMENTS.effective_date.isoformat(),
+        last_updated=CURRENT_AGREEMENTS.last_updated.isoformat(),
+        accepted_at=acceptance.accepted_at if acceptance else None,
+    )
+
+
+@app.post("/api/v1/legal/acceptance", response_model=LegalAcceptanceStatus)
+def accept_legal_agreements(
+    payload: LegalAcceptanceCreate,
+    principal: Principal = Depends(get_principal),
+    db: Session = Depends(get_db),
+) -> LegalAcceptanceStatus:
+    if not payload.accepted:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Affirmative acceptance is required"
+        )
+    if (
+        payload.terms_version != CURRENT_AGREEMENTS.terms_version
+        or payload.responsible_use_version != CURRENT_AGREEMENTS.responsible_use_version
+    ):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Agreement versions changed; review and accept the current agreements",
+        )
+    user = db.scalar(select(User).where(User.external_subject == principal.subject))
+    if user is None:
+        user = User(external_subject=principal.subject, email=principal.email)
+        db.add(user)
+        db.flush()
+    acceptance = current_acceptance(db, user.id)
+    if acceptance is None:
+        acceptance = LegalAcceptance(
+            user_id=user.id,
+            terms_version=CURRENT_AGREEMENTS.terms_version,
+            responsible_use_version=CURRENT_AGREEMENTS.responsible_use_version,
+        )
+        db.add(acceptance)
+        db.commit()
+        db.refresh(acceptance)
+    return LegalAcceptanceStatus(
+        required=False,
+        accepted=True,
+        terms_version=CURRENT_AGREEMENTS.terms_version,
+        responsible_use_version=CURRENT_AGREEMENTS.responsible_use_version,
+        effective_date=CURRENT_AGREEMENTS.effective_date.isoformat(),
+        last_updated=CURRENT_AGREEMENTS.last_updated.isoformat(),
+        accepted_at=acceptance.accepted_at,
+    )
 
 settings = get_settings()
 if settings.cors_origins:
@@ -1183,7 +1248,7 @@ def create_authorization(
     authorization = Authorization(
         organization_id=organization_id,
         authorizer_id=user.id,
-        **payload.model_dump(),
+        **payload.model_dump(exclude={"active_scope_confirmed"}),
     )
     db.add(authorization)
     db.flush()

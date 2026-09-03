@@ -38,9 +38,10 @@ app.cypheryn.com {
 			}
 		}
 
-		# The product landing page is public. Its calls to action point to
-		# authenticated application routes handled below.
-		handle / {
+		# Product and legal pages are public so a visitor can review the
+		# agreements before authenticating or accepting them.
+		@public_pages path / /terms /responsible-use /privacy /security
+		handle @public_pages {
 			header Cache-Control "public, max-age=300, stale-while-revalidate=60"
 			reverse_proxy frontend:3000 {
 				header_down -Cache-Control
@@ -132,8 +133,9 @@ cypheryn.com {
 	}
 
 	route {
-		# Keep the product website public on the apex domain.
-		handle / {
+		# Keep the product website and legal agreements public on the apex domain.
+		@public_pages path / /terms /responsible-use /privacy /security
+		handle @public_pages {
 			header Cache-Control "public, max-age=300, stale-while-revalidate=60"
 			reverse_proxy frontend:3000 {
 				header_down -Cache-Control
