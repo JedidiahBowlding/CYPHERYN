@@ -13,7 +13,7 @@ from intel_platform.local_ai import (
     validate_narrative,
 )
 from intel_platform.main import app
-from intel_platform.models import Entity, Finding
+from intel_platform.models import Entity, Finding, ProviderConfiguration, ProviderRuntimeState
 from intel_platform.provider_contract import ProviderResult, registry
 from intel_platform.provider_secrets import decrypt_credentials, encrypt_credentials
 from intel_platform.providers.certificate_transparency import CertificateTransparencyProvider
@@ -759,6 +759,45 @@ def test_provider_kill_switch_blocks_collection(client: TestClient) -> None:
     assert runtime.status_code == 200
     assert runtime.json()["kill_switch"] is True
     assert runtime.json()["consecutive_failures"] == 0
+
+
+def test_replacing_provider_credentials_resets_stale_runtime_state(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    organization = create_org(client)
+    key = Fernet.generate_key().decode()
+    monkeypatch.setattr("intel_platform.main.settings.provider_encryption_key", key)
+    with client.app.state.testing_session() as db:
+        db.add(
+            ProviderRuntimeState(
+                organization_id=organization["id"],
+                provider="abuseipdb",
+                consecutive_failures=4,
+                circuit_open_until=datetime.now(UTC) + timedelta(minutes=5),
+                last_error="abuseipdb returned HTTP 401",
+            )
+        )
+        db.commit()
+
+    response = client.put(
+        f"/api/v1/organizations/{organization['id']}/providers/abuseipdb",
+        json={"enabled": True, "credentials": {"api_key": "replacement-key"}},
+    )
+
+    assert response.status_code == 200
+    with client.app.state.testing_session() as db:
+        configuration = db.query(ProviderConfiguration).filter_by(
+            organization_id=organization["id"], provider="abuseipdb"
+        ).one()
+        runtime = db.query(ProviderRuntimeState).filter_by(
+            organization_id=organization["id"], provider="abuseipdb"
+        ).one()
+        assert decrypt_credentials(configuration.encrypted_credentials, key) == {
+            "api_key": "replacement-key"
+        }
+        assert runtime.consecutive_failures == 0
+        assert runtime.circuit_open_until is None
+        assert runtime.last_error is None
 
 
 def test_provider_assurance_uses_progressive_verification_states(client: TestClient) -> None:

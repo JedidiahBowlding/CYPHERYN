@@ -95,9 +95,11 @@ export default function Page() {
         ]);
         setProviders(p);
         setOrganizations(o);
-        if (o[0]) {
+        if (o.length === 1) {
           setOrganizationId(o[0].id);
           await loadSaved(o[0].id);
+        } else if (o.length > 1) {
+          setMessage("Select the organization that should own these credentials.");
         }
       } catch {
         setMessage("Provider controls could not be loaded.");
@@ -186,9 +188,11 @@ export default function Page() {
       setUsername("");
       await loadSaved(organizationId);
     }
+    const organizationName =
+      organizations.find((item) => item.id === organizationId)?.name ?? organizationId;
     setMessage(
       response.ok
-        ? `${provider.replaceAll("_", " ")} saved successfully.`
+        ? `${provider.replaceAll("_", " ")} credentials saved for ${organizationName} (${organizationId.slice(0, 8)}). New jobs will use this key.`
         : "Provider configuration could not be saved.",
     );
     setSaving(false);
@@ -217,12 +221,15 @@ export default function Page() {
               setOrganizationId(id);
               setSavedProviders([]);
               setMessage("");
+              setSecret("");
+              setUsername("");
               await loadSaved(id);
             }}
           >
+            <option value="" disabled>Select an organization…</option>
             {organizations.map((organization) => (
               <option value={organization.id} key={organization.id}>
-                {organization.name}
+                {organization.name} · {organization.id.slice(0, 8)}
               </option>
             ))}
           </select>
