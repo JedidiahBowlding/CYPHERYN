@@ -3,14 +3,21 @@ set -eu
 
 network_name="${CYPHERYN_SCANNER_NETWORK:-cypheryn-egress-owned-targets}"
 subnet="${CYPHERYN_SCANNER_SUBNET:-172.31.250.0/24}"
-target_ip="${CYPHERYN_AUTHORIZED_TARGET_IP:?Set CYPHERYN_AUTHORIZED_TARGET_IP}"
+authorized_ips="$(printf '%s' "${CYPHERYN_AUTHORIZED_TARGET_IPS:-${CYPHERYN_AUTHORIZED_TARGET_IP:-}}" | tr ',' ' ')"
 
-case "$target_ip" in
-  *[!0-9.]*|'')
-    echo "authorized target must be an IPv4 address" >&2
-    exit 64
-    ;;
-esac
+if [ -z "$authorized_ips" ]; then
+  echo "Set CYPHERYN_AUTHORIZED_TARGET_IPS (or legacy CYPHERYN_AUTHORIZED_TARGET_IP)" >&2
+  exit 64
+fi
+
+for target_ip in $authorized_ips; do
+  case "$target_ip" in
+    *[!0-9.]*|'')
+      echo "authorized target must be an IPv4 address: $target_ip" >&2
+      exit 64
+      ;;
+  esac
+done
 
 if ! docker network inspect "$network_name" >/dev/null 2>&1; then
   docker network create \
@@ -20,23 +27,30 @@ if ! docker network inspect "$network_name" >/dev/null 2>&1; then
     "$network_name" >/dev/null
 fi
 
-remove_rule() {
-  while iptables -C DOCKER-USER "$@" 2>/dev/null; do
-    iptables -D DOCKER-USER "$@"
-  done
-}
+policy_chain="CYPHERYN-SCANNER-EGRESS"
+iptables -N "$policy_chain" 2>/dev/null || true
+iptables -F "$policy_chain"
+
+# Remove the legacy inline rules and any earlier jump for this exact scanner
+# subnet. A dedicated chain can then be atomically rebuilt without retaining a
+# destination that was removed from the current authorization list.
+iptables -S DOCKER-USER | while read -r operation chain remainder; do
+  [ "$operation" = "-A" ] || continue
+  [ "$chain" = "DOCKER-USER" ] || continue
+  set -- $remainder
+  case " $* " in
+    *" -s $subnet "*) iptables -D DOCKER-USER "$@" ;;
+  esac
+done
 
 # Rules are source-scoped to the dedicated scanner subnet. Scanner containers
-# may establish HTTPS/HTTP connections only to the explicitly authorized host;
+# may establish HTTPS/HTTP connections only to explicitly authorized hosts;
 # replies are permitted and every other forwarded destination is rejected.
-remove_rule -s "$subnet" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-remove_rule -s "$subnet" -d "$target_ip/32" -p tcp -m multiport --dports 80,443 -j ACCEPT
-remove_rule -s "$subnet" -j REJECT --reject-with icmp-port-unreachable
+iptables -A "$policy_chain" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+for target_ip in $authorized_ips; do
+  iptables -A "$policy_chain" -d "$target_ip/32" -p tcp -m multiport --dports 80,443 -j ACCEPT
+done
+iptables -A "$policy_chain" -j REJECT --reject-with icmp-port-unreachable
+iptables -A DOCKER-USER -s "$subnet" -j "$policy_chain"
 
-# Recreate the ordered policy on every run so service restarts cannot leave an
-# earlier catch-all reject ahead of the destination allow rule.
-iptables -A DOCKER-USER -s "$subnet" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A DOCKER-USER -s "$subnet" -d "$target_ip/32" -p tcp -m multiport --dports 80,443 -j ACCEPT
-iptables -A DOCKER-USER -s "$subnet" -j REJECT --reject-with icmp-port-unreachable
-
-echo "CYPHERYN scanner egress is restricted to $target_ip on TCP 80/443"
+echo "CYPHERYN scanner egress is restricted to:$authorized_ips on TCP 80/443"

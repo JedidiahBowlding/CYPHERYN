@@ -161,7 +161,7 @@ def reconcile_findings(
                 or_(
                     Finding.rule_id == "email.missing_bimi",
                     func.lower(Finding.rule_id).in_(
-                        ["testssl.scanproblem", "testssl.engineproblem"]
+                        ["testssl.scanproblem", "testssl.engineproblem", "nikto.fail"]
                     ),
                 ),
             )

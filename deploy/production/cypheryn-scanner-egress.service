@@ -5,7 +5,9 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-Environment=CYPHERYN_AUTHORIZED_TARGET_IP=172.31.250.2
+# Comma-separated exact IPs. Extend this list only for targets whose active
+# assessment has been explicitly authorized.
+Environment=CYPHERYN_AUTHORIZED_TARGET_IPS=172.31.250.2
 ExecStart=/usr/local/sbin/configure-cypheryn-scanner-egress
 RemainAfterExit=yes
 

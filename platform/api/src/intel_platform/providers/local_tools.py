@@ -809,6 +809,18 @@ class NiktoProvider(LocalToolProvider):
             vulnerabilities = (
                 payload.get("vulnerabilities", []) if isinstance(payload, dict) else []
             )
+        diagnostic_failures = [
+            item
+            for item in vulnerabilities
+            if str(item.get("id") or "").strip().upper() == "FAIL"
+        ]
+        if diagnostic_failures:
+            detail = str(
+                diagnostic_failures[0].get("msg")
+                or diagnostic_failures[0].get("message")
+                or "Nikto could not assess the target"
+            )
+            raise RuntimeError(f"Nikto scanner could not assess the target: {detail}")
         findings = []
         for item in vulnerabilities[:500]:
             message = str(item.get("msg") or item.get("message") or "Nikto finding")

@@ -328,6 +328,31 @@ def test_nikto_uses_the_orchestrator_allowlisted_wrapper(monkeypatch) -> None:
     assert captured["remote_binary"] == "cypheryn-nikto"
 
 
+def test_nikto_connectivity_failure_is_not_a_target_finding(monkeypatch) -> None:
+    provider = NiktoProvider()
+
+    def fake_run(_context, _arguments, **_kwargs):
+        return SimpleNamespace(
+            stdout=(
+                '{"vulnerabilities":[{"id":"FAIL","msg":'
+                '"Unable to connect to example.test:443.","url":"/"}]}'
+            ),
+            stderr="",
+            returncode=0,
+        )
+
+    monkeypatch.setattr(provider, "_public_target", lambda value: value)
+    monkeypatch.setattr(provider, "_run", fake_run)
+    with pytest.raises(RuntimeError, match="scanner could not assess the target"):
+        provider.collect(
+            ProviderContext(
+                db=FakeDb(),
+                job=SimpleNamespace(investigation_id="investigation", provider="nikto"),
+                target=SimpleNamespace(canonical_value="https://example.test"),
+            )
+        )
+
+
 def collect_response(monkeypatch: pytest.MonkeyPatch, case: ContractCase, response_factory):
     def handler(request: httpx.Request) -> httpx.Response:
         return response_factory(request)

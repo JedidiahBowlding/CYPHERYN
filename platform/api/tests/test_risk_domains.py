@@ -15,6 +15,7 @@ def test_lookalikes_are_brand_risk_not_host_risk() -> None:
 def test_optional_bimi_and_scanner_diagnostics_are_not_risk_findings() -> None:
     assert not is_risk_finding(SimpleNamespace(rule_id="email.missing_bimi"))
     assert not is_risk_finding(SimpleNamespace(rule_id="testssl.scanProblem"))
+    assert not is_risk_finding(SimpleNamespace(rule_id="nikto.FAIL"))
     assert is_risk_finding(SimpleNamespace(rule_id="testssl.heartbleed"))
 
 

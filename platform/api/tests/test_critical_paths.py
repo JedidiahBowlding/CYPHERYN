@@ -759,6 +759,7 @@ def test_reconciliation_retires_optional_bimi_and_scanner_diagnostics(session_fa
             for rule, provider in (
                 ("email.missing_bimi", "domain_security"),
                 ("testssl.scanProblem", "testssl"),
+                ("nikto.FAIL", "nikto"),
             )
         ]
         db.add_all([source, old_source, *findings])

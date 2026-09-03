@@ -18,8 +18,9 @@ def finding_risk_domain(finding: Finding) -> str:
 def is_risk_finding(finding: Finding) -> bool:
     """Exclude legacy advisories and scanner diagnostics from vulnerability scoring."""
     rule = finding.rule_id.lower()
-    return rule != "email.missing_bimi" and not (
-        rule.startswith("testssl.") and rule.rsplit(".", 1)[-1] in {"scanproblem", "engineproblem"}
+    return rule not in {"email.missing_bimi", "nikto.fail"} and not (
+        rule.startswith("testssl.")
+        and rule.rsplit(".", 1)[-1] in {"scanproblem", "engineproblem"}
     )
 
 
