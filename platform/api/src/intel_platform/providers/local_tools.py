@@ -96,7 +96,13 @@ class LocalToolProvider:
                         image=image,
                         timeout_seconds=timeout,
                         network=os.environ.get("PLATFORM_SCANNER_NETWORK", "bridge"),
-                        memory_mb=1536 if self.name in {"zap_passive", "zap_active"} else 512,
+                        memory_mb=(
+                            1536
+                            if self.name in {"zap_passive", "zap_active"}
+                            else 1024
+                            if self.name == "nuclei"
+                            else 512
+                        ),
                         # ZAP expands its add-ons and session state beneath /tmp.
                         # Keep the disposable filesystem bounded, but give this
                         # scanner enough room to start reliably.
@@ -553,12 +559,18 @@ class NucleiProvider(LocalToolProvider):
                 "-silent",
                 "-jsonl",
                 "-severity",
-                "info,low,medium,high,critical",
+                "low,medium,high,critical",
                 "-rate-limit",
                 "5",
                 "-bulk-size",
                 "5",
-                "-templates",
+                # Select templates that match detected web technologies. A
+                # blind pass over the entire catalog is both noisy and too
+                # slow for an interactive, rate-limited assessment.
+                "-automatic-scan",
+                # Automatic mode resolves its catalog through Nuclei's update
+                # directory rather than the ordinary -templates selector.
+                "-update-template-dir",
                 "/opt/nuclei-templates",
                 "-disable-update-check",
             ],
