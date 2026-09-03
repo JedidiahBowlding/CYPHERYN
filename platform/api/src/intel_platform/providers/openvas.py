@@ -165,7 +165,7 @@ class OpenVasProvider(LocalToolProvider):
         request = {
             "target": target,
             "task_name": (
-                f"CYPHERYN-{context.job.investigation_id}-{context.target.id}-{context.job.id}"
+                f"CYPHERYN-{context.job.investigation_id}-{context.target.id}"
             ),
         }
         if not os.environ.get("OPENVAS_BRIDGE_URL"):
@@ -194,7 +194,10 @@ class OpenVasProvider(LocalToolProvider):
             self._raise_if_cancelled(context)
             if self._seconds_remaining(context) <= 7:
                 progress = int(latest.get("progress") or 0)
-                raise TimeoutError(f"OpenVAS scan is still running ({progress}% complete)")
+                raise TimeoutError(
+                    f"OpenVAS scanner deadline reached while its persisted task is still "
+                    f"running ({progress}% complete); the target did not fail"
+                )
             time.sleep(min(5.0, max(1.0, self._seconds_remaining(context) - 5.0)))
             latest = self._bridge(context, request)
 
@@ -202,6 +205,14 @@ class OpenVasProvider(LocalToolProvider):
             raise RuntimeError(f"OpenVAS scan ended with status {latest.get('status', 'Unknown')}")
 
         rows = list(latest.get("results") or [])[:500]
+        # A stable task name lets a later collection job resume an OpenVAS
+        # scan that outlived an earlier worker deadline. Once its evidence is
+        # safely in memory, remove the completed task so a future rescan starts
+        # a genuinely fresh assessment.
+        try:
+            self._bridge(context, {**request, "action": "delete_task"})
+        except (RuntimeError, TimeoutError):
+            pass
         entities = []
         findings = []
         for row in rows:

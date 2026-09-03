@@ -12,9 +12,10 @@ from intel_platform.provider_contract import (
     ProviderContext,
     ProviderHttpError,
 )
-from intel_platform.providers.local_tools import NiktoProvider, ZapPassiveProvider
+from intel_platform.providers.local_tools import NiktoProvider, TestsslProvider, ZapPassiveProvider
 from intel_platform.providers.threat_intel import (
     AbuseChProvider,
+    AbuseIpDbProvider,
     AlienVaultOtxProvider,
     CensysProvider,
     ShodanProvider,
@@ -226,6 +227,84 @@ def test_zap_preserves_expected_observations_without_opening_findings() -> None:
 def test_zap_accepts_bounded_scanner_noise_before_json() -> None:
     payload = ZapPassiveProvider._json_document('startup notice\n{"site":[]}\n')
     assert payload == {"site": []}
+
+
+def test_zap_accepts_bounded_scanner_noise_after_json() -> None:
+    payload = ZapPassiveProvider._json_document('{"site":[]}\nshutdown notice\n')
+    assert payload == {"site": []}
+
+
+def test_testssl_scanner_problem_is_not_a_target_finding(monkeypatch) -> None:
+    provider = TestsslProvider()
+    monkeypatch.setattr(provider, "_public_target", lambda value: value)
+    monkeypatch.setattr(
+        provider,
+        "_run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            stdout='[{"id":"scanProblem","severity":"FATAL","finding":"connection failed"}]',
+            stderr="",
+            returncode=0,
+        ),
+    )
+    monkeypatch.setattr(
+        "intel_platform.providers.local_tools.configured_scanner_images",
+        lambda: {"testssl": "image@sha256:" + "a" * 64},
+    )
+    ctx = ProviderContext(
+        db=FakeDb(),
+        job=SimpleNamespace(investigation_id="investigation", provider="testssl"),
+        target=SimpleNamespace(canonical_value="example.test"),
+    )
+    with pytest.raises(RuntimeError, match="scanner could not assess.*connection failed"):
+        provider.collect(ctx)
+
+
+def test_testssl_flattens_host_sections_without_inventing_a_tls_issue() -> None:
+    rows = TestsslProvider._testssl_observations(
+        {
+            "scanResult": [
+                {
+                    "targetHost": "example.test",
+                    "protocols": [
+                        {"id": "TLS1_3", "severity": "OK", "finding": "offered"}
+                    ],
+                    "vulnerabilities": [],
+                }
+            ]
+        }
+    )
+    assert rows == [{"id": "TLS1_3", "severity": "OK", "finding": "offered"}]
+
+
+def test_abuse_ch_accepts_documented_no_result_shape() -> None:
+    provider = AbuseChProvider()
+    provider.validate_payload(
+        {"query_status": "no_result", "data": "No results matched your search criteria."}
+    )
+    summary, associations = provider.extract_intelligence(
+        {"query_status": "no_result", "data": "No results matched your search criteria."}
+    )
+    assert summary["match_count"] == 0
+    assert associations == []
+
+
+def test_abuseipdb_normalizes_reputation_and_rejects_bad_schema() -> None:
+    provider = AbuseIpDbProvider()
+    payload = {
+        "data": {
+            "ipAddress": "203.0.113.10",
+            "abuseConfidenceScore": 80,
+            "totalReports": 12,
+            "lastReportedAt": "2026-09-01T00:00:00+00:00",
+        }
+    }
+    provider.validate_payload(payload)
+    summary, associations = provider.extract_intelligence(payload)
+    assert summary["kind"] == "abuseipdb_summary"
+    assert summary["_finding_candidates"][0]["severity"] == "high"
+    assert associations[0]["predicate"] == "HAS_ABUSE_REPUTATION"
+    with pytest.raises(RuntimeError, match="schema is invalid"):
+        provider.validate_payload({"data": {"ipAddress": "203.0.113.10"}})
 
 
 def test_nikto_uses_the_orchestrator_allowlisted_wrapper(monkeypatch) -> None:

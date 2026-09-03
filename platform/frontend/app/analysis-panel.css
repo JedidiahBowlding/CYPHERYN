@@ -34,7 +34,7 @@
 }
 .risk-summary {
   display: grid;
-  grid-template-columns: 105px 1fr;
+  grid-template-columns: 105px 105px 1fr;
   gap: 20px;
   align-items: center;
   padding: 20px;

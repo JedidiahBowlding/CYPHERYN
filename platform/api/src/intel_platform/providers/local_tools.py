@@ -797,10 +797,33 @@ class NiktoProvider(LocalToolProvider):
             remote_binary="cypheryn-nikto",
         )
         payload = json.loads(result.stdout) if result.stdout.strip() else {}
-        vulnerabilities = payload.get("vulnerabilities", []) if isinstance(payload, dict) else []
+        if isinstance(payload, list):
+            vulnerabilities = [
+                item
+                for host in payload
+                if isinstance(host, dict)
+                for item in (host.get("vulnerabilities") or [])
+                if isinstance(item, dict)
+            ]
+        else:
+            vulnerabilities = (
+                payload.get("vulnerabilities", []) if isinstance(payload, dict) else []
+            )
         findings = []
         for item in vulnerabilities[:500]:
             message = str(item.get("msg") or item.get("message") or "Nikto finding")
+            informational = any(
+                marker in message.lower()
+                for marker in (
+                    "link header(s) found",
+                    "uncommon header(s)",
+                    "robots.txt",
+                    "sitemap.xml",
+                    "should be manually viewed",
+                )
+            )
+            if informational:
+                continue
             rule = str(item.get("id") or hashlib.sha256(message.encode()).hexdigest()[:16])
             uri = str(item.get("url") or item.get("uri") or url)
             findings.append(
@@ -887,10 +910,13 @@ class ZapPassiveProvider(LocalToolProvider):
             if character != "{":
                 continue
             try:
-                payload, end = decoder.raw_decode(output[offset:])
+                payload, _end = decoder.raw_decode(output[offset:])
             except json.JSONDecodeError:
                 continue
-            if isinstance(payload, dict) and not output[offset + end :].strip():
+            # Some ZAP builds write bounded launcher diagnostics after the
+            # report. The report itself remains authoritative; trailing text
+            # is scanner telemetry, not evidence that the target failed.
+            if isinstance(payload, dict):
                 return payload
         raise json.JSONDecodeError("no JSON object found", output, 0)
 
@@ -974,7 +1000,7 @@ class ZapActiveProvider(ZapPassiveProvider):
             remote_binary="cypheryn-zap-active",
         )
         try:
-            payload = json.loads(result.stdout) if result.stdout.strip() else {}
+            payload = self._json_document(result.stdout)
         except json.JSONDecodeError as exc:
             raise RuntimeError("ZAP Active returned malformed JSON") from exc
         return self._normalize_zap(context, url, payload)
@@ -1008,14 +1034,21 @@ class TestsslProvider(LocalToolProvider):
                     ["--quiet", "--warnings", "off", "--jsonfile-pretty", str(output), target],
                 )
                 rows = json.loads(output.read_text()) if output.exists() else []
-        if isinstance(rows, dict):
-            rows = rows.get("scanResult", [rows])
+        raw_rows = rows
+        rows = self._testssl_observations(rows)
+        scanner_errors = []
         findings = []
         for row in rows if isinstance(rows, list) else []:
             severity = str(row.get("severity") or "INFO").lower()
+            rule = str(row.get("id") or "tls_issue")
+            if severity in {"fatal", "error"} or rule.lower() in {
+                "scanproblem",
+                "engineproblem",
+            }:
+                scanner_errors.append(str(row.get("finding") or rule)[:500])
+                continue
             if severity in {"ok", "info"}:
                 continue
-            rule = str(row.get("id") or "tls_issue")
             findings.append(
                 {
                     "rule_id": f"testssl.{rule}"[:100],
@@ -1029,8 +1062,28 @@ class TestsslProvider(LocalToolProvider):
                     "entity_value": target,
                 }
             )
+        if scanner_errors:
+            raise RuntimeError(
+                "testssl scanner could not assess the target: " + "; ".join(scanner_errors[:3])
+            )
         entity = self._entity(context, "tls_service", target, {"source": self.name})
-        return self._result({"target": target, "results": rows}, [entity], findings=findings)
+        return self._result({"target": target, "results": raw_rows}, [entity], findings=findings)
+
+    @staticmethod
+    def _testssl_observations(payload: object) -> list[dict]:
+        """Flatten testssl's host/section document to actual result observations."""
+        observations: list[dict] = []
+        stack = [payload]
+        while stack:
+            item = stack.pop()
+            if isinstance(item, dict):
+                if "id" in item and "severity" in item:
+                    observations.append(item)
+                else:
+                    stack.extend(reversed(list(item.values())))
+            elif isinstance(item, list):
+                stack.extend(reversed(item))
+        return observations
 
 
 LOCAL_TOOL_PROVIDERS = (

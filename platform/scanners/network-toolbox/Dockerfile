@@ -66,7 +66,8 @@ ARG DNSTWIST_VERSION=20250130
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
-       bind9-dnsutils ca-certificates libcap2 libxml-writer-perl masscan nmap perl \
+       bind9-dnsutils ca-certificates libcap2 libnet-ssleay-perl libxml-writer-perl \
+       masscan nmap perl \
     && pip install --no-cache-dir "dnstwist==${DNSTWIST_VERSION}" "dnspython==2.8.0" \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 10001 scanner
@@ -74,9 +75,9 @@ RUN apt-get update \
 COPY --from=downloader /out/ /usr/local/bin/
 COPY --from=downloader /nikto/ /opt/nikto/
 COPY --from=downloader /nuclei-templates/ /opt/nuclei-templates/
-COPY cypheryn-nikto /usr/local/bin/nikto
+COPY cypheryn-nikto /usr/local/bin/cypheryn-nikto
 COPY cypheryn-katana-auth /usr/local/bin/cypheryn-katana-auth
-RUN chmod 0755 /usr/local/bin/nikto /usr/local/bin/cypheryn-katana-auth
+RUN chmod 0755 /usr/local/bin/cypheryn-nikto /usr/local/bin/cypheryn-katana-auth
 
 ENV HOME=/tmp \
     XDG_CACHE_HOME=/tmp/.cache \

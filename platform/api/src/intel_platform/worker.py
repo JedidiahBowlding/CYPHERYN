@@ -9,7 +9,7 @@ import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from .analysis import build_analysis
@@ -55,6 +55,7 @@ from .provider_safety import (
     counts_toward_circuit_breaker,
     enforce_enqueue,
     enforce_execution,
+    is_retryable_provider_error,
     record_failure,
     record_success,
 )
@@ -149,6 +150,30 @@ def reconcile_findings(
     source: EvidenceSource,
     candidates: list[dict],
 ) -> None:
+    # These historical rules represented an optional control or a scanner
+    # execution diagnostic. Neither is a target vulnerability. Retire them as
+    # soon as newer successful evidence is persisted, regardless of provider.
+    obsolete = list(
+        db.scalars(
+            select(Finding).where(
+                Finding.investigation_id == source.investigation_id,
+                Finding.status.in_(["open", "acknowledged", "verifying"]),
+                or_(
+                    Finding.rule_id == "email.missing_bimi",
+                    func.lower(Finding.rule_id).in_(
+                        ["testssl.scanproblem", "testssl.engineproblem"]
+                    ),
+                ),
+            )
+        )
+    )
+    for finding in obsolete:
+        finding.status = "resolved"
+        finding.clean_observations = max(2, finding.clean_observations or 0)
+        finding.last_verified_at = source.retrieved_at
+        finding.resolved_at = now_utc()
+        finding.updated_at = now_utc()
+
     observed: set[tuple[str, str]] = set()
     for candidate in candidates[:100]:
         rule_id = str(candidate["rule_id"])
@@ -1341,7 +1366,11 @@ def process_one(
                         from_status=JobStatus.RUNNING,
                         message="Provider execution terminated after cancellation",
                     )
-                elif blocked or failed.attempt >= failed.max_attempts:
+                elif (
+                    blocked
+                    or not is_retryable_provider_error(exc)
+                    or failed.attempt >= failed.max_attempts
+                ):
                     failed.status = JobStatus.FAILED
                     failed.ended_at = now_utc()
                     append_job_event(

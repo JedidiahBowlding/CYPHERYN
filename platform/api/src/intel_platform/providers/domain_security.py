@@ -179,7 +179,6 @@ class DomainSecurityProvider:
             (not email["dmarc"], "email.missing_dmarc", "DMARC record is missing", "high"),
             (not email["mta_sts"], "email.missing_mta_sts", "MTA-STS record is missing", "medium"),
             (not email["tls_rpt"], "email.missing_tls_rpt", "TLS-RPT record is missing", "low"),
-            (not email["bimi"], "email.missing_bimi", "BIMI record is missing", "low"),
         )
         for missing, rule_id, title, severity in rules:
             if missing:
