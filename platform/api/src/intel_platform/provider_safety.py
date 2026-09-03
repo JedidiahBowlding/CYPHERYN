@@ -36,7 +36,11 @@ def default_timeout_seconds(provider: str) -> int:
     """Return a realistic wall-clock budget for each collection class."""
     if provider == "openvas":
         return 900
-    if provider in {"nuclei", "maigret", "testssl", "zap_passive", "zap_active"}:
+    if provider == "nuclei":
+        # A full, rate-limited template pass routinely exceeds three minutes.
+        # Keep the scan bounded while allowing the isolated runner to finish.
+        return 600
+    if provider in {"maigret", "testssl", "zap_passive", "zap_active"}:
         return 180
     if provider == "nmap":
         # Service detection and bounded NSE scripts can legitimately take more
@@ -44,6 +48,11 @@ def default_timeout_seconds(provider: str) -> int:
         return 300
     if provider in {"naabu", "rustscan", "masscan", "nikto", "katana"}:
         return 90
+    if provider == "subfinder":
+        # Passive sources can be slow or intermittently unavailable. Twenty
+        # seconds caused healthy runs to be killed before partial results were
+        # returned.
+        return 120
     return 20
 
 
