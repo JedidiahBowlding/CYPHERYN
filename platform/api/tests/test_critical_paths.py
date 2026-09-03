@@ -721,6 +721,53 @@ def test_finding_reconciliation_opens_confirms_and_resolves_after_two_clean_runs
         assert finding.severity == "critical"
 
 
+def test_reconciliation_retires_optional_bimi_and_scanner_diagnostics(session_factory) -> None:
+    now = datetime.now(UTC)
+    with session_factory() as db:
+        source = EvidenceSource(
+            id="new-source",
+            investigation_id="inv",
+            job_id="job",
+            target_id="target",
+            authorization_id="auth",
+            provider="web_posture",
+            query="example.test",
+            raw_response_hash="e" * 64,
+            redacted_payload={},
+            retrieved_at=now,
+            retain_until=now + timedelta(days=1),
+        )
+        old_source = EvidenceSource(
+            id="old-source",
+            investigation_id="inv",
+            job_id="job-old",
+            target_id="target",
+            authorization_id="auth",
+            provider="testssl",
+            query="example.test",
+            raw_response_hash="f" * 64,
+            redacted_payload={},
+            retrieved_at=now - timedelta(days=1),
+            retain_until=now + timedelta(days=1),
+        )
+        findings = [
+            Finding(
+                investigation_id="inv", source_id="old-source", rule_id=rule,
+                title="legacy", description="legacy", severity="low",
+                asset_value="example.test", provider=provider,
+            )
+            for rule, provider in (
+                ("email.missing_bimi", "domain_security"),
+                ("testssl.scanProblem", "testssl"),
+            )
+        ]
+        db.add_all([source, old_source, *findings])
+        db.commit()
+        reconcile_findings(db, source, [])
+        db.commit()
+        assert {finding.status for finding in findings} == {"resolved"}
+
+
 def test_direct_verification_distinguishes_confirmed_fixed_and_stale(session_factory) -> None:
     now = datetime.now(UTC)
     with session_factory() as db:

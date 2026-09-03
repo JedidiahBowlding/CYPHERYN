@@ -83,7 +83,7 @@ type AnalysisSnapshot = {
     limitation?: string;
   }[];
   recommendations: { priority: string; action: string; asset: string }[];
-  metrics: Record<string, number>;
+  metrics: Record<string, number | string>;
   created_at: string;
 };
 type NarrativeSnapshot = {
@@ -1359,7 +1359,12 @@ function AnalysisPanel({
             <div className={`risk-score ${snapshot.risk_level}`}>
               <strong>{snapshot.risk_score}</strong>
               <span>/100</span>
-              <b>{snapshot.risk_level}</b>
+              <b>host {snapshot.risk_level}</b>
+            </div>
+            <div className={`risk-score ${String(snapshot.metrics.brand_risk_level || "low")}`}>
+              <strong>{Number(snapshot.metrics.brand_risk_score || 0)}</strong>
+              <span>/100</span>
+              <b>brand {String(snapshot.metrics.brand_risk_level || "low")}</b>
             </div>
             <div>
               <h3>{snapshot.title}</h3>

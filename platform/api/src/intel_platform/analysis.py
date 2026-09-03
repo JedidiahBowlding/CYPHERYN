@@ -8,6 +8,21 @@ from .models import Entity, EvidenceChange, Finding, Investigation, Relationship
 SEVERITY_WEIGHT = {"critical": 35, "high": 25, "medium": 15, "low": 5, "info": 1}
 
 
+def finding_risk_domain(finding: Finding) -> str:
+    """Classify risk without conflating third-party brand abuse with host compromise."""
+    if finding.rule_id.startswith("domain.registered_lookalike"):
+        return "brand"
+    return "host"
+
+
+def is_risk_finding(finding: Finding) -> bool:
+    """Exclude legacy advisories and scanner diagnostics from vulnerability scoring."""
+    rule = finding.rule_id.lower()
+    return rule != "email.missing_bimi" and not (
+        rule.startswith("testssl.") and rule.rsplit(".", 1)[-1] in {"scanproblem", "engineproblem"}
+    )
+
+
 def build_analysis(db: Session, investigation: Investigation) -> dict:
     findings = list(
         db.scalars(
@@ -35,7 +50,10 @@ def build_analysis(db: Session, investigation: Investigation) -> dict:
             )
         )
     )
-    score = sum(SEVERITY_WEIGHT.get(item.severity.lower(), 3) for item in findings)
+    findings = [item for item in findings if is_risk_finding(item)]
+    host_findings = [item for item in findings if finding_risk_domain(item) == "host"]
+    brand_findings = [item for item in findings if finding_risk_domain(item) == "brand"]
+    score = sum(SEVERITY_WEIGHT.get(item.severity.lower(), 3) for item in host_findings)
     score += min(15, len(changes) * 3)
     malicious_records = []
     public_services = []
@@ -51,6 +69,19 @@ def build_analysis(db: Session, investigation: Investigation) -> dict:
             public_services.append(entity)
     score += min(25, len(malicious_records) * 10)
     score = min(100, score)
+    brand_score = min(
+        100,
+        sum(SEVERITY_WEIGHT.get(item.severity.lower(), 3) for item in brand_findings),
+    )
+    brand_level = (
+        "critical"
+        if brand_score >= 80
+        else "high"
+        if brand_score >= 60
+        else "medium"
+        if brand_score >= 30
+        else "low"
+    )
     level = (
         "critical" if score >= 80 else "high" if score >= 60 else "medium" if score >= 30 else "low"
     )
@@ -118,7 +149,8 @@ def build_analysis(db: Session, investigation: Investigation) -> dict:
             }
         )
     summary = (
-        f"Risk is {level} ({score}/100). Analysis is based on {len(findings)} active findings, "
+        f"Host-compromise risk is {level} ({score}/100); external brand risk is "
+        f"{brand_level} ({brand_score}/100). Analysis is based on {len(findings)} active findings, "
         f"{len(entities)} entities, {len(relationships)} relationships, and "
         f"{len(changes)} unacknowledged changes."
     )
@@ -132,6 +164,10 @@ def build_analysis(db: Session, investigation: Investigation) -> dict:
         "recommendations": recommendations[:50],
         "metrics": {
             "active_findings": len(findings),
+            "host_findings": len(host_findings),
+            "brand_findings": len(brand_findings),
+            "brand_risk_score": brand_score,
+            "brand_risk_level": brand_level,
             "entities": len(entities),
             "relationships": len(relationships),
             "unacknowledged_changes": len(changes),

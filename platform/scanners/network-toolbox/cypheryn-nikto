@@ -1,2 +1,36 @@
-#!/bin/sh
-exec perl /opt/nikto/program/nikto.pl "$@"
+#!/usr/bin/env python3
+"""Run Nikto while guaranteeing that stdout contains only its JSON report."""
+
+import pathlib
+import subprocess
+import sys
+
+
+def main() -> int:
+    arguments = list(sys.argv[1:])
+    report = pathlib.Path("/tmp/cypheryn-nikto.json")
+    for index in range(len(arguments) - 1):
+        if arguments[index].lower() in {"-output", "-o"} and arguments[index + 1] == "-":
+            arguments[index + 1] = str(report)
+            break
+    else:
+        print("Nikto wrapper requires '-output -'", file=sys.stderr)
+        return 64
+
+    completed = subprocess.run(
+        ["perl", "/opt/nikto/program/nikto.pl", *arguments],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    if not report.is_file():
+        print((completed.stderr or "Nikto did not produce a JSON report")[-1000:], file=sys.stderr)
+        return completed.returncode if completed.returncode not in {0, 1} else 2
+    sys.stdout.write(report.read_text(encoding="utf-8"))
+    return completed.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

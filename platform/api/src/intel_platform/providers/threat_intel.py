@@ -431,6 +431,63 @@ class AbuseIpDbProvider(ThreatIntelProvider):
             "headers": {"Key": self._credential(context, "api_key"), "Accept": "application/json"},
         }
 
+    def validate_payload(self, payload: dict) -> None:
+        data = payload.get("data")
+        if not isinstance(data, dict) or not isinstance(data.get("ipAddress"), str):
+            raise RuntimeError("abuseipdb response schema is invalid")
+        score = data.get("abuseConfidenceScore")
+        if isinstance(score, bool) or not isinstance(score, (int, float)):
+            raise RuntimeError("abuseipdb response schema is invalid")
+
+    def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:
+        data = payload["data"]
+        score = max(0, min(100, int(data.get("abuseConfidenceScore") or 0)))
+        reports = max(0, int(data.get("totalReports") or 0))
+        associations = []
+        if reports or score:
+            associations.append(
+                {
+                    "entity_type": "abuse_reputation",
+                    "value": f"abuseipdb:{data['ipAddress']}",
+                    "predicate": "HAS_ABUSE_REPUTATION",
+                    "confidence": score,
+                    "attributes": {
+                        "abuse_confidence_score": score,
+                        "total_reports": reports,
+                        "last_reported_at": data.get("lastReportedAt"),
+                        "usage_type": data.get("usageType"),
+                        "isp": data.get("isp"),
+                        "domain": data.get("domain"),
+                    },
+                }
+            )
+        findings = []
+        if score >= 25:
+            findings.append(
+                {
+                    "rule_id": "abuseipdb.reported_address",
+                    "title": "IP address has recent abuse reports",
+                    "description": (
+                        f"AbuseIPDB reports a {score}% abuse-confidence score from "
+                        f"{reports} report(s) in the configured lookback period."
+                    ),
+                    "severity": "high" if score >= 75 else "medium",
+                    "confidence": score,
+                    "asset_value": str(data["ipAddress"]),
+                    "entity_value": str(data["ipAddress"]),
+                }
+            )
+        return {
+            "kind": "abuseipdb_summary",
+            "ip": data["ipAddress"],
+            "abuse_confidence_score": score,
+            "total_reports": reports,
+            "country_code": data.get("countryCode"),
+            "is_public": data.get("isPublic"),
+            "is_whitelisted": data.get("isWhitelisted"),
+            "_finding_candidates": findings,
+        }, associations
+
 
 class CensysProvider(ThreatIntelProvider):
     name = "censys"
@@ -579,10 +636,14 @@ class AbuseChProvider(ThreatIntelProvider):
     def validate_payload(self, payload: dict) -> None:
         status = payload.get("query_status")
         records = payload.get("data")
-        if not isinstance(status, str) or (status == "ok" and not isinstance(records, list)):
+        if not isinstance(status, str):
             raise RuntimeError("abuse_ch response schema is invalid")
-        if records is not None and not isinstance(records, list):
+        if status == "ok" and not isinstance(records, list):
             raise RuntimeError("abuse_ch response schema is invalid")
+        # ThreatFox returns a human-readable string in `data` for a clean
+        # no-result query. That is valid negative evidence, not schema failure.
+        if status not in {"ok", "no_result"}:
+            raise RuntimeError(f"abuse_ch query failed with status {status[:80]}")
 
     def extract_intelligence(self, payload: dict) -> tuple[dict, list[dict]]:
         records = payload.get("data") if isinstance(payload.get("data"), list) else []

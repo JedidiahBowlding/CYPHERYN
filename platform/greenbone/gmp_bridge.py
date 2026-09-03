@@ -105,6 +105,11 @@ def run(payload: dict) -> dict:
         tasks = _xml(gmp.get_tasks(filter_string=f'name="{task_name}"', details=True))
         task = tasks.find(".//task")
 
+        if payload.get("action") == "delete_task":
+            if task is not None and task.get("id"):
+                gmp.delete_task(str(task.get("id")), ultimate=True)
+            return {"deleted": task is not None}
+
         if task is None:
             configs = gmp.get_scan_configs(filter_string='name="Full and fast"')
             scanners = gmp.get_scanners(filter_string='name="OpenVAS Default"')
