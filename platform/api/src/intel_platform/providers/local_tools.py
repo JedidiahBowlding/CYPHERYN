@@ -276,7 +276,21 @@ class SubfinderProvider(LocalToolProvider):
 
     def collect(self, context: ProviderContext) -> ProviderResult:
         domain = self._public_target(context.target.canonical_value)
-        result = self._run(context, ["-d", domain, "-silent", "-json"])
+        result = self._run(
+            context,
+            [
+                "-d",
+                domain,
+                "-silent",
+                "-json",
+                # Bound individual passive-source requests and the complete
+                # enumeration below the worker's outer hard deadline.
+                "-timeout",
+                "15",
+                "-max-time",
+                "1",
+            ],
+        )
         rows = self._json_lines(result.stdout)
         domains = sorted({str(row.get("host", "")).lower() for row in rows if row.get("host")})[
             :500
