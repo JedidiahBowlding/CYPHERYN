@@ -336,7 +336,17 @@ def test_scheduled_anchor_bundle_is_immutable_and_key_rotation_retains_history(
             retrieved_at=now,
             retain_until=now + timedelta(days=30),
         )
-        db.add(source)
+        in_progress_draft = EvidenceSource(
+            investigation_id="investigation",
+            job_id="running-job",
+            target_id="target",
+            authorization_id="authorization",
+            provider="openvas",
+            query="example.test",
+            retrieved_at=now - timedelta(seconds=1),
+            retain_until=now + timedelta(days=30),
+        )
+        db.add_all([in_progress_draft, source])
         db.flush()
         seal_evidence_source(db, source)
         db.commit()
