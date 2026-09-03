@@ -2174,6 +2174,17 @@ def upsert_provider_configuration(
                 status.HTTP_503_SERVICE_UNAVAILABLE,
                 "Provider encryption key is invalid",
             ) from exc
+        runtime = db.scalar(
+            select(ProviderRuntimeState).where(
+                ProviderRuntimeState.organization_id == organization_id,
+                ProviderRuntimeState.provider == provider_name,
+            )
+        )
+        if runtime is not None:
+            runtime.consecutive_failures = 0
+            runtime.circuit_open_until = None
+            runtime.last_error = None
+            runtime.updated_at = datetime.now(UTC)
     db.flush()
     record_audit(
         db,

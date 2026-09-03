@@ -43,4 +43,7 @@ test("keeps security guidance and cross-platform scripts in source", async () =>
   assert.doesNotMatch(packageJson, /@rolldown\/binding-darwin-x64/);
   assert.match(providerSettings, /Live verified/);
   assert.match(providerSettings, /last_verified_at/);
+  assert.match(providerSettings, /Select an organization/);
+  assert.match(providerSettings, /organization\.id\.slice\(0, 8\)/);
+  assert.match(providerSettings, /New jobs will use this key/);
 });
