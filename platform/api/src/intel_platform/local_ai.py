@@ -16,40 +16,128 @@ def generate_local_narrative(
     model: str,
     timeout_seconds: int,
 ) -> dict:
-    contract = {
+    indexed_claims = [{"index": index, **claim} for index, claim in enumerate(snapshot.claims)]
+    compact_claims = [_compact_mapping(claim) for claim in indexed_claims[:16]]
+    context = {
         "risk_score": snapshot.risk_score,
         "risk_level": snapshot.risk_level,
-        "metrics": snapshot.metrics,
-        "claims": [{"index": index, **claim} for index, claim in enumerate(snapshot.claims)],
-        "correlations": snapshot.correlations,
-        "recommendations": snapshot.recommendations,
+        "metrics": _compact_mapping(snapshot.metrics, value_limit=180),
     }
-    prompt = (
-        "You are a defensive security report writer. Use only the supplied JSON contract. "
-        "Do not add facts, identities, incidents, vulnerabilities, or causal claims. "
-        "Never introduce breach, compromise, attack, malicious activity, or misconfiguration "
-        "unless that exact concept appears in a supplied claim. "
-        "Copy every IP address, domain, hash, URL, and port exactly; never reformat or infer one. "
-        "Return JSON with executive_summary, technical_summary, and key_points. "
-        "Each key_points item must contain text and claim_refs, an array of claim indexes. "
-        "Describe correlations as inferences and preserve their limitations.\n\n"
-        + json.dumps(contract, separators=(",", ":"), sort_keys=True)
+    executive = _generate_section(
+        base_url=base_url,
+        model=model,
+        timeout_seconds=timeout_seconds,
+        prompt=(
+            "Write a concise executive security summary from only this JSON. Do not add facts. "
+            "Preserve indicators exactly. Return only JSON with executive_summary.\n"
+            + json.dumps(
+                {
+                    **context,
+                    "top_claims": compact_claims[:8],
+                    "recommendations": [
+                        _compact_value(item, 240) for item in snapshot.recommendations[:6]
+                    ],
+                },
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        ),
+        schema={
+            "type": "object",
+            "properties": {"executive_summary": {"type": "string"}},
+            "required": ["executive_summary"],
+        },
+        num_predict=320,
     )
+    technical = _generate_section(
+        base_url=base_url,
+        model=model,
+        timeout_seconds=timeout_seconds,
+        prompt=(
+            "Write a concise technical security summary from only this JSON. Do not add facts. "
+            "Preserve indicators exactly. Claim references must use the supplied index values. "
+            "Return only JSON with technical_summary and key_points; each key point has text and "
+            "claim_refs. Describe correlations only as limited inferences.\n"
+            + json.dumps(
+                {
+                    **context,
+                    "claims": compact_claims,
+                    "correlations": [
+                        _compact_value(item, 300) for item in snapshot.correlations[:6]
+                    ],
+                },
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        ),
+        schema={
+            "type": "object",
+            "properties": {
+                "technical_summary": {"type": "string"},
+                "key_points": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "claim_refs": {"type": "array", "items": {"type": "integer"}},
+                        },
+                        "required": ["text", "claim_refs"],
+                    },
+                },
+            },
+            "required": ["technical_summary", "key_points"],
+        },
+        num_predict=700,
+    )
+    raw = {**executive, **technical}
+    corrected = correct_unambiguous_indicators(raw, snapshot.claims)
+    sanitized = strip_unsupported_security_sentences(corrected, snapshot.claims)
+    return validate_narrative(sanitized, len(snapshot.claims), snapshot.claims)
+
+
+def _compact_value(value: object, limit: int) -> object:
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value if not isinstance(value, str) else value[:limit]
+    return json.dumps(value, separators=(",", ":"), sort_keys=True, default=str)[:limit]
+
+
+def _compact_mapping(value: object, value_limit: int = 320) -> dict:
+    if not isinstance(value, dict):
+        return {"value": _compact_value(value, value_limit)}
+    return {str(key): _compact_value(item, value_limit) for key, item in value.items()}
+
+
+def _generate_section(
+    *,
+    base_url: str,
+    model: str,
+    timeout_seconds: int,
+    prompt: str,
+    schema: dict,
+    num_predict: int,
+) -> dict:
     endpoint = f"{base_url.rstrip('/')}/api/generate"
     try:
         response = httpx.post(
             endpoint,
-            json={"model": model, "prompt": prompt, "stream": False, "format": "json"},
+            json={
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+                "format": schema,
+                "options": {"num_predict": num_predict},
+            },
             timeout=timeout_seconds,
         )
         response.raise_for_status()
         envelope = response.json()
-        raw = json.loads(envelope.get("response", "{}"))
+        value = json.loads(envelope.get("response", "{}"))
+        if not isinstance(value, dict):
+            raise TypeError("section is not a JSON object")
+        return value
     except (httpx.HTTPError, json.JSONDecodeError, TypeError) as exc:
         raise LocalNarrativeError(f"Local model response failed: {exc}") from exc
-    corrected = correct_unambiguous_indicators(raw, snapshot.claims)
-    sanitized = strip_unsupported_security_sentences(corrected, snapshot.claims)
-    return validate_narrative(sanitized, len(snapshot.claims), snapshot.claims)
 
 
 def correct_unambiguous_indicators(value: dict, supported_claims: list) -> dict:

@@ -9,11 +9,18 @@ from intel_platform.auth import Principal, get_principal
 from intel_platform.local_ai import (
     LocalNarrativeError,
     correct_unambiguous_indicators,
+    generate_local_narrative,
     strip_unsupported_security_sentences,
     validate_narrative,
 )
 from intel_platform.main import app
-from intel_platform.models import Entity, Finding, ProviderConfiguration, ProviderRuntimeState
+from intel_platform.models import (
+    AnalysisSnapshot,
+    Entity,
+    Finding,
+    ProviderConfiguration,
+    ProviderRuntimeState,
+)
 from intel_platform.provider_contract import ProviderResult, registry
 from intel_platform.provider_secrets import decrypt_credentials, encrypt_credentials
 from intel_platform.providers.certificate_transparency import CertificateTransparencyProvider
@@ -393,6 +400,61 @@ def test_finding_verification_requires_two_clean_observations(
     listed = client.get(f"/api/v1/organizations/{organization['id']}/findings").json()[0]
     assert listed["status"] == "resolved"
     assert listed["clean_observations"] == 2
+
+
+def test_local_ai_generates_executive_and_technical_sections_separately(monkeypatch) -> None:
+    requests = []
+
+    class Response:
+        def __init__(self, payload: dict) -> None:
+            self.payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"response": __import__("json").dumps(self.payload)}
+
+    responses = iter(
+        [
+            Response({"executive_summary": "One observed service requires review."}),
+            Response(
+                {
+                    "technical_summary": "The service was observed at 8.8.8.8:443/tcp.",
+                    "key_points": [{"text": "Review the service.", "claim_refs": [0]}],
+                }
+            ),
+        ]
+    )
+
+    def fake_post(endpoint, *, json, timeout):
+        requests.append((endpoint, json, timeout))
+        return next(responses)
+
+    monkeypatch.setattr("intel_platform.local_ai.httpx.post", fake_post)
+    snapshot = AnalysisSnapshot(
+        investigation_id="investigation",
+        generated_by_id="user",
+        risk_score=25,
+        risk_level="low",
+        title="Assessment",
+        executive_summary="Deterministic summary",
+        claims=[{"statement": "A service was observed at 8.8.8.8:443/tcp."}],
+        correlations=[],
+        recommendations=["Review the service."],
+        metrics={"claim_count": 1},
+    )
+
+    narrative = generate_local_narrative(snapshot, "http://ollama:11434/", "small", 30)
+
+    assert narrative["executive_summary"] == "One observed service requires review."
+    assert narrative["technical_summary"].endswith("8.8.8.8:443/tcp.")
+    assert narrative["key_points"] == [{"text": "Review the service.", "claim_refs": [0]}]
+    assert len(requests) == 2
+    assert requests[0][0] == "http://ollama:11434/api/generate"
+    assert "executive_summary" in requests[0][1]["format"]["required"]
+    assert "technical_summary" in requests[1][1]["format"]["required"]
+    assert requests[0][1]["options"]["num_predict"] < requests[1][1]["options"]["num_predict"]
 
 
 def test_local_ai_narrative_discards_unsupported_claim_references() -> None:
@@ -786,12 +848,16 @@ def test_replacing_provider_credentials_resets_stale_runtime_state(
 
     assert response.status_code == 200
     with client.app.state.testing_session() as db:
-        configuration = db.query(ProviderConfiguration).filter_by(
-            organization_id=organization["id"], provider="abuseipdb"
-        ).one()
-        runtime = db.query(ProviderRuntimeState).filter_by(
-            organization_id=organization["id"], provider="abuseipdb"
-        ).one()
+        configuration = (
+            db.query(ProviderConfiguration)
+            .filter_by(organization_id=organization["id"], provider="abuseipdb")
+            .one()
+        )
+        runtime = (
+            db.query(ProviderRuntimeState)
+            .filter_by(organization_id=organization["id"], provider="abuseipdb")
+            .one()
+        )
         assert decrypt_credentials(configuration.encrypted_credentials, key) == {
             "api_key": "replacement-key"
         }
