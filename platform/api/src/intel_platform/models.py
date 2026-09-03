@@ -74,6 +74,19 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class LegalAcceptance(Base):
+    __tablename__ = "legal_acceptances"
+    __table_args__ = (
+        UniqueConstraint("user_id", "terms_version", "responsible_use_version"),
+        Index("ix_legal_acceptance_user_time", "user_id", "accepted_at"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    terms_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    responsible_use_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class Organization(Base):
     __tablename__ = "organizations"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)

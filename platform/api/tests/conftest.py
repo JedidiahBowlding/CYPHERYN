@@ -31,6 +31,15 @@ def client(tmp_path) -> Generator[TestClient, None, None]:
     )
     test_client = TestClient(app)
     test_client.app.state.testing_session = testing_session
+    response = test_client.post(
+        "/api/v1/legal/acceptance",
+        json={
+            "accepted": True,
+            "terms_version": "1.0",
+            "responsible_use_version": "1.0",
+        },
+    )
+    assert response.status_code == 200
     yield test_client
     test_client.close()
     app.dependency_overrides.clear()

@@ -80,6 +80,7 @@ def test_active_authorization_is_revalidated_immediately_before_execution(
             "basis": "Temporary active test scope",
             "passive_allowed": True,
             "active_allowed": True,
+            "active_scope_confirmed": True,
             "valid_from": (now - timedelta(minutes=1)).isoformat(),
             "valid_until": (now + timedelta(hours=1)).isoformat(),
         },

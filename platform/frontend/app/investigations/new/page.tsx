@@ -75,6 +75,7 @@ export default function NewInvestigation() {
           basis: data.get("basis"),
           passive_allowed: true,
           active_allowed: data.get("activeAllowed") === "on",
+          active_scope_confirmed: data.get("activeScopeConfirmed") === "on",
           valid_from: now.toISOString(),
           valid_until: until.toISOString(),
         },
@@ -225,6 +226,20 @@ export default function NewInvestigation() {
                 requires this explicit authorization and an exact IP target.
               </p>
             </div>
+            <label className="check-label">
+              <input
+                aria-label="Confirm ownership or authorization for active testing"
+                type="checkbox"
+                name="activeScopeConfirmed"
+              />
+              <span>
+                <strong>I own this target or have authorization to assess it</strong>
+                <small>
+                  This confirmation is mandatory when active testing is enabled.
+                  CYPHERYN access does not grant third-party authorization.
+                </small>
+              </span>
+            </label>
           </div>
           <div className="form-section">
             <Title

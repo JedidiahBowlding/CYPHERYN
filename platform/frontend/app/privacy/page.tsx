@@ -1,0 +1,16 @@
+import LegalDocument from "../_components/LegalDocument";
+
+export const metadata = { title: "Privacy Policy — CYPHERYN", description: "How CYPHERYN handles account, investigation, and security-analysis data." };
+
+export default function PrivacyPage() {
+  return <LegalDocument title="CYPHERYN Privacy Policy" version="1.0">
+    <section><h2>Information CYPHERYN processes</h2><p>CYPHERYN processes identity information supplied by the configured authentication provider, such as an account subject and email address; organization memberships; investigation targets and authorization records; provider configuration state; scan requests and results; entities, relationships, findings, reports, evidence, audit events, operational logs, notification settings, and legal acceptance records.</p></section>
+    <section><h2>Why it is processed</h2><p>This information is used to authenticate users, enforce tenant and authorization boundaries, perform requested analysis, preserve evidence and provenance, generate reports, monitor operation, investigate abuse, and maintain security and reliability.</p></section>
+    <section><h2>Providers and processors</h2><p>Authentication, hosting, threat-intelligence, notification, storage, and other configured services may receive the minimum information needed for their function. Queries sent to intelligence providers can reveal a target or indicator. Those services operate under their own terms and privacy practices. Operators choose which integrations to enable.</p></section>
+    <section><h2>AI processing</h2><p>CYPHERYN may send bounded evidence summaries to the AI service configured by the operator. A local model can keep that processing within operator-controlled infrastructure; a remotely configured model may process data under that provider&apos;s terms. AI output can be inaccurate and is retained as analysis, not established fact.</p></section>
+    <section><h2>Cookies and authentication</h2><p>The production service uses an authentication provider and a secure session proxy. They use cookies required to establish and maintain a signed-in session. CYPHERYN does not claim that these essential authentication records are anonymous.</p></section>
+    <section><h2>Retention and deletion</h2><p>Investigation data, evidence, audit history, and acceptance records persist according to the operator&apos;s retention, backup, integrity, and legal requirements. Deleting an account or investigation may not immediately remove protected backups, required audit evidence, or records that must be retained. Contact the deployment operator to request access, correction, export, or deletion where applicable.</p></section>
+    <section><h2>Security and limits</h2><p>CYPHERYN uses technical controls intended to protect stored data, but no service can guarantee absolute security. Do not submit data you lack authority to process, and never place API keys or secrets into investigation targets or notes.</p></section>
+    <section><h2>Policy contact</h2><p>For this open-source project, use the repository&apos;s <a href="https://github.com/JedidiahBowlding/CYPHERYN/issues" target="_blank" rel="noreferrer">issue tracker</a> for non-sensitive policy questions. Use private security reporting for vulnerabilities.</p></section>
+  </LegalDocument>;
+}

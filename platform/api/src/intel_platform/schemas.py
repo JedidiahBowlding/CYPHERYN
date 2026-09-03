@@ -85,6 +85,22 @@ class OrganizationRead(ApiModel):
     created_at: datetime
 
 
+class LegalAcceptanceCreate(BaseModel):
+    accepted: bool
+    terms_version: str
+    responsible_use_version: str
+
+
+class LegalAcceptanceStatus(BaseModel):
+    required: bool
+    accepted: bool
+    terms_version: str
+    responsible_use_version: str
+    effective_date: str
+    last_updated: str
+    accepted_at: datetime | None = None
+
+
 class ReportBrandingUpdate(BaseModel):
     report_title: str = Field(default="CYPHERYN", min_length=1, max_length=200)
     report_accent: str = Field(default="#147d72", pattern=r"^#[0-9a-fA-F]{6}$")
@@ -229,6 +245,7 @@ class AuthorizationCreate(BaseModel):
     basis: str = Field(min_length=5, max_length=5000)
     passive_allowed: bool = True
     active_allowed: bool = False
+    active_scope_confirmed: bool = False
     valid_from: datetime
     valid_until: datetime
 
@@ -236,6 +253,8 @@ class AuthorizationCreate(BaseModel):
     def dates_are_ordered(self) -> "AuthorizationCreate":
         if self.valid_until <= self.valid_from:
             raise ValueError("valid_until must be after valid_from")
+        if self.active_allowed and not self.active_scope_confirmed:
+            raise ValueError("active_scope_confirmed is required for active authorization")
         return self
 
 
