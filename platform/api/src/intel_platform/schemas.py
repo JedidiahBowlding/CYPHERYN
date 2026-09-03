@@ -43,9 +43,7 @@ class FederatedAssertionCreate(BaseModel):
     assertion_type: str = Field(
         pattern=r"^(indicator_assessment|exposure_observation|threat_association)$"
     )
-    subject_type: str = Field(
-        pattern=r"^(domain|ip_address|url|sha256|certificate|service)$"
-    )
+    subject_type: str = Field(pattern=r"^(domain|ip_address|url|sha256|certificate|service)$")
     subject_fingerprint: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
     evidence_fingerprint: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
     source_category: str = Field(
@@ -112,6 +110,7 @@ class InvestigationRead(ApiModel):
     description: str
     status: InvestigationStatus
     created_at: datetime
+    last_scanned_at: datetime | None = None
 
 
 class StixBundleImport(BaseModel):

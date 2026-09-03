@@ -164,6 +164,12 @@ def test_safe_mock_collection_builds_evidence_graph(client: TestClient) -> None:
     assert completed.result_count == 4
     assert completed.attempt == 1
 
+    listed_investigations = client.get(
+        f"/api/v1/organizations/{organization['id']}/investigations"
+    ).json()
+    assert listed_investigations[0]["id"] == investigation["id"]
+    assert listed_investigations[0]["last_scanned_at"] is not None
+
     workspace = client.get(f"/api/v1/investigations/{investigation['id']}/workspace")
     assert workspace.status_code == 200
     assert len(workspace.json()["entities"]) == 4

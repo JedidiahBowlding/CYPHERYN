@@ -317,15 +317,39 @@ def list_investigations(
     organization_id: str,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> list[Investigation]:
+) -> list[dict]:
     membership_for(db, user.id, organization_id)
-    return list(
-        db.scalars(
-            select(Investigation)
-            .where(Investigation.organization_id == organization_id)
-            .order_by(Investigation.created_at)
+    latest_scan = (
+        select(
+            CollectionJob.investigation_id,
+            func.max(CollectionJob.ended_at).label("last_scanned_at"),
+        )
+        .where(CollectionJob.status == JobStatus.COMPLETED)
+        .group_by(CollectionJob.investigation_id)
+        .subquery()
+    )
+    rows = db.execute(
+        select(Investigation, latest_scan.c.last_scanned_at)
+        .outerjoin(latest_scan, latest_scan.c.investigation_id == Investigation.id)
+        .where(Investigation.organization_id == organization_id)
+        .order_by(
+            latest_scan.c.last_scanned_at.desc().nullslast(),
+            Investigation.created_at.desc(),
         )
     )
+    return [
+        {
+            "id": investigation.id,
+            "organization_id": investigation.organization_id,
+            "owner_id": investigation.owner_id,
+            "name": investigation.name,
+            "description": investigation.description,
+            "status": investigation.status,
+            "created_at": investigation.created_at,
+            "last_scanned_at": last_scanned_at,
+        }
+        for investigation, last_scanned_at in rows
+    ]
 
 
 @app.post(
