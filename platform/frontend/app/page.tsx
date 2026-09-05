@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import PlatformUserCount from "./_components/PlatformUserCount";
 
 const features = [
   {
@@ -118,6 +119,7 @@ export default function LandingPage() {
             <Link href="/dashboard">Log in to dashboard →</Link>
           </div>
           <dl>
+            <PlatformUserCount />
             <div>
               <dt>Passive-first</dt>
               <dd>Safe collection by default</dd>
