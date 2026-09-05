@@ -101,6 +101,10 @@ class LegalAcceptanceStatus(BaseModel):
     accepted_at: datetime | None = None
 
 
+class PublicPlatformStats(BaseModel):
+    registered_users: int
+
+
 class ReportBrandingUpdate(BaseModel):
     report_title: str = Field(default="CYPHERYN", min_length=1, max_length=200)
     report_accent: str = Field(default="#147d72", pattern=r"^#[0-9a-fA-F]{6}$")

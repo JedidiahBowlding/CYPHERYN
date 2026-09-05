@@ -116,6 +116,7 @@ from .schemas import (
     ProviderConfigurationUpsert,
     ProviderDescriptor,
     ProviderRuntimeRead,
+    PublicPlatformStats,
     ReportArtifactRead,
     ReportBrandingRead,
     ReportBrandingUpdate,
@@ -162,6 +163,13 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 app.include_router(federation_router)
+
+
+@app.get("/api/public/stats", response_model=PublicPlatformStats)
+def public_platform_stats(db: Session = Depends(get_db)) -> PublicPlatformStats:
+    """Return a deliberately narrow aggregate with no account attributes."""
+    registered_users = db.scalar(select(func.count(User.id))) or 0
+    return PublicPlatformStats(registered_users=registered_users)
 
 
 @app.get("/api/v1/legal/status", response_model=LegalAcceptanceStatus)

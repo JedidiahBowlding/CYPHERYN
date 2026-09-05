@@ -21,6 +21,7 @@ test("server-renders the CYPHERYN landing page", async () => {
   assert.match(html, /<title>CYPHERYN — See the Exposure\. Prove the Risk\.<\/title>/i);
   assert.match(html, /Follow every signal/);
   assert.match(html, /Prove every finding/);
+  assert.match(html, /Registered users/);
   assert.match(html, /href="\/investigations\/new"/);
   assert.match(html, /\/_next\/image\?url=%2Fcypheryn-logo\.png(?:&|&amp;)w=/);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
