@@ -26,7 +26,7 @@ RUN set -eux; \
 # advisories. Rebuild the affected tools from their immutable release commits
 # with the patched compiler and dependency floors instead of suppressing a
 # reachable High/Critical container finding.
-FROM golang:1.26.6-bookworm AS patched-security-tools
+FROM golang:1.27.1-bookworm AS patched-security-tools
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates git \
