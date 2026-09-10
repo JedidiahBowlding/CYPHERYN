@@ -114,7 +114,12 @@ export default function NewInvestigation() {
           />
           <span>CYPHERYN</span>
         </div>
-        <p>Authorized collection only</p>
+        <div className="workflow-account-actions">
+          <p>Authorized collection only</p>
+          <a href="/oauth2/sign_out?rd=%2F" aria-label="Log out of CYPHERYN">
+            Logout
+          </a>
+        </div>
       </header>
       <div className="workflow-wrap">
         <section className="workflow-intro">

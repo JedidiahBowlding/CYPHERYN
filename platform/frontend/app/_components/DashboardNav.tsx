@@ -77,6 +77,13 @@ export default function DashboardNav({
           </nav>
         </div>
       )}
+      <a
+        className="dashboard-logout"
+        href="/oauth2/sign_out?rd=%2F"
+        aria-label="Log out of CYPHERYN"
+      >
+        Logout
+      </a>
     </aside>
   );
 }
