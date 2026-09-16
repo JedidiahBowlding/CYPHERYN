@@ -1933,6 +1933,7 @@ input {
   border-radius: 7px;
 }
 .job-row > span {
+  flex: 0 0 7px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -1943,6 +1944,8 @@ input {
   box-shadow: 0 0 7px #39e6c8;
 }
 .job-row > div {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1955,12 +1958,17 @@ input {
 .job-row small {
   color: #5d6b7c;
   font-size: 7px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .job-row > b {
+  flex: 0 0 auto;
   margin-left: auto;
   color: #61cdbb;
   font-size: 7px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .evidence-panel,
 .relationship-panel {
@@ -2096,6 +2104,7 @@ input {
   }
 }
 .job-row > button {
+  flex: 0 0 auto;
   border: 1px solid #49333b;
   border-radius: 5px;
   background: #21151a;
