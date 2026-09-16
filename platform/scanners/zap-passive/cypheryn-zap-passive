@@ -3,6 +3,7 @@ import json
 import pathlib
 import subprocess
 import sys
+import time
 import urllib.parse
 
 
@@ -40,15 +41,23 @@ def main() -> int:
         "    reportFile: report.json\n",
         encoding="utf-8",
     )
-    completed = subprocess.run(
-        ["/zap/zap.sh", "-cmd", "-silent", "-dir", str(work), "-autorun", str(plan)],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
-        timeout=150,
-        check=False,
-    )
+    completed = None
+    for attempt in range(3):
+        report.unlink(missing_ok=True)
+        completed = subprocess.run(
+            ["/zap/zap.sh", "-cmd", "-silent", "-dir", str(work), "-autorun", str(plan)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=50,
+            check=False,
+        )
+        if report.is_file() and report.stat().st_size:
+            break
+        if attempt < 2:
+            time.sleep(5 * (attempt + 1))
+    assert completed is not None
     if not report.is_file():
         print((completed.stderr or "ZAP did not produce a report")[-1000:], file=sys.stderr)
         return completed.returncode or 1
