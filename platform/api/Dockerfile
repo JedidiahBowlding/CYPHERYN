@@ -58,7 +58,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # of relying on the moving base tag to have been republished already.
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends clamav git yara \
+    && apt-get install -y --no-install-recommends clamav git tesseract-ocr yara \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -73,7 +73,7 @@ COPY --from=patched-security-tools /out/ /usr/local/bin/
 COPY tests ./tests
 
 RUN useradd --create-home --uid 10001 appuser \
-    && mkdir -p /data/quarantine /data/clamav-db \
+    && mkdir -p /data/quarantine/egress /data/clamav-db \
     && chown -R appuser:appuser /data
 USER appuser
 EXPOSE 8000

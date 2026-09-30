@@ -12,6 +12,7 @@ const primaryNavigation = [
   ["Identity", "/identity"],
   ["Malware", "/malware"],
   ["Detections", "/detections"],
+  ["Egress", "/egress"],
   ["Findings", "/findings"],
   ["Notifications", "/notifications"],
   ["Reports", "/reports"],

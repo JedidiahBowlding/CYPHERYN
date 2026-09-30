@@ -18,6 +18,7 @@ from .auth import Principal, get_current_user, get_principal, membership_for, re
 from .config import get_settings
 from .database import Base, engine, get_db
 from .detection_engine import export_suricata, ingest_network_events, parse_sigma
+from .egress_api import router as egress_router
 from .federation_api import router as federation_router
 from .integrity import verify_audit_event, verify_evidence_source
 from .integrity_anchor import latest_anchor_metadata
@@ -163,6 +164,7 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 app.include_router(federation_router)
+app.include_router(egress_router)
 
 
 @app.get("/api/public/stats", response_model=PublicPlatformStats)

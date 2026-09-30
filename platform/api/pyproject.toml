@@ -19,6 +19,7 @@ dependencies = [
   "psycopg[binary]>=3.2,<4",
   "reportlab>=4.2,<5",
   "PyYAML>=6.0,<7",
+  "Pillow>=12.3.0,<13",
   "uvicorn[standard]>=0.32,<1",
 ]
 
