@@ -73,6 +73,7 @@ RUN pip install --no-cache-dir ".[dev]" \
 # its CLI is compatible with the security-only 2.14 patch. Keep Semgrep's
 # resolved dependency set, then replace only PyJWT.
 RUN pip install --no-cache-dir --no-deps "PyJWT==2.14.0"
+RUN python -c "from importlib.metadata import version; from packaging.version import Version; assert Version(version('PyJWT')) >= Version('2.14.0'); assert Version(version('urllib3')) >= Version('2.8.0')"
 COPY --from=patched-security-tools /out/ /usr/local/bin/
 COPY tests ./tests
 
