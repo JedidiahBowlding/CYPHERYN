@@ -29,7 +29,38 @@ WORKER_STALE_SECONDS = 45
 _federation_lock = threading.Lock()
 _federation_counters: Counter[str] = Counter()
 _federation_delivery_latencies: list[float] = []
+_egress_lock = threading.Lock()
+_egress_counters: Counter[str] = Counter()
+_egress_durations: list[float] = []
 FEDERATION_LATENCY_BUCKETS = (0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+
+
+def record_egress_event(
+    outcome: str, *, sensitive: bool = False, duration_seconds: float | None = None
+) -> None:
+    allowed = {
+        "allow",
+        "block",
+        "require_approval",
+        "allow_with_redaction",
+        "quarantine",
+        "artifact_scanned",
+        "scanner_failure",
+        "verification_mismatch",
+    }
+    normalized = outcome if outcome in allowed else "scanner_failure"
+    with _egress_lock:
+        _egress_counters[normalized] += 1
+        if sensitive:
+            _egress_counters["sensitive_artifact"] += 1
+        if duration_seconds is not None:
+            _egress_durations.append(max(0.0, min(duration_seconds, 60.0)))
+            del _egress_durations[:-10_000]
+
+
+def egress_telemetry_snapshot() -> tuple[dict[str, int], list[float]]:
+    with _egress_lock:
+        return dict(_egress_counters), list(_egress_durations)
 
 
 def record_federation_event(reason: str, *, latency_seconds: float | None = None) -> None:
@@ -287,6 +318,30 @@ def prometheus_metrics(snapshot: dict) -> str:
         "# TYPE cypheryn_worker_healthy gauge",
         f"cypheryn_worker_healthy {1 if snapshot['worker_healthy'] else 0}",
     ]
+    egress, egress_durations = egress_telemetry_snapshot()
+    metric_map = {
+        "allow": "egress_allowed_total",
+        "block": "egress_blocked_total",
+        "require_approval": "egress_approvals_pending",
+        "artifact_scanned": "egress_artifacts_scanned_total",
+        "sensitive_artifact": "egress_sensitive_artifacts_total",
+        "quarantine": "egress_fail_closed_total",
+        "verification_mismatch": "egress_verification_mismatches_total",
+        "scanner_failure": "egress_scanner_failures_total",
+    }
+    evaluation_outcomes = (
+        "allow",
+        "block",
+        "require_approval",
+        "allow_with_redaction",
+        "quarantine",
+    )
+    evaluation_total = sum(egress.get(key, 0) for key in evaluation_outcomes)
+    lines.append(f"cypheryn_egress_evaluations_total {evaluation_total}")
+    for key, metric_name in metric_map.items():
+        lines.append(f"cypheryn_{metric_name} {egress.get(key, 0)}")
+    lines.append(f"cypheryn_egress_evaluation_duration_seconds_count {len(egress_durations)}")
+    lines.append(f"cypheryn_egress_evaluation_duration_seconds_sum {sum(egress_durations):.6f}")
     federation = snapshot.get("federation", {})
     for metric in (
         "peers",
@@ -315,20 +370,15 @@ def prometheus_metrics(snapshot: dict) -> str:
     for boundary in FEDERATION_LATENCY_BUCKETS:
         cumulative = sum(value <= boundary for value in federation_latencies)
         lines.append(
-            "cypheryn_federation_delivery_latency_seconds_bucket"
-            f'{{le="{boundary}"}} {cumulative}'
+            f'cypheryn_federation_delivery_latency_seconds_bucket{{le="{boundary}"}} {cumulative}'
         )
     lines.append(
         "cypheryn_federation_delivery_latency_seconds_bucket"
         f'{{le="+Inf"}} {len(federation_latencies)}'
     )
+    lines.append(f"cypheryn_federation_delivery_latency_seconds_count {len(federation_latencies)}")
     lines.append(
-        "cypheryn_federation_delivery_latency_seconds_count "
-        f"{len(federation_latencies)}"
-    )
-    lines.append(
-        "cypheryn_federation_delivery_latency_seconds_sum "
-        f"{sum(federation_latencies):.6f}"
+        f"cypheryn_federation_delivery_latency_seconds_sum {sum(federation_latencies):.6f}"
     )
     for key in ("queued", "running", "failed", "cancelled", "retries", "expired_leases"):
         lines.append(f"cypheryn_jobs_{key} {queue[key]}")

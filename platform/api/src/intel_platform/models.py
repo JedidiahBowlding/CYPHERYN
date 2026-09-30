@@ -66,6 +66,26 @@ class JobStatus(enum.StrEnum):
     CANCELLED = "cancelled"
 
 
+class EgressDecision(enum.StrEnum):
+    ALLOW = "ALLOW"
+    BLOCK = "BLOCK"
+    REQUIRE_APPROVAL = "REQUIRE_APPROVAL"
+    ALLOW_WITH_REDACTION = "ALLOW_WITH_REDACTION"
+    QUARANTINE = "QUARANTINE"
+
+
+class EgressEventStatus(enum.StrEnum):
+    REQUESTED = "REQUESTED"
+    ALLOWED = "ALLOWED"
+    BLOCKED = "BLOCKED"
+    APPROVED = "APPROVED"
+    EXECUTED = "EXECUTED"
+    VERIFIED = "VERIFIED"
+    MISMATCHED = "MISMATCHED"
+    QUARANTINED = "QUARANTINED"
+    FAILED_CLOSED = "FAILED_CLOSED"
+
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -95,6 +115,120 @@ class Organization(Base):
     report_accent: Mapped[str] = mapped_column(String(7), default="#147d72", nullable=False)
     report_logo: Mapped[bytes | None] = mapped_column(LargeBinary)
     report_logo_mime: Mapped[str] = mapped_column(String(30), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ProtectedAgent(Base):
+    __tablename__ = "protected_agents"
+    __table_args__ = (Index("ix_protected_agent_org_status", "organization_id", "status"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    agent_type: Mapped[str] = mapped_column(String(80), default="development_agent")
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    runtime: Mapped[str] = mapped_column(String(120), default="unknown")
+    workspace: Mapped[str] = mapped_column(String(500), default="")
+    credential_reference: Mapped[str] = mapped_column(String(300), default="")
+    status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EgressPolicy(Base):
+    __tablename__ = "egress_policies"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "name", "version", name="uq_egress_policy_version"),
+        Index("ix_egress_policy_org_state", "organization_id", "state"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    version: Mapped[str] = mapped_column(String(40), nullable=False)
+    scope: Mapped[dict] = mapped_column(JSON, default=dict)
+    rules: Mapped[dict] = mapped_column(JSON, default=dict)
+    enforcement_mode: Mapped[str] = mapped_column(String(30), default="enforce")
+    state: Mapped[str] = mapped_column(String(30), default="draft")
+    integrity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    approved_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EgressEvent(Base):
+    __tablename__ = "egress_events"
+    __table_args__ = (
+        Index("ix_egress_event_org_time", "organization_id", "created_at"),
+        Index("ix_egress_event_decision", "organization_id", "decision"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    agent_id: Mapped[str] = mapped_column(ForeignKey("protected_agents.id"), nullable=False)
+    actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    correlation_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    action_type: Mapped[str] = mapped_column(String(160), nullable=False)
+    destination: Mapped[str] = mapped_column(String(500), nullable=False)
+    repository: Mapped[str] = mapped_column(String(300), default="")
+    normalized_request: Mapped[dict] = mapped_column(JSON, default=dict)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision: Mapped[EgressDecision] = mapped_column(Enum(EgressDecision), nullable=False)
+    reason_codes: Mapped[list] = mapped_column(JSON, default=list)
+    human_reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    policy_id: Mapped[str | None] = mapped_column(ForeignKey("egress_policies.id"))
+    policy_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    approval_id: Mapped[str | None] = mapped_column(String(36))
+    status: Mapped[EgressEventStatus] = mapped_column(Enum(EgressEventStatus), nullable=False)
+    execution_result: Mapped[dict] = mapped_column(JSON, default=dict)
+    verification_result: Mapped[dict] = mapped_column(JSON, default=dict)
+    previous_event_hash: Mapped[str | None] = mapped_column(String(64))
+    event_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EgressArtifact(Base):
+    __tablename__ = "egress_artifacts"
+    __table_args__ = (Index("ix_egress_artifact_event", "event_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    event_id: Mapped[str] = mapped_column(ForeignKey("egress_events.id"), nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    verified_mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    classification: Mapped[list] = mapped_column(JSON, default=list)
+    findings: Mapped[list] = mapped_column(JSON, default=list)
+    ocr_status: Mapped[str] = mapped_column(String(40), default="not_applicable")
+    quarantine_reference: Mapped[str] = mapped_column(String(500), default="")
+    redacted_artifact_reference: Mapped[str] = mapped_column(String(500), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class EgressApproval(Base):
+    __tablename__ = "egress_approvals"
+    __table_args__ = (Index("ix_egress_approval_event", "event_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    event_id: Mapped[str] = mapped_column(ForeignKey("egress_events.id"), nullable=False)
+    requested_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    decided_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    action_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class EgressFinding(Base):
+    __tablename__ = "egress_findings"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    event_id: Mapped[str] = mapped_column(ForeignKey("egress_events.id"), nullable=False)
+    severity: Mapped[str] = mapped_column(String(20), default="high", nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="open", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

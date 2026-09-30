@@ -109,3 +109,14 @@ def require_writer(db: Session, user_id: str, organization_id: str) -> Membershi
     if membership.role not in WRITE_ROLES:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Write permission required")
     return membership
+
+
+def require_organization_admin(
+    db: Session, user_id: str, organization_id: str
+) -> Membership:
+    membership = membership_for(db, user_id, organization_id)
+    if membership.role != MembershipRole.ORGANIZATION_ADMIN:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Organization administrator permission required"
+        )
+    return membership

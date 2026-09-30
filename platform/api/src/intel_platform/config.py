@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     federation_max_assertion_bytes: int = 64 * 1024
     federation_clock_skew_seconds: int = 300
     federation_rate_limit_per_minute: int = 60
+    egress_guard_enabled: bool = True
+    egress_guard_bind_host: str = "127.0.0.1"
+    egress_max_artifact_bytes: int = 5 * 1024 * 1024
+    egress_scan_timeout_seconds: int = 15
+    egress_quarantine_dir: str = "/data/egress-quarantine"
+    egress_rate_limit_per_minute: int = 120
+    egress_mandatory_scanners: list[str] = Field(default_factory=lambda: ["builtin-patterns"])
+    egress_organization_patterns: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_authentication(self) -> "Settings":

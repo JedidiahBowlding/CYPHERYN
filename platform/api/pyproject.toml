@@ -15,10 +15,12 @@ dependencies = [
   "cryptography>=50.0.0,<51",
   "dnspython>=2.7,<3",
   "certifi>=2024.8.30",
+  "urllib3>=2.8.0,<3",
   "sqlalchemy>=2.0,<3",
   "psycopg[binary]>=3.2,<4",
   "reportlab>=4.2,<5",
   "PyYAML>=6.0,<7",
+  "Pillow>=12.3.0,<13",
   "uvicorn[standard]>=0.32,<1",
 ]
 

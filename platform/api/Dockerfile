@@ -58,7 +58,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # of relying on the moving base tag to have been republished already.
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends clamav git yara \
+    && apt-get install -y --no-install-recommends clamav git tesseract-ocr yara \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -69,11 +69,16 @@ RUN pip install --no-cache-dir ".[dev]" \
     "dnstwist==20250130" \
     "maigret==0.6.5" \
     "semgrep==1.175.0"
+# Semgrep currently constrains PyJWT to the vulnerable 2.13 series even though
+# its CLI is compatible with the security-only 2.14 patch. Keep Semgrep's
+# resolved dependency set, then replace only PyJWT.
+RUN pip install --no-cache-dir --no-deps "PyJWT==2.14.0"
+RUN python -c "from importlib.metadata import version; from packaging.version import Version; assert Version(version('PyJWT')) >= Version('2.14.0'); assert Version(version('urllib3')) >= Version('2.8.0')"
 COPY --from=patched-security-tools /out/ /usr/local/bin/
 COPY tests ./tests
 
 RUN useradd --create-home --uid 10001 appuser \
-    && mkdir -p /data/quarantine /data/clamav-db \
+    && mkdir -p /data/quarantine/egress /data/clamav-db \
     && chown -R appuser:appuser /data
 USER appuser
 EXPOSE 8000

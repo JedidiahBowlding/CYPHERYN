@@ -188,7 +188,7 @@ cypheryn.com {
 		}
 
 		# Known application routes belong on the authenticated app subdomain.
-		@app_route path /assets* /dashboard* /detections* /exposure-graph* /findings* /identity* /intelligence* /investigations* /malware* /notifications* /reports* /settings*
+		@app_route path /assets* /dashboard* /detections* /egress* /exposure-graph* /findings* /identity* /intelligence* /investigations* /malware* /notifications* /reports* /settings*
 		handle @app_route {
 			redir https://app.cypheryn.com{uri} permanent
 		}

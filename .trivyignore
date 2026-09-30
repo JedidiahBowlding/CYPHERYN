@@ -4,6 +4,13 @@
 GHSA-6v7p-g79w-8964
 CVE-2025-47273
 
+# Docker's third-party build SBOM retains an obsolete urllib3 2.7.0 record as
+# the generic `Python` target. The final image installs urllib3 2.8.0, and
+# Trivy independently scans its 2.8.0 dist-info as clean. Keep these scoped to
+# the stale provenance record; the application constraint requires >=2.8.0.
+CVE-2026-97687
+CVE-2026-97689
+
 # Trivy is built from the pinned v0.74.0 source commit while its dependencies
 # are upgraded during the image build. That makes Go report the main module as
 # v0.0.0-...+dirty, so Trivy cannot recognize that these v0.71.x fixes are
