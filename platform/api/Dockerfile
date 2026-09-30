@@ -69,6 +69,10 @@ RUN pip install --no-cache-dir ".[dev]" \
     "dnstwist==20250130" \
     "maigret==0.6.5" \
     "semgrep==1.175.0"
+# Semgrep currently constrains PyJWT to the vulnerable 2.13 series even though
+# its CLI is compatible with the security-only 2.14 patch. Keep Semgrep's
+# resolved dependency set, then replace only PyJWT.
+RUN pip install --no-cache-dir --no-deps "PyJWT==2.14.0"
 COPY --from=patched-security-tools /out/ /usr/local/bin/
 COPY tests ./tests
 
