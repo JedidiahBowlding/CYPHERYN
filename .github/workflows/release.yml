@@ -80,7 +80,7 @@ jobs:
             -o "dist/CYPHERYN-${GITHUB_REF_NAME}.tar.gz" "$GITHUB_SHA"
           (cd dist && sha256sum * > SHA256SUMS)
       - name: Attest source artifact
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: dist/CYPHERYN-*.tar.gz
       - name: Publish GitHub release
