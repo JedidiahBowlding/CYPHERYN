@@ -35,7 +35,7 @@ jobs:
           cp -R project-site/. _site/
           cp docs/images/cypheryn-*.jpg _site/images/
       - name: Upload project site
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: _site
       - name: Deploy to GitHub Pages
