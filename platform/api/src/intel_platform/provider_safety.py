@@ -40,7 +40,7 @@ def default_timeout_seconds(provider: str) -> int:
         # A full, rate-limited template pass routinely exceeds three minutes.
         # Keep the scan bounded while allowing the isolated runner to finish.
         return 600
-    if provider in {"maigret", "testssl", "zap_passive", "zap_active"}:
+    if provider in {"maigret", "testssl", "zap_passive", "zap_active", "dnstwist"}:
         return 180
     if provider == "nmap":
         # Service detection and bounded NSE scripts can legitimately take more

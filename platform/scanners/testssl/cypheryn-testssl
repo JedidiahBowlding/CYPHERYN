@@ -17,7 +17,17 @@ report=/tmp/cypheryn-testssl.json
 # Keep the production check bounded and non-destructive: protocol negotiation
 # plus HTTP/TLS security headers. Vulnerability probes and exhaustive cipher
 # enumeration are intentionally excluded from this assessment profile.
-testssl.sh --quiet --warnings off --protocols --headers --jsonfile-pretty "$report" "$1" >/dev/null 2>&1 || status=$?
+attempt=1
+while [ "$attempt" -le 3 ]; do
+  rm -f "$report"
+  status=0
+  testssl.sh --quiet --warnings off --protocols --headers --jsonfile-pretty "$report" "$1" >/dev/null 2>&1 || status=$?
+  if [ -s "$report" ] && ! grep -q '"id"[[:space:]]*:[[:space:]]*"scanProblem"' "$report"; then
+    break
+  fi
+  [ "$attempt" -eq 3 ] || sleep $((attempt * 5))
+  attempt=$((attempt + 1))
+done
 if [ ! -s "$report" ]; then
   echo "testssl did not produce a JSON report (exit ${status:-0})" >&2
   exit "${status:-1}"
