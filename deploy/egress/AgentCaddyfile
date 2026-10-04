@@ -1,0 +1,13 @@
+{
+	auto_https off
+	admin off
+}
+
+:8015 {
+	@workloadEvaluation {
+		path /api/v1/security/evaluate
+		method POST
+	}
+	reverse_proxy @workloadEvaluation api:8000
+	respond "protected agents are not authorized for this control-plane operation" 403
+}

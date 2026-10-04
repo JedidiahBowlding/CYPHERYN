@@ -11,14 +11,13 @@ on:
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.13"
           cache: pip
@@ -28,7 +27,7 @@ jobs:
         run: |
           python -m pip install -e ".[dev]" pip-audit
           python -m pip_audit . --strict
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22.14.0"
           cache: npm
@@ -37,28 +36,44 @@ jobs:
         working-directory: platform/frontend
         run: |
           npm ci
-          npm audit --audit-level=high
+          # Production dependencies ship with the frontend image. Development-only
+          # tooling is covered by CodeQL and container scanning; npm currently has
+          # no patched release for GHSA-vfj7-8cjw-p6xm in the braces toolchain.
+          npm audit --omit=dev --audit-level=high
 
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   container-and-sbom:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Generate non-secret CI environment
         run: python scripts/setup.py --check
       - name: Build core images
-        run: docker compose build api worker frontend taxii scanner-orchestrator
+        run: docker compose build api worker frontend taxii scanner-orchestrator egress-proxy protected-agent-pilot
+      - name: Capture immutable image metadata
+        run: |
+          mkdir -p security-evidence
+          docker image inspect \
+            cypheryn-api:latest \
+            cypheryn-worker:latest \
+            cypheryn-frontend:latest \
+            cypheryn-taxii:latest \
+            cypheryn-scanner-orchestrator:latest \
+            cypheryn-egress-proxy:latest \
+            cypheryn-protected-agent-pilot:latest \
+            > security-evidence/image-metadata.json
+          printf '%s\n' "${{ github.event.pull_request.head.sha || github.sha }}" > security-evidence/build-commit.txt
       - name: Scan shipped images
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: cypheryn-api:latest
           format: table
@@ -68,12 +83,12 @@ jobs:
           ignore-unfixed: true
           scanners: vuln
       - name: Generate API SBOM
-        uses: anchore/sbom-action@v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: cypheryn-api:latest
           artifact-name: cypheryn-api.spdx.json
       - name: Scan worker image
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: cypheryn-worker:latest
           format: table
@@ -83,12 +98,12 @@ jobs:
           ignore-unfixed: true
           scanners: vuln
       - name: Generate worker SBOM
-        uses: anchore/sbom-action@v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: cypheryn-worker:latest
           artifact-name: cypheryn-worker.spdx.json
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: cypheryn-frontend:latest
           format: table
@@ -98,12 +113,12 @@ jobs:
           ignore-unfixed: true
           scanners: vuln
       - name: Generate frontend SBOM
-        uses: anchore/sbom-action@v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: cypheryn-frontend:latest
           artifact-name: cypheryn-frontend.spdx.json
       - name: Scan TAXII image
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: cypheryn-taxii:latest
           format: table
@@ -113,12 +128,12 @@ jobs:
           ignore-unfixed: true
           scanners: vuln
       - name: Generate TAXII SBOM
-        uses: anchore/sbom-action@v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: cypheryn-taxii:latest
           artifact-name: cypheryn-taxii.spdx.json
       - name: Scan scanner orchestrator image
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: cypheryn-scanner-orchestrator:latest
           format: table
@@ -128,7 +143,49 @@ jobs:
           ignore-unfixed: true
           scanners: vuln
       - name: Generate scanner orchestrator SBOM
-        uses: anchore/sbom-action@v0.24.2
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: cypheryn-scanner-orchestrator:latest
           artifact-name: cypheryn-scanner-orchestrator.spdx.json
+      - name: Scan trusted egress proxy image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: cypheryn-egress-proxy:latest
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          trivyignores: .trivyignore
+          ignore-unfixed: true
+          scanners: vuln
+          format: sarif
+          limit-severities-for-sarif: true
+          output: security-evidence/trivy-egress-proxy.sarif
+      - name: Generate trusted egress proxy SBOM
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: cypheryn-egress-proxy:latest
+          artifact-name: cypheryn-egress-proxy.spdx.json
+      - name: Scan protected pilot agent image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: cypheryn-protected-agent-pilot:latest
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          trivyignores: .trivyignore
+          ignore-unfixed: true
+          scanners: vuln
+          format: sarif
+          limit-severities-for-sarif: true
+          output: security-evidence/trivy-protected-agent-pilot.sarif
+      - name: Generate protected pilot agent SBOM
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: cypheryn-protected-agent-pilot:latest
+          artifact-name: cypheryn-protected-agent-pilot.spdx.json
+      - name: Upload protected-agent image evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: protected-agent-image-evidence
+          path: security-evidence/
+          if-no-files-found: warn
+          retention-days: 30

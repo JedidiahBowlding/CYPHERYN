@@ -22,7 +22,7 @@ def _digest(payload: dict) -> str:
 
 
 def _serialize_audit(event: AuditEvent) -> dict:
-    return {
+    payload = {
         "id": event.id,
         "organization_id": event.organization_id,
         "actor_id": event.actor_id,
@@ -34,6 +34,11 @@ def _serialize_audit(event: AuditEvent) -> dict:
         "occurred_at": _time(event.occurred_at),
         "previous_integrity_hash": event.previous_integrity_hash,
     }
+    # Preserve verification for historical human audit records while binding
+    # workload identity into all newly created workload audit records.
+    if event.security_client_id is not None:
+        payload["security_client_id"] = event.security_client_id
+    return payload
 
 
 def _serialize_evidence(source: EvidenceSource) -> dict:
@@ -65,12 +70,17 @@ def _transaction_lock(db: Session, scope: str) -> None:
 
 def seal_audit_event(db: Session, event: AuditEvent) -> None:
     _transaction_lock(db, event.organization_id)
+    referenced_hashes = select(AuditEvent.previous_integrity_hash).where(
+        AuditEvent.organization_id == event.organization_id,
+        AuditEvent.previous_integrity_hash.is_not(None),
+    )
     previous = db.scalar(
         select(AuditEvent)
         .where(
             AuditEvent.organization_id == event.organization_id,
             AuditEvent.id != event.id,
             AuditEvent.integrity_hash.is_not(None),
+            AuditEvent.integrity_hash.not_in(referenced_hashes),
         )
         .order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc())
         .limit(1)

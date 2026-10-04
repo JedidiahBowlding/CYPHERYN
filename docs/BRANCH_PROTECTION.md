@@ -32,6 +32,17 @@ Required checks:
 - `container-and-sbom`
 - `Analyze (python)`
 - `Analyze (javascript-typescript)`
+- `concurrency`
+- `independence`
+- `PostgreSQL authority and migrations`
+
+The Ubuntu `utilities-api` check installs Tesseract so the OCR classification test
+is executed rather than skipped. `PostgreSQL authority and migrations` provisions
+an isolated PostgreSQL 17 service, executes the single-use/concurrency test, verifies
+upgrade from the previous baseline, exercises the supported development downgrade and
+re-upgrade path, and validates clean-development initialization. The two federation
+checks remain independently required so a green generic API matrix cannot hide a
+database race or two-node regression.
 
 Repository administrators should review this list whenever workflow job names change.
 Renaming a required job without updating branch protection can block legitimate merges;

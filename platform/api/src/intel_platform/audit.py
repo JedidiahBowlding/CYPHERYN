@@ -10,7 +10,8 @@ def record_audit(
     db: Session,
     *,
     organization_id: str,
-    actor_id: str,
+    actor_id: str | None,
+    security_client_id: str | None = None,
     action: str,
     object_type: str,
     object_id: str,
@@ -20,6 +21,7 @@ def record_audit(
     event = AuditEvent(
         organization_id=organization_id,
         actor_id=actor_id,
+        security_client_id=security_client_id,
         action=action,
         object_type=object_type,
         object_id=object_id,

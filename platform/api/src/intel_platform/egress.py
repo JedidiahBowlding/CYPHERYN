@@ -39,6 +39,18 @@ SECRET_PATTERNS = {
     "generic_secret": re.compile(
         r"(?i)\b(?:api[_-]?key|secret|password|token)\b\s*[:=]\s*['\"]?([^\s'\"]{12,})"
     ),
+    "bearer_token": re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{12,}"),
+    "authorization_header": re.compile(
+        r"(?im)^\s*authorization\s*:\s*(?:bearer|basic)\s+\S+"
+    ),
+    "database_credentials": re.compile(
+        r"(?i)\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis)://"
+        r"[^\s:@/]+:[^\s@/]+@"
+    ),
+    "session_token": re.compile(
+        r"(?i)\b(?:session(?:_id)?|session_token)\b\s*[:=]\s*['\"]?"
+        r"[^\s'\"]{12,}"
+    ),
 }
 PII_PATTERNS = {
     "email_address": re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I),
@@ -256,6 +268,7 @@ def evaluate_policy(
     artifact_classifications: list[str],
     approved_private_repositories: list[str],
     mandatory_scanners_healthy: bool,
+    approved_destinations: set[str] | None = None,
 ) -> tuple[str, list[str], str]:
     if not mandatory_scanners_healthy:
         return "BLOCK", ["MANDATORY_SCANNER_UNHEALTHY"], "A mandatory local scanner is unavailable."
@@ -278,7 +291,10 @@ def evaluate_policy(
             ["PUBLIC_REPOSITORY_PROHIBITED"],
             "Agents may not create or expose public repositories.",
         )
-    if destination not in KNOWN_DESTINATIONS:
+    destination_allowlist = (
+        approved_destinations if approved_destinations is not None else KNOWN_DESTINATIONS
+    )
+    if destination not in destination_allowlist:
         return (
             "BLOCK",
             ["UNKNOWN_OUTBOUND_DESTINATION"],
@@ -319,9 +335,18 @@ def seal_event(db: Session, event: EgressEvent) -> None:
             text("SELECT pg_advisory_xact_lock(hashtext(:scope))"),
             {"scope": f"cypheryn-egress:{event.organization_id}"},
         )
+    referenced_hashes = select(EgressEvent.previous_event_hash).where(
+        EgressEvent.organization_id == event.organization_id,
+        EgressEvent.previous_event_hash.is_not(None),
+    )
     previous = db.scalar(
         select(EgressEvent)
-        .where(EgressEvent.organization_id == event.organization_id, EgressEvent.id != event.id)
+        .where(
+            EgressEvent.organization_id == event.organization_id,
+            EgressEvent.id != event.id,
+            EgressEvent.event_hash.is_not(None),
+            EgressEvent.event_hash.not_in(referenced_hashes),
+        )
         .order_by(EgressEvent.created_at.desc(), EgressEvent.id.desc())
         .limit(1)
     )
@@ -333,7 +358,10 @@ def event_payload(event: EgressEvent) -> dict:
     created_at = event.created_at
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=UTC)
-    return {
+    request_timestamp = event.request_timestamp
+    if request_timestamp is not None and request_timestamp.tzinfo is None:
+        request_timestamp = request_timestamp.replace(tzinfo=UTC)
+    payload = {
         "id": event.id,
         "organization_id": event.organization_id,
         "agent_id": event.agent_id,
@@ -351,6 +379,30 @@ def event_payload(event: EgressEvent) -> dict:
         "previous_event_hash": event.previous_event_hash,
         "created_at": created_at.astimezone(UTC).isoformat(),
     }
+    if event.security_client_id is not None:
+        payload.update(
+            {
+                "security_client_id": event.security_client_id,
+                "capability": event.capability,
+                "environment": event.environment,
+                "resource_scope": event.resource_scope,
+                "data_classifications": event.data_classifications,
+                "policy_trace": event.policy_trace,
+                "policy_mode": event.policy_mode,
+                "evaluated_decision": event.evaluated_decision,
+                "effective_decision": event.effective_decision,
+                "enforced_decision": event.enforced_decision,
+                "human_reason": event.human_reason,
+                "risk_score": event.risk_score,
+                "request_id": event.request_id,
+                "idempotency_key_hash": event.idempotency_key_hash,
+                "nonce_hash": event.nonce_hash,
+                "request_timestamp": (
+                    request_timestamp.astimezone(UTC).isoformat() if request_timestamp else None
+                ),
+            }
+        )
+    return payload
 
 
 def verify_event(event: EgressEvent) -> bool:

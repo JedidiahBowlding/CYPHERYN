@@ -8,10 +8,11 @@ version = "0.9.0"
 description = "CYPHERYN evidence-grounded defensive intelligence API and worker"
 requires-python = ">=3.12"
 dependencies = [
+  "alembic>=1.14,<2",
   "fastapi>=0.115,<1",
   "httpx>=0.28,<1",
   "pydantic-settings>=2.6,<3",
-  "PyJWT[crypto]>=2.10,<3",
+  "PyJWT[crypto]>=2.15.0,<3",
   "cryptography>=50.0.0,<51",
   "dnspython>=2.7,<3",
   "certifi>=2024.8.30",

@@ -53,6 +53,30 @@ class Settings(BaseSettings):
     egress_rate_limit_per_minute: int = 120
     egress_mandatory_scanners: list[str] = Field(default_factory=lambda: ["builtin-patterns"])
     egress_organization_patterns: list[str] = Field(default_factory=list)
+    security_request_clock_skew_seconds: int = 300
+    security_authorization_ttl_seconds: int = Field(default=60, ge=5, le=300)
+    security_resolution_ttl_seconds: int = Field(default=30, ge=5, le=120)
+    trusted_egress_proxy_enabled: bool = False
+    trusted_egress_proxy_control_plane_url: str = "http://api:8000"
+    trusted_egress_proxy_max_request_bytes: int = Field(
+        default=1024 * 1024, ge=1024, le=10 * 1024 * 1024
+    )
+    trusted_egress_proxy_max_response_bytes: int = Field(
+        default=5 * 1024 * 1024, ge=1024, le=25 * 1024 * 1024
+    )
+    trusted_egress_proxy_max_header_bytes: int = Field(
+        default=32 * 1024, ge=4096, le=128 * 1024
+    )
+    trusted_egress_proxy_connect_timeout_seconds: float = Field(default=5.0, ge=0.1, le=30)
+    trusted_egress_proxy_read_timeout_seconds: float = Field(default=20.0, ge=0.1, le=120)
+    trusted_egress_proxy_validation_timeout_seconds: float = Field(
+        default=5.0, ge=0.1, le=30
+    )
+    trusted_egress_proxy_max_redirects: int = Field(default=3, ge=0, le=10)
+    trusted_egress_proxy_replica_id: str = Field(default="", max_length=128)
+    trusted_egress_proxy_mtls_ca_file: str = ""
+    trusted_egress_proxy_mtls_cert_file: str = ""
+    trusted_egress_proxy_mtls_key_file: str = ""
 
     @model_validator(mode="after")
     def validate_authentication(self) -> "Settings":
@@ -63,6 +87,17 @@ class Settings(BaseSettings):
                 "PLATFORM_AUTH_PROXY_SECRET must contain at least 32 characters "
                 "when trusted proxy authentication is enabled"
             )
+        if self.trusted_egress_proxy_enabled and self.environment.lower() == "production":
+            if not self.trusted_egress_proxy_control_plane_url.startswith("https://"):
+                raise ValueError("The production trusted egress proxy requires HTTPS control plane")
+            if not all(
+                (
+                    self.trusted_egress_proxy_mtls_ca_file,
+                    self.trusted_egress_proxy_mtls_cert_file,
+                    self.trusted_egress_proxy_mtls_key_file,
+                )
+            ):
+                raise ValueError("The production trusted egress proxy requires mTLS credentials")
         return self
 
 
