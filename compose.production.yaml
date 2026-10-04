@@ -16,7 +16,7 @@ services:
         NEXT_PUBLIC_PLATFORM_API_URL: https://app.cypheryn.com
 
   oauth2-proxy:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.4
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
     restart: unless-stopped
     command:
       - --provider=oidc
