@@ -148,7 +148,6 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: cypheryn-egress-proxy:latest
-          format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
           trivyignores: .trivyignore
@@ -165,7 +164,6 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: cypheryn-protected-agent-pilot:latest
-          format: table
           severity: HIGH,CRITICAL
           exit-code: "1"
           trivyignores: .trivyignore
