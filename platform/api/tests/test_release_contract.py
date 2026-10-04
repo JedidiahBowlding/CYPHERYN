@@ -74,3 +74,11 @@ def test_frontend_declares_linux_rolldown_bindings_for_container_builds() -> Non
     optional = package["optionalDependencies"]
     assert optional["@rolldown/binding-linux-x64-gnu"] == "1.2.6"
     assert optional["@rolldown/binding-linux-arm64-gnu"] == "1.2.6"
+
+
+def test_postgres_upgrade_uses_immutable_pre_alembic_baseline() -> None:
+    workflow = (
+        ROOT / ".github/workflows/protected-agent-review.yml"
+    ).read_text(encoding="utf-8")
+    assert "0570c28c6ef2d93f50fd53bb1b3b79e8684c7add" in workflow
+    assert "github.event.pull_request.base.sha" not in workflow

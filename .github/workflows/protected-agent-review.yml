@@ -33,10 +33,13 @@ jobs:
     steps:
       - name: Check out candidate
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Check out previous baseline
+      # This is the immutable pre-Alembic production schema that the first
+      # protected-agent migration upgrades. A moving PR base eventually contains
+      # the new tables itself and produces a false DuplicateTable failure.
+      - name: Check out certified pre-Alembic baseline
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.pull_request.base.sha || github.event.before }}
+          ref: 0570c28c6ef2d93f50fd53bb1b3b79e8684c7add
           path: migration-baseline
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
