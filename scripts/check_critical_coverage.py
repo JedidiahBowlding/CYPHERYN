@@ -29,6 +29,12 @@ THRESHOLDS = {
     "malware_analysis.py": 90,
     "federation.py": 70,
     "federation_api.py": 70,
+    "security_api.py": 75,
+    "security_control.py": 80,
+    "security_contracts.py": 90,
+    "destination_security.py": 80,
+    "migration_guard.py": 90,
+    "auth.py": 80,
 }
 
 

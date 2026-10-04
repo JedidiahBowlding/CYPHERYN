@@ -64,16 +64,18 @@ RUN apt-get update \
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
+COPY alembic.ini ./alembic.ini
+COPY migrations ./migrations
 RUN pip install --no-cache-dir ".[dev]" \
     "checkov==3.3.16" \
     "dnstwist==20250130" \
     "maigret==0.6.5" \
     "semgrep==1.175.0"
-# Semgrep currently constrains PyJWT to the vulnerable 2.13 series even though
-# its CLI is compatible with the security-only 2.14 patch. Keep Semgrep's
+# Semgrep can constrain PyJWT below the current security floor even though its
+# CLI is compatible with the security-only 2.15 patch. Keep Semgrep's
 # resolved dependency set, then replace only PyJWT.
-RUN pip install --no-cache-dir --no-deps "PyJWT==2.14.0"
-RUN python -c "from importlib.metadata import version; from packaging.version import Version; assert Version(version('PyJWT')) >= Version('2.14.0'); assert Version(version('urllib3')) >= Version('2.8.0')"
+RUN pip install --no-cache-dir --no-deps "PyJWT==2.15.0"
+RUN python -c "from importlib.metadata import version; from packaging.version import Version; assert Version(version('PyJWT')) >= Version('2.15.0'); assert Version(version('urllib3')) >= Version('2.8.0')"
 COPY --from=patched-security-tools /out/ /usr/local/bin/
 COPY tests ./tests
 

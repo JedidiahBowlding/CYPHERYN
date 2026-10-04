@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     egress_rate_limit_per_minute: int = 120
     egress_mandatory_scanners: list[str] = Field(default_factory=lambda: ["builtin-patterns"])
     egress_organization_patterns: list[str] = Field(default_factory=list)
+    security_request_clock_skew_seconds: int = 300
 
     @model_validator(mode="after")
     def validate_authentication(self) -> "Settings":

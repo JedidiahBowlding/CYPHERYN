@@ -256,6 +256,7 @@ def evaluate_policy(
     artifact_classifications: list[str],
     approved_private_repositories: list[str],
     mandatory_scanners_healthy: bool,
+    approved_destinations: set[str] | None = None,
 ) -> tuple[str, list[str], str]:
     if not mandatory_scanners_healthy:
         return "BLOCK", ["MANDATORY_SCANNER_UNHEALTHY"], "A mandatory local scanner is unavailable."
@@ -278,7 +279,10 @@ def evaluate_policy(
             ["PUBLIC_REPOSITORY_PROHIBITED"],
             "Agents may not create or expose public repositories.",
         )
-    if destination not in KNOWN_DESTINATIONS:
+    destination_allowlist = (
+        approved_destinations if approved_destinations is not None else KNOWN_DESTINATIONS
+    )
+    if destination not in destination_allowlist:
         return (
             "BLOCK",
             ["UNKNOWN_OUTBOUND_DESTINATION"],
@@ -333,7 +337,7 @@ def event_payload(event: EgressEvent) -> dict:
     created_at = event.created_at
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=UTC)
-    return {
+    payload = {
         "id": event.id,
         "organization_id": event.organization_id,
         "agent_id": event.agent_id,
@@ -351,6 +355,25 @@ def event_payload(event: EgressEvent) -> dict:
         "previous_event_hash": event.previous_event_hash,
         "created_at": created_at.astimezone(UTC).isoformat(),
     }
+    if event.security_client_id is not None:
+        payload.update(
+            {
+                "security_client_id": event.security_client_id,
+                "capability": event.capability,
+                "environment": event.environment,
+                "resource_scope": event.resource_scope,
+                "data_classifications": event.data_classifications,
+                "policy_trace": event.policy_trace,
+                "policy_mode": event.policy_mode,
+                "evaluated_decision": event.evaluated_decision,
+                "effective_decision": event.effective_decision,
+                "enforced_decision": event.enforced_decision,
+                "request_id": event.request_id,
+                "idempotency_key_hash": event.idempotency_key_hash,
+                "nonce_hash": event.nonce_hash,
+            }
+        )
+    return payload
 
 
 def verify_event(event: EgressEvent) -> bool:

@@ -26,6 +26,7 @@ from .job_events import append_job_event
 from .legal import CURRENT_AGREEMENTS, current_acceptance
 from .local_ai import LocalNarrativeError, generate_local_narrative
 from .malware_analysis import correlate_hashes, quarantine_file, scan_clamav, scan_yara
+from .migration_guard import assert_database_current
 from .models import (
     AlertNotification,
     AnalysisSnapshot,
@@ -131,6 +132,7 @@ from .schemas import (
     TargetRead,
     ThreatIntelObjectRead,
 )
+from .security_api import router as security_router
 from .stix_ingest import import_stix_bundle
 
 register_builtin_providers(registry)
@@ -149,10 +151,14 @@ def provider_version_label(provider) -> str:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    from .schema_upgrade import upgrade_existing_schema
+    settings = get_settings()
+    if settings.environment.lower() == "production":
+        assert_database_current(engine)
+    else:
+        Base.metadata.create_all(bind=engine)
+        from .schema_upgrade import upgrade_existing_schema
 
-    upgrade_existing_schema()
+        upgrade_existing_schema()
     yield
 
 
@@ -165,6 +171,7 @@ app = FastAPI(
 )
 app.include_router(federation_router)
 app.include_router(egress_router)
+app.include_router(security_router)
 
 
 @app.get("/api/public/stats", response_model=PublicPlatformStats)

@@ -22,6 +22,7 @@ from .auth import (
 from .config import Settings, get_settings
 from .database import get_db
 from .egress import (
+    KNOWN_DESTINATIONS,
     POLICY_ID,
     POLICY_VERSION,
     digest,
@@ -44,9 +45,11 @@ from .models import (
     EgressPolicy,
     MembershipRole,
     ProtectedAgent,
+    SecurityDestination,
     User,
 )
 from .observability import record_egress_event, structured_log
+from .security_contracts import normalize_classifications
 
 router = APIRouter(prefix="/api/v1/egress", tags=["agent-egress-firewall"])
 _rate_lock = threading.Lock()
@@ -181,6 +184,27 @@ def _ensure_default_policy(db: Session, organization_id: str, user_id: str) -> E
     )
     db.add(policy)
     db.flush()
+    for hostname in sorted({"github.com", "api.github.com", "uploads.github.com"}):
+        destination = db.scalar(
+            select(SecurityDestination).where(
+                SecurityDestination.organization_id == organization_id,
+                SecurityDestination.environment == "production",
+                SecurityDestination.hostname == hostname,
+            )
+        )
+        if destination is None:
+            db.add(
+                SecurityDestination(
+                    organization_id=organization_id,
+                    canonical_identifier=f"https://{hostname}",
+                    destination_type="https",
+                    hostname=hostname,
+                    environment="production",
+                    trust_state="trusted",
+                    reputation_metadata={"source": "cypheryn-github-compatibility"},
+                    created_by_id=user_id,
+                )
+            )
     return policy
 
 
@@ -268,7 +292,10 @@ def artifact_scan(
         record_egress_event("scanner_failure")
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
     record_egress_event("artifact_scanned", sensitive=bool(result.classification))
-    return result.__dict__
+    return {
+        **result.__dict__,
+        "canonical_classification": normalize_classifications(result.classification),
+    }
 
 
 @router.post("/evaluate", status_code=201)
@@ -308,11 +335,21 @@ def evaluate(
         }
     )
     approved_repositories = list(policy.rules.get("approved_private_repositories", []))
+    approved_destinations = set(KNOWN_DESTINATIONS) | {
+        item.hostname
+        for item in db.scalars(
+            select(SecurityDestination).where(
+                SecurityDestination.organization_id == payload.organization_id,
+                SecurityDestination.trust_state.in_(["trusted", "approved"]),
+            )
+        )
+    }
     decision, reasons, reason = evaluate_policy(
         action,
         artifact_classifications=classifications,
         approved_private_repositories=approved_repositories,
         mandatory_scanners_healthy=scanner_healthy,
+        approved_destinations=approved_destinations,
     )
     if not scanner_healthy:
         status_value = EgressEventStatus.FAILED_CLOSED
@@ -533,6 +570,7 @@ def get_event(
             "size": item.size,
             "sha256": item.sha256,
             "classification": item.classification,
+            "canonical_classification": normalize_classifications(item.classification),
             "findings": item.findings,
             "ocr_status": item.ocr_status,
             "quarantined": bool(item.quarantine_reference),

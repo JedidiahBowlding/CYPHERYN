@@ -19,6 +19,34 @@ class Principal:
     email: str | None = None
 
 
+@dataclass(frozen=True)
+class WorkloadPrincipal:
+    subject: str
+    client_id: str
+
+
+def _bearer_claims(request: Request, settings: Settings) -> dict:
+    authorization = request.headers.get("Authorization", "")
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bearer authentication required")
+    if not settings.oidc_jwks_url or not settings.oidc_issuer:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "OIDC is not configured")
+
+    token = authorization.removeprefix("Bearer ").strip()
+    try:
+        signing_key = PyJWKClient(settings.oidc_jwks_url).get_signing_key_from_jwt(token)
+        return jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256", "ES256"],
+            audience=settings.oidc_audience,
+            issuer=settings.oidc_issuer,
+            options={"require": ["exp", "iat", "sub"]},
+        )
+    except jwt.PyJWTError as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid bearer token") from exc
+
+
 def get_principal(
     request: Request,
     settings: Settings = Depends(get_settings),
@@ -45,26 +73,27 @@ def get_principal(
                 email=request.headers.get("X-Auth-Request-Email"),
             )
 
-    authorization = request.headers.get("Authorization", "")
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bearer authentication required")
-    if not settings.oidc_jwks_url or not settings.oidc_issuer:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "OIDC is not configured")
-
-    token = authorization.removeprefix("Bearer ").strip()
-    try:
-        signing_key = PyJWKClient(settings.oidc_jwks_url).get_signing_key_from_jwt(token)
-        claims = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256", "ES256"],
-            audience=settings.oidc_audience,
-            issuer=settings.oidc_issuer,
-            options={"require": ["exp", "iat", "sub"]},
-        )
-    except jwt.PyJWTError as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid bearer token") from exc
+    claims = _bearer_claims(request, settings)
     return Principal(subject=claims["sub"], email=claims.get("email"))
+
+
+def get_workload_principal(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> WorkloadPrincipal:
+    """Authenticate an OAuth/OIDC client-credentials access token.
+
+    Workload routes intentionally do not trust browser proxy identity headers or
+    developer identity headers. The external client identifier is taken only from
+    verified token claims issued by the configured identity provider.
+    """
+    claims = _bearer_claims(request, settings)
+    client_id = str(claims.get("azp") or claims.get("client_id") or "").strip()
+    grant_type = str(claims.get("gty") or claims.get("grant_type") or "").lower()
+    valid_grants = {"client-credentials", "client_credentials"}
+    if not client_id or grant_type not in valid_grants:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Workload access token required")
+    return WorkloadPrincipal(subject=str(claims["sub"]), client_id=client_id)
 
 
 def get_current_user(

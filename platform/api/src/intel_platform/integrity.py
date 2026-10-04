@@ -22,7 +22,7 @@ def _digest(payload: dict) -> str:
 
 
 def _serialize_audit(event: AuditEvent) -> dict:
-    return {
+    payload = {
         "id": event.id,
         "organization_id": event.organization_id,
         "actor_id": event.actor_id,
@@ -34,6 +34,11 @@ def _serialize_audit(event: AuditEvent) -> dict:
         "occurred_at": _time(event.occurred_at),
         "previous_integrity_hash": event.previous_integrity_hash,
     }
+    # Preserve verification for historical human audit records while binding
+    # workload identity into all newly created workload audit records.
+    if event.security_client_id is not None:
+        payload["security_client_id"] = event.security_client_id
+    return payload
 
 
 def _serialize_evidence(source: EvidenceSource) -> dict:

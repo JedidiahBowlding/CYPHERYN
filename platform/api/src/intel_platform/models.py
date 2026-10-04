@@ -130,8 +130,100 @@ class ProtectedAgent(Base):
     workspace: Mapped[str] = mapped_column(String(500), default="")
     credential_reference: Mapped[str] = mapped_column(String(300), default="")
     status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    environment: Mapped[str] = mapped_column(String(80), default="production", nullable=False)
+    risk_level: Mapped[str] = mapped_column(String(30), default="standard", nullable=False)
+    owner_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    security_client_id: Mapped[str | None] = mapped_column(
+        ForeignKey("security_clients.id"), index=True
+    )
+    credential_state: Mapped[str] = mapped_column(String(30), default="managed", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SecurityClient(Base):
+    __tablename__ = "security_clients"
+    __table_args__ = (
+        UniqueConstraint("external_client_id", name="uq_security_client_oidc"),
+        Index("ix_security_client_org_status", "organization_id", "status"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    external_client_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    environment: Mapped[str] = mapped_column(String(80), default="production", nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    credential_reference: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+    credential_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
+    last_authenticated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentCapability(Base):
+    __tablename__ = "agent_capabilities"
+    __table_args__ = (UniqueConstraint("name", name="uq_agent_capability_name"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    risk_level: Mapped[str] = mapped_column(String(30), default="standard", nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AgentCapabilityGrant(Base):
+    __tablename__ = "agent_capability_grants"
+    __table_args__ = (
+        Index("ix_agent_capability_grant_agent", "agent_id", "status"),
+        UniqueConstraint(
+            "agent_id", "capability_id", "environment", "resource_scope_hash",
+            name="uq_agent_capability_scope",
+        ),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    agent_id: Mapped[str] = mapped_column(ForeignKey("protected_agents.id"), nullable=False)
+    capability_id: Mapped[str] = mapped_column(ForeignKey("agent_capabilities.id"), nullable=False)
+    environment: Mapped[str] = mapped_column(String(80), default="production", nullable=False)
+    resource_scope: Mapped[dict] = mapped_column(JSON, default=dict)
+    resource_scope_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SecurityDestination(Base):
+    __tablename__ = "security_destinations"
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id", "environment", "canonical_identifier",
+            name="uq_security_destination_scope",
+        ),
+        Index("ix_security_destination_org_trust", "organization_id", "trust_state"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    canonical_identifier: Mapped[str] = mapped_column(String(500), nullable=False)
+    destination_type: Mapped[str] = mapped_column(String(60), default="hostname", nullable=False)
+    hostname: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    service_identity: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    environment: Mapped[str] = mapped_column(String(80), default="production", nullable=False)
+    trust_state: Mapped[str] = mapped_column(String(30), default="unknown", nullable=False)
+    reputation_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
 
 class EgressPolicy(Base):
@@ -147,6 +239,8 @@ class EgressPolicy(Base):
     scope: Mapped[dict] = mapped_column(JSON, default=dict)
     rules: Mapped[dict] = mapped_column(JSON, default=dict)
     enforcement_mode: Mapped[str] = mapped_column(String(30), default="enforce")
+    policy_type: Mapped[str] = mapped_column(String(50), default="egress", nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
     state: Mapped[str] = mapped_column(String(30), default="draft")
     integrity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -160,15 +254,24 @@ class EgressEvent(Base):
     __table_args__ = (
         Index("ix_egress_event_org_time", "organization_id", "created_at"),
         Index("ix_egress_event_decision", "organization_id", "decision"),
+        UniqueConstraint(
+            "security_client_id", "idempotency_key_hash", name="uq_egress_client_idempotency"
+        ),
+        UniqueConstraint("security_client_id", "nonce_hash", name="uq_egress_client_nonce"),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
     agent_id: Mapped[str] = mapped_column(ForeignKey("protected_agents.id"), nullable=False)
-    actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    actor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    security_client_id: Mapped[str | None] = mapped_column(ForeignKey("security_clients.id"))
     correlation_id: Mapped[str] = mapped_column(String(128), nullable=False)
     action_type: Mapped[str] = mapped_column(String(160), nullable=False)
     destination: Mapped[str] = mapped_column(String(500), nullable=False)
     repository: Mapped[str] = mapped_column(String(300), default="")
+    capability: Mapped[str] = mapped_column(String(160), default="", nullable=False)
+    environment: Mapped[str] = mapped_column(String(80), default="production", nullable=False)
+    resource_scope: Mapped[dict] = mapped_column(JSON, default=dict)
+    data_classifications: Mapped[list] = mapped_column(JSON, default=list)
     normalized_request: Mapped[dict] = mapped_column(JSON, default=dict)
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     decision: Mapped[EgressDecision] = mapped_column(Enum(EgressDecision), nullable=False)
@@ -176,6 +279,16 @@ class EgressEvent(Base):
     human_reason: Mapped[str] = mapped_column(String(1000), nullable=False)
     policy_id: Mapped[str | None] = mapped_column(ForeignKey("egress_policies.id"))
     policy_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    policy_trace: Mapped[list] = mapped_column(JSON, default=list)
+    policy_mode: Mapped[str] = mapped_column(String(30), default="enforce", nullable=False)
+    evaluated_decision: Mapped[str] = mapped_column(String(32), default="BLOCK", nullable=False)
+    effective_decision: Mapped[str] = mapped_column(String(32), default="BLOCK", nullable=False)
+    enforced_decision: Mapped[str] = mapped_column(String(32), default="BLOCK", nullable=False)
+    risk_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    request_id: Mapped[str] = mapped_column(String(128), default="", nullable=False)
+    idempotency_key_hash: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    nonce_hash: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    request_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approval_id: Mapped[str | None] = mapped_column(String(36))
     status: Mapped[EgressEventStatus] = mapped_column(Enum(EgressEventStatus), nullable=False)
     execution_result: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -295,7 +408,8 @@ class AuditEvent(Base):
     __table_args__ = (Index("ix_audit_org_time", "organization_id", "occurred_at"),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
-    actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    actor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    security_client_id: Mapped[str | None] = mapped_column(ForeignKey("security_clients.id"))
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     object_type: Mapped[str] = mapped_column(String(100), nullable=False)
     object_id: Mapped[str] = mapped_column(String(36), nullable=False)
