@@ -897,7 +897,19 @@ def evaluate_security_request(
         status=status_for(internal_effective),
     )
     db.add(event)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        concurrent = db.scalar(
+            select(EgressEvent).where(
+                EgressEvent.security_client_id == client.id,
+                EgressEvent.idempotency_key_hash == idempotency_hash,
+            )
+        )
+        if concurrent and concurrent.normalized_request.get("input_hash") == input_hash:
+            return _receipt(concurrent)
+        raise HTTPException(status.HTTP_409_CONFLICT, "Duplicate security request") from exc
     seal_event(db, event)
     client.last_authenticated_at = now
     agent.last_seen_at = now
@@ -916,6 +928,14 @@ def evaluate_security_request(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
+        concurrent = db.scalar(
+            select(EgressEvent).where(
+                EgressEvent.security_client_id == client.id,
+                EgressEvent.idempotency_key_hash == idempotency_hash,
+            )
+        )
+        if concurrent and concurrent.normalized_request.get("input_hash") == input_hash:
+            return _receipt(concurrent)
         raise HTTPException(status.HTTP_409_CONFLICT, "Duplicate security request") from exc
     return _receipt(event)
 

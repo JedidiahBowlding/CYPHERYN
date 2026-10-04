@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import json
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -8,11 +10,20 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from starlette.requests import Request
 
-from intel_platform.auth import WorkloadPrincipal, get_workload_principal
+from intel_platform.auth import Principal, WorkloadPrincipal, get_principal, get_workload_principal
 from intel_platform.config import Settings
 from intel_platform.destination_security import UnsafeDestination, canonicalize_destination
+from intel_platform.egress import scan_artifact, verify_event
+from intel_platform.integrity import verify_audit_event
 from intel_platform.main import app
-from intel_platform.models import EgressEvent, EgressPolicy, ProtectedAgent
+from intel_platform.models import (
+    AgentCapability,
+    AuditEvent,
+    EgressEvent,
+    EgressPolicy,
+    ProtectedAgent,
+    SecurityDestination,
+)
 from intel_platform.security_control import policy_integrity
 
 
@@ -125,6 +136,40 @@ def test_invalid_workload_token_is_rejected(monkeypatch):
     )
     with pytest.raises(HTTPException) as exc:
         get_workload_principal(request, settings)
+    assert exc.value.status_code == 401
+
+
+def test_expired_workload_token_is_rejected(monkeypatch):
+    class SyntheticSigningKey:
+        key = object()
+
+    class SyntheticJwks:
+        def __init__(self, _url):
+            pass
+
+        def get_signing_key_from_jwt(self, _token):
+            return SyntheticSigningKey()
+
+    def expired_decode(*_args, **_kwargs):
+        raise jwt.ExpiredSignatureError("synthetic expired token")
+
+    monkeypatch.setattr("intel_platform.auth.PyJWKClient", SyntheticJwks)
+    monkeypatch.setattr("intel_platform.auth.jwt.decode", expired_decode)
+    request = Request(
+        {
+            "type": "http",
+            "headers": [(b"authorization", b"Bearer synthetic-expired-token")],
+        }
+    )
+    with pytest.raises(HTTPException) as exc:
+        get_workload_principal(
+            request,
+            Settings(
+                oidc_issuer="https://issuer.example/",
+                oidc_audience="cypheryn",
+                oidc_jwks_url="https://issuer.example/.well-known/jwks.json",
+            ),
+        )
     assert exc.value.status_code == 401
 
 
@@ -407,3 +452,337 @@ def test_workload_cannot_evaluate_another_clients_agent(client):
         json=_evaluation(second_agent["id"]),
     )
     assert response.status_code == 404
+
+
+def test_unknown_workload_client_and_unknown_agent_fail_closed(client):
+    _, _, agent_id, _ = _foundation(client)
+    app.dependency_overrides[get_workload_principal] = lambda: WorkloadPrincipal(
+        subject="unknown@clients", client_id="unknown-client"
+    )
+    unknown_client = client.post("/api/v1/security/evaluate", json=_evaluation(agent_id))
+    assert unknown_client.status_code == 401
+
+    _workload(client)
+    unknown_agent = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation("00000000-0000-0000-0000-000000000000"),
+    )
+    assert unknown_agent.status_code == 404
+
+
+def test_wrong_resource_scope_and_disabled_capability_are_denied(client):
+    organization_id, _, agent_id, _ = _foundation(client)
+    with client.app.state.testing_session() as db:
+        grant = next(iter(agent_grants(db, organization_id, agent_id)))
+        grant.resource_scope = {"method": ["GET"]}
+        capability = db.scalar(select(AgentCapability).where(AgentCapability.name == "web.read"))
+        db.commit()
+
+    _workload(client)
+    wrong_scope = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation(agent_id, resource_scope={"method": "POST"}),
+    )
+    assert wrong_scope.json()["reason_codes"] == ["CAPABILITY_NOT_GRANTED"]
+
+    with client.app.state.testing_session() as db:
+        capability = db.scalar(select(AgentCapability).where(AgentCapability.name == "web.read"))
+        capability.status = "revoked"
+        db.commit()
+    disabled = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation(
+            agent_id,
+            request_id="request-disabled-capability",
+            idempotency_key="idempotency-disabled-capability",
+            nonce="nonce-disabled-capability-0001",
+        ),
+    )
+    assert disabled.json()["reason_codes"] == ["CAPABILITY_NOT_GRANTED"]
+
+
+@pytest.mark.parametrize(
+    ("trust_state", "classification", "expected"),
+    [
+        ("TRUSTED", "PUBLIC", "ALLOW"),
+        ("APPROVED", "CONFIDENTIAL", "ALLOW"),
+        ("UNKNOWN", "PUBLIC", "REQUIRE_APPROVAL"),
+        ("UNKNOWN", "CONFIDENTIAL", "DENY"),
+        ("RESTRICTED", "INTERNAL", "DENY"),
+        ("BLOCKED", "SYSTEM_SECRET", "DENY"),
+    ],
+)
+def test_destination_and_classification_matrix(client, trust_state, classification, expected):
+    _, _, agent_id, _ = _foundation(client, destination_state=trust_state)
+    _workload(client)
+    response = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation(agent_id, data_classifications=[classification]),
+    )
+    assert response.status_code == 201
+    assert response.json()["evaluated_decision"] == expected
+
+
+@pytest.mark.parametrize(
+    "classification",
+    [
+        "PUBLIC",
+        "INTERNAL",
+        "CONFIDENTIAL",
+        "PERSONAL",
+        "FINANCIAL",
+        "AUTHENTICATION_SECRET",
+        "SYSTEM_SECRET",
+        "HIGHLY_RESTRICTED",
+    ],
+)
+def test_all_public_classifications_are_durable_and_canonical(client, classification):
+    _, _, agent_id, _ = _foundation(client)
+    _workload(client)
+    response = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation(agent_id, data_classifications=[classification]),
+    )
+    assert response.status_code == 201
+    with client.app.state.testing_session() as db:
+        event = db.get(EgressEvent, response.json()["decision_id"])
+        assert event.data_classifications == [classification]
+        assert verify_event(event)
+
+
+@pytest.mark.parametrize(
+    "destination",
+    [
+        "https://EXAMPLE.COM./path",
+        "https://example.com/?redirect=https://127.0.0.1",
+        "https://xn--bcher-kva.example/",
+    ],
+)
+def test_hostname_variants_bind_to_the_expected_origin(destination):
+    canonical = canonicalize_destination(destination, resolve=False)
+    expected = "https://xn--bcher-kva.example" if "xn--" in destination else "https://example.com"
+    assert canonical.canonical_identifier == expected
+
+
+def test_unicode_idna_and_ipv6_origins_are_unambiguous():
+    assert (
+        canonicalize_destination("https://bücher.example", resolve=False).canonical_identifier
+        == "https://xn--bcher-kva.example"
+    )
+    assert (
+        canonicalize_destination("https://[2606:4700:4700::1111]", resolve=False)
+        .canonical_identifier
+        == "https://[2606:4700:4700::1111]"
+    )
+
+
+@pytest.mark.parametrize(
+    "destination",
+    [
+        "https://example.com:invalid",
+        "https://bad_host.example",
+        "https://[::1]",
+        "https://[fe80::1]",
+        "https://user:synthetic@example.com",
+        "https://example.com/#fragment",
+    ],
+)
+def test_malformed_and_bypass_destinations_fail_closed(destination):
+    with pytest.raises(UnsafeDestination):
+        canonicalize_destination(destination, resolve=False)
+
+
+@pytest.mark.parametrize(
+    "synthetic_secret",
+    [
+        "API_KEY=synthetic_api_key_1234567890",
+        "Authorization: Bearer synthetic.bearer.token.123456",
+        "password=synthetic_password_12345",
+        "-----BEGIN PRIVATE KEY-----\nSYNTHETIC_ONLY\n-----END PRIVATE KEY-----",
+        "postgresql://demo:synthetic_password@database.example/demo",
+        "session_token=synthetic_session_123456789",
+    ],
+)
+def test_synthetic_secret_forms_are_detected_without_value_disclosure(synthetic_secret):
+    encoded = base64.b64encode(synthetic_secret.encode()).decode()
+    result = scan_artifact(
+        filename="synthetic.txt",
+        content_base64=encoded,
+        settings=Settings(egress_max_artifact_bytes=4096),
+    )
+    assert "secret" in result.classification
+    assert synthetic_secret not in json.dumps(result.findings)
+
+
+def test_missing_and_ambiguous_policy_configuration_fails_closed(client):
+    organization_id, _, agent_id, _ = _foundation(client)
+    with client.app.state.testing_session() as db:
+        policies = list(
+            db.scalars(
+                select(EgressPolicy).where(EgressPolicy.organization_id == organization_id)
+            )
+        )
+        for policy in policies:
+            policy.state = "retired"
+        db.commit()
+    _workload(client)
+    missing = client.post("/api/v1/security/evaluate", json=_evaluation(agent_id))
+    assert missing.status_code == 503
+
+    with client.app.state.testing_session() as db:
+        for policy in db.scalars(
+            select(EgressPolicy).where(EgressPolicy.organization_id == organization_id)
+        ):
+            policy.state = "active"
+        original = db.scalar(
+            select(EgressPolicy).where(EgressPolicy.organization_id == organization_id)
+        )
+        duplicate = EgressPolicy(
+            organization_id=organization_id,
+            name="agent-security-conflict",
+            version="conflict-1",
+            scope=original.scope,
+            rules={**original.rules, "default": "ALLOW"},
+            enforcement_mode="enforce",
+            policy_type="agent_security",
+            priority=200,
+            state="active",
+            integrity_hash="intentional-conflict",
+            created_by_id=original.created_by_id,
+            approved_by_id=original.approved_by_id,
+            activated_at=datetime.now(UTC),
+        )
+        db.add(duplicate)
+        db.commit()
+    ambiguous = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation(
+            agent_id,
+            request_id="request-ambiguous-policy",
+            idempotency_key="idempotency-ambiguous-policy",
+            nonce="nonce-ambiguous-policy-0001",
+        ),
+    )
+    assert ambiguous.status_code == 503
+
+
+@pytest.mark.parametrize("offset", [timedelta(hours=-1), timedelta(hours=1)])
+def test_stale_and_future_authenticated_requests_are_rejected(client, offset):
+    _, _, agent_id, _ = _foundation(client)
+    _workload(client)
+    response = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation(agent_id, timestamp=(datetime.now(UTC) + offset).isoformat()),
+    )
+    assert response.status_code == 409
+
+
+def test_cross_tenant_security_resources_and_modifications_are_hidden(client):
+    organization_id, client_id, agent_id, grant_id = _foundation(client)
+    with client.app.state.testing_session() as db:
+        destination_id = db.scalar(
+            select(SecurityDestination.id).where(
+                SecurityDestination.organization_id == organization_id
+            )
+        )
+    app.dependency_overrides[get_principal] = lambda: Principal(subject="unrelated-principal")
+    paths = [
+        f"/api/v1/security/clients?organization_id={organization_id}",
+        f"/api/v1/security/agents?organization_id={organization_id}",
+        f"/api/v1/security/capabilities?organization_id={organization_id}",
+        f"/api/v1/security/destinations?organization_id={organization_id}",
+        f"/api/v1/security/policies?organization_id={organization_id}",
+    ]
+    for path in paths:
+        assert client.get(path).status_code == 403
+    assert client.patch(
+        f"/api/v1/security/clients/{client_id}/status", json={"status": "REVOKED"}
+    ).status_code == 403
+    assert client.patch(
+        f"/api/v1/security/agents/{agent_id}/status", json={"status": "REVOKED"}
+    ).status_code == 403
+    assert client.post(f"/api/v1/security/capability-grants/{grant_id}/revoke").status_code == 403
+    assert client.patch(
+        f"/api/v1/security/destinations/{destination_id}/trust",
+        json={"trust_state": "BLOCKED"},
+    ).status_code == 403
+
+
+def test_kill_switches_take_effect_on_the_next_evaluation(client):
+    _, client_id, agent_id, grant_id = _foundation(client)
+    _workload(client)
+    initial = client.post("/api/v1/security/evaluate", json=_evaluation(agent_id))
+    assert initial.json()["decision"] == "ALLOW"
+
+    app.dependency_overrides.pop(get_workload_principal)
+    assert client.post(f"/api/v1/security/capability-grants/{grant_id}/revoke").status_code == 200
+    _workload(client)
+    denied = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation(
+            agent_id,
+            request_id="request-after-revoke",
+            idempotency_key="idempotency-after-revoke",
+            nonce="nonce-after-revoke-0000001",
+        ),
+    )
+    assert denied.json()["decision"] == "DENY"
+
+    app.dependency_overrides.pop(get_workload_principal)
+    assert client.patch(
+        f"/api/v1/security/clients/{client_id}/status", json={"status": "REVOKED"}
+    ).status_code == 200
+    _workload(client)
+    rejected = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation(
+            agent_id,
+            request_id="request-after-client-revoke",
+            idempotency_key="idempotency-after-client-revoke",
+            nonce="nonce-after-client-revoke-01",
+        ),
+    )
+    assert rejected.status_code == 403
+
+
+def test_receipt_is_complete_redacted_durable_and_tamper_evident(client):
+    _, _, agent_id, _ = _foundation(client)
+    _workload(client)
+    synthetic = "synthetic-do-not-store-123456"  # noqa: S105
+    response = client.post(
+        "/api/v1/security/evaluate",
+        json=_evaluation(agent_id, context={"purpose": synthetic}),
+    )
+    assert response.status_code == 201
+    receipt = response.json()
+    for field in (
+        "decision_id",
+        "evaluated_decision",
+        "effective_decision",
+        "enforced_decision",
+        "human_readable_reason",
+        "reason_codes",
+        "policy_references",
+        "policy_mode",
+        "request_id",
+        "destination_binding",
+        "created_at",
+        "integrity",
+    ):
+        assert field in receipt
+    assert synthetic not in json.dumps(receipt)
+
+    with client.app.state.testing_session() as db:
+        event = db.get(EgressEvent, receipt["decision_id"])
+        assert synthetic not in json.dumps(event.normalized_request)
+        assert verify_event(event)
+        audit = db.scalar(
+            select(AuditEvent).where(
+                AuditEvent.object_type == "egress_event", AuditEvent.object_id == event.id
+            )
+        )
+        assert audit is not None and verify_audit_event(audit)
+        event.human_reason = "controlled tamper"
+        audit.reason_code = "controlled-tamper"
+        assert not verify_event(event)
+        assert not verify_audit_event(audit)

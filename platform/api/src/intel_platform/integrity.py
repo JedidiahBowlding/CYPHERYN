@@ -70,12 +70,17 @@ def _transaction_lock(db: Session, scope: str) -> None:
 
 def seal_audit_event(db: Session, event: AuditEvent) -> None:
     _transaction_lock(db, event.organization_id)
+    referenced_hashes = select(AuditEvent.previous_integrity_hash).where(
+        AuditEvent.organization_id == event.organization_id,
+        AuditEvent.previous_integrity_hash.is_not(None),
+    )
     previous = db.scalar(
         select(AuditEvent)
         .where(
             AuditEvent.organization_id == event.organization_id,
             AuditEvent.id != event.id,
             AuditEvent.integrity_hash.is_not(None),
+            AuditEvent.integrity_hash.not_in(referenced_hashes),
         )
         .order_by(AuditEvent.occurred_at.desc(), AuditEvent.id.desc())
         .limit(1)

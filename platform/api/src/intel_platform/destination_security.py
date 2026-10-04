@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import re
 import socket
 from dataclasses import dataclass
 from urllib.parse import urlsplit
@@ -8,6 +9,9 @@ from urllib.parse import urlsplit
 
 class UnsafeDestination(ValueError):
     pass
+
+
+DNS_LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 
 
 @dataclass(frozen=True)
@@ -48,7 +52,10 @@ def canonicalize_destination(
         raise UnsafeDestination("Destination hostname is not valid IDNA") from exc
     if not hostname or len(hostname) > 253 or ".." in hostname:
         raise UnsafeDestination("Destination hostname is invalid")
-    port = parsed.port or 443
+    try:
+        port = parsed.port or 443
+    except ValueError as exc:
+        raise UnsafeDestination("Destination port is invalid") from exc
     if port != 443:
         raise UnsafeDestination("Non-standard destination ports require a separate policy")
     addresses: set[str] = set()
@@ -59,6 +66,8 @@ def canonicalize_destination(
     if literal is not None:
         addresses.add(_public_address(hostname))
     elif resolve:
+        if any(not DNS_LABEL.fullmatch(label) for label in hostname.split(".")):
+            raise UnsafeDestination("Destination hostname contains an invalid DNS label")
         try:
             answers = resolver(hostname, port, type=socket.SOCK_STREAM)
         except OSError as exc:
@@ -71,5 +80,8 @@ def canonicalize_destination(
         # Policy binds to an origin. Paths remain action metadata and redirects must be
         # re-evaluated by the enforcing client rather than silently followed.
         pass
-    canonical = f"https://{hostname}"
+    if literal is None and any(not DNS_LABEL.fullmatch(label) for label in hostname.split(".")):
+        raise UnsafeDestination("Destination hostname contains an invalid DNS label")
+    origin_host = f"[{hostname}]" if isinstance(literal, ipaddress.IPv6Address) else hostname
+    canonical = f"https://{origin_host}"
     return CanonicalDestination(canonical, hostname, port, "https", tuple(sorted(addresses)))

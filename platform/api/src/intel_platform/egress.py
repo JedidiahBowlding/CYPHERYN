@@ -39,6 +39,18 @@ SECRET_PATTERNS = {
     "generic_secret": re.compile(
         r"(?i)\b(?:api[_-]?key|secret|password|token)\b\s*[:=]\s*['\"]?([^\s'\"]{12,})"
     ),
+    "bearer_token": re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{12,}"),
+    "authorization_header": re.compile(
+        r"(?im)^\s*authorization\s*:\s*(?:bearer|basic)\s+\S+"
+    ),
+    "database_credentials": re.compile(
+        r"(?i)\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis)://"
+        r"[^\s:@/]+:[^\s@/]+@"
+    ),
+    "session_token": re.compile(
+        r"(?i)\b(?:session(?:_id)?|session_token)\b\s*[:=]\s*['\"]?"
+        r"[^\s'\"]{12,}"
+    ),
 }
 PII_PATTERNS = {
     "email_address": re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I),
@@ -323,9 +335,18 @@ def seal_event(db: Session, event: EgressEvent) -> None:
             text("SELECT pg_advisory_xact_lock(hashtext(:scope))"),
             {"scope": f"cypheryn-egress:{event.organization_id}"},
         )
+    referenced_hashes = select(EgressEvent.previous_event_hash).where(
+        EgressEvent.organization_id == event.organization_id,
+        EgressEvent.previous_event_hash.is_not(None),
+    )
     previous = db.scalar(
         select(EgressEvent)
-        .where(EgressEvent.organization_id == event.organization_id, EgressEvent.id != event.id)
+        .where(
+            EgressEvent.organization_id == event.organization_id,
+            EgressEvent.id != event.id,
+            EgressEvent.event_hash.is_not(None),
+            EgressEvent.event_hash.not_in(referenced_hashes),
+        )
         .order_by(EgressEvent.created_at.desc(), EgressEvent.id.desc())
         .limit(1)
     )
@@ -337,6 +358,9 @@ def event_payload(event: EgressEvent) -> dict:
     created_at = event.created_at
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=UTC)
+    request_timestamp = event.request_timestamp
+    if request_timestamp is not None and request_timestamp.tzinfo is None:
+        request_timestamp = request_timestamp.replace(tzinfo=UTC)
     payload = {
         "id": event.id,
         "organization_id": event.organization_id,
@@ -368,9 +392,14 @@ def event_payload(event: EgressEvent) -> dict:
                 "evaluated_decision": event.evaluated_decision,
                 "effective_decision": event.effective_decision,
                 "enforced_decision": event.enforced_decision,
+                "human_reason": event.human_reason,
+                "risk_score": event.risk_score,
                 "request_id": event.request_id,
                 "idempotency_key_hash": event.idempotency_key_hash,
                 "nonce_hash": event.nonce_hash,
+                "request_timestamp": (
+                    request_timestamp.astimezone(UTC).isoformat() if request_timestamp else None
+                ),
             }
         )
     return payload
