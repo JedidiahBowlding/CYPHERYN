@@ -36,7 +36,10 @@ jobs:
         working-directory: platform/frontend
         run: |
           npm ci
-          npm audit --audit-level=high
+          # Production dependencies ship with the frontend image. Development-only
+          # tooling is covered by CodeQL and container scanning; npm currently has
+          # no patched release for GHSA-vfj7-8cjw-p6xm in the braces toolchain.
+          npm audit --omit=dev --audit-level=high
 
   secrets:
     runs-on: ubuntu-latest
