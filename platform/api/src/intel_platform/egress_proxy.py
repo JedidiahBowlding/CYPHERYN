@@ -300,6 +300,7 @@ def execute_proxy_request(
     try:
         canonical = canonicalize_destination(payload.url)
     except UnsafeDestination as exc:
+        metrics.add("dns_safety_failures_total")
         raise ProxySecurityError("UNSAFE_DESTINATION", str(exc)) from exc
     finally:
         metrics.add("dns_latency_ms_total", (time.monotonic() - dns_started) * 1000)
@@ -322,6 +323,9 @@ def execute_proxy_request(
                 "proxy_replica_id": replica_id,
             },
         )
+    except Exception:
+        metrics.add("receipt_start_failures_total")
+        raise
     finally:
         metrics.add(
             "receipt_start_latency_ms_total", (time.monotonic() - receipt_started) * 1000
@@ -353,6 +357,9 @@ def execute_proxy_request(
                     "consume": True,
                 },
             )
+        except Exception:
+            metrics.add("final_validation_failures_total")
+            raise
         finally:
             metrics.add(
                 "final_validation_latency_ms_total",
@@ -446,6 +453,9 @@ def execute_proxy_request(
                     "request_classifications": classifications,
                 },
             )
+        except Exception:
+            metrics.add("receipt_finish_failures_total")
+            raise
         finally:
             metrics.add(
                 "receipt_finish_latency_ms_total",
@@ -453,7 +463,7 @@ def execute_proxy_request(
             )
 
 
-app = FastAPI(title="CYPHERYN Trusted Agent Egress Proxy", version="0.1.0")
+app = FastAPI(title="CYPHERYN Trusted Agent Egress Proxy", version="0.10.0")
 
 
 @app.get("/health")

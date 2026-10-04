@@ -1,0 +1,88 @@
+groups:
+  - name: cypheryn-protected-agent
+    rules:
+      - alert: CypherynEgressProxyReplicaQuorumLost
+        expr: sum(up{job="cypheryn-egress-proxy"} == 1) < 3 or absent(up{job="cypheryn-egress-proxy"})
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: Fewer than three CYPHERYN trusted-egress replicas are healthy
+
+      - alert: CypherynEgressProxyUnavailable
+        expr: sum(up{job="cypheryn-egress-proxy"} == 1) == 0 or absent(up{job="cypheryn-egress-proxy"})
+        for: 30s
+        labels: {severity: critical}
+        annotations:
+          summary: All CYPHERYN trusted-egress replicas are unavailable
+
+      - alert: CypherynEgressControlPlaneFailure
+        expr: increase(cypheryn_egress_proxy_final_validation_failures_total[5m]) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: Trusted-egress final validation is failing closed
+
+      - alert: CypherynEgressControlPlaneUnavailable
+        expr: up{job="cypheryn-egress-control-plane"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: The trusted-egress mTLS control-plane gateway is unavailable
+
+      - alert: CypherynPostgresUnavailable
+        expr: up{job="cypheryn-postgres"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: PostgreSQL authority is unavailable
+
+      - alert: CypherynEgressCertificateExpiring
+        expr: probe_ssl_earliest_cert_expiry{job="cypheryn-egress-control-plane"} - time() < 1209600
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: Trusted-egress mTLS certificate expires within 14 days
+
+      - alert: CypherynEgressCertificateValidationFailed
+        expr: probe_success{job="cypheryn-egress-control-plane"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: Trusted-egress mTLS certificate validation failed
+
+      - alert: CypherynEgressReceiptPersistenceFailure
+        expr: increase(cypheryn_egress_proxy_receipt_start_failures_total[5m]) > 0 or increase(cypheryn_egress_proxy_receipt_finish_failures_total[5m]) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: Trusted-egress receipt persistence failed
+
+      - alert: CypherynEgressDnsSafetyFailure
+        expr: increase(cypheryn_egress_proxy_dns_safety_failures_total[5m]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: Trusted-egress rejected an unsafe DNS destination
+
+      - alert: CypherynEgressTlsFailure
+        expr: increase(cypheryn_egress_proxy_tls_failures_total[5m]) > 0
+        labels: {severity: warning}
+        annotations:
+          summary: Trusted-egress TLS verification failed
+
+      - alert: CypherynEgressDenialSpike
+        expr: sum(rate(cypheryn_egress_proxy_denials_total[10m])) / clamp_min(sum(rate(cypheryn_egress_proxy_requests_total[10m])), 0.001) > 0.20
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: Trusted-egress denial ratio exceeded 20 percent
+
+      - alert: CypherynEgressAverageLatencyHigh
+        expr: sum(rate(cypheryn_egress_proxy_latency_ms_total[10m])) / clamp_min(sum(rate(cypheryn_egress_proxy_requests_total[10m])), 0.001) > 2000
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: Trusted-egress average request latency exceeded two seconds
+
+      - alert: CypherynProtectedAgentBypassDetected
+        expr: increase(cypheryn_protected_agent_bypass_attempts_total[5m]) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: A protected workload attempted a direct network bypass

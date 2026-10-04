@@ -164,7 +164,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="CYPHERYN API",
-    version="0.1.0",
+    version="0.10.0",
     lifespan=lifespan,
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",

@@ -423,7 +423,7 @@ PowerShell uses `py scripts/reset_dev.py`. The utility requires the operator to 
 
 Operational metrics, alert conditions, privacy considerations, and troubleshooting are documented in [the observability guide](docs/OBSERVABILITY.md). The exact five-provider support contract is documented in [the provider certification guide](docs/PROVIDER_CERTIFICATION.md). Scheduled checkpoints, independent storage, rotation, and offline verification are documented in [the external integrity anchoring guide](docs/EXTERNAL_INTEGRITY_ANCHORING.md). Enforced review and CI requirements are recorded in [the branch protection guide](docs/BRANCH_PROTECTION.md). Scanner isolation, critical coverage, and release boundaries are detailed in [the engineering maturity release guide](docs/ENGINEERING_MATURITY_RELEASE.md).
 
-Protected agent traffic, the trusted egress proxy, mTLS service identity, certificate rotation, alerts, and fail-closed rollback are documented in [the trusted proxy guide](docs/TRUSTED_AGENT_EGRESS_PROXY.md) and [deployment checklist](docs/PROTECTED_AGENT_DEPLOYMENT.md).
+Protected agent traffic, the trusted egress proxy, mTLS service identity, certificate rotation, alerts, and fail-closed rollback are documented in [the trusted proxy guide](docs/TRUSTED_AGENT_EGRESS_PROXY.md), [deployment checklist](docs/PROTECTED_AGENT_DEPLOYMENT.md), and [v0.10.0 production runbook](docs/PRODUCTION_V0.10.0_RUNBOOK.md).
 
 For production deployment, disable development identity, configure OIDC, rotate every development secret, apply HTTPS and network controls, establish backup/retention policy, and complete an environment-specific security review.
 

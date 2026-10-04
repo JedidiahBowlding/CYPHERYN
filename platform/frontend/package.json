@@ -1,7 +1,7 @@
 {
   "name": "cypheryn-console",
   "description": "CYPHERYN defensive intelligence and OSINT investigation console",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -45,5 +45,9 @@
     "vite": "8.2.2",
     "wrangler": "4.145.0"
   },
-  "type": "module"
+  "type": "module",
+  "optionalDependencies": {
+    "@rolldown/binding-linux-arm64-gnu": "1.2.6",
+    "@rolldown/binding-linux-x64-gnu": "1.2.6"
+  }
 }
