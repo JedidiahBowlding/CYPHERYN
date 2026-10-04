@@ -8,6 +8,7 @@ permissions:
   contents: write
   id-token: write
   attestations: write
+  packages: write
 
 jobs:
   verify-build-release:
@@ -15,6 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: {fetch-depth: 0}
+      - name: Verify tag matches release metadata
+        run: |
+          expected_tag="v$(awk '{print $2}' VERSION)"
+          if [ "$GITHUB_REF_NAME" != "$expected_tag" ]; then
+            echo "Release tag $GITHUB_REF_NAME does not match VERSION ($expected_tag)." >&2
+            exit 1
+          fi
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: {python-version: "3.13", cache: pip, cache-dependency-path: platform/api/pyproject.toml}
       - name: Test, lint, and audit API
@@ -50,8 +58,80 @@ jobs:
               --severity HIGH,CRITICAL --ignore-unfixed --ignorefile /workspace/.trivyignore \
               --exit-code 1 "$image"
           done
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish immutable release images
+        id: publish-images
+        env:
+          REGISTRY_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          owner="$(printf '%s' "$REGISTRY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          : > dist-image-digests.txt
+          for component in api worker frontend taxii scanner-orchestrator egress-proxy protected-agent-pilot; do
+            local_image="cypheryn-${component}:latest"
+            repository="ghcr.io/${owner}/cypheryn-${component}"
+            version_ref="${repository}:${GITHUB_REF_NAME}"
+            commit_ref="${repository}:sha-${GITHUB_SHA}"
+            docker tag "$local_image" "$version_ref"
+            docker tag "$local_image" "$commit_ref"
+            docker push "$version_ref"
+            docker push "$commit_ref"
+            digest_ref="$(docker image inspect --format '{{index .RepoDigests 0}}' "$version_ref")"
+            digest="${digest_ref##*@}"
+            printf '%s=%s@%s\n' "$component" "$repository" "$digest" | tee -a dist-image-digests.txt
+            printf '%s_digest=%s\n' "${component//-/_}" "$digest" >> "$GITHUB_OUTPUT"
+          done
+      - name: Attest API image
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ghcr.io/jedidiahbowlding/cypheryn-api
+          subject-digest: ${{ steps.publish-images.outputs.api_digest }}
+          push-to-registry: true
+      - name: Attest worker image
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ghcr.io/jedidiahbowlding/cypheryn-worker
+          subject-digest: ${{ steps.publish-images.outputs.worker_digest }}
+          push-to-registry: true
+      - name: Attest frontend image
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ghcr.io/jedidiahbowlding/cypheryn-frontend
+          subject-digest: ${{ steps.publish-images.outputs.frontend_digest }}
+          push-to-registry: true
+      - name: Attest TAXII image
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ghcr.io/jedidiahbowlding/cypheryn-taxii
+          subject-digest: ${{ steps.publish-images.outputs.taxii_digest }}
+          push-to-registry: true
+      - name: Attest scanner orchestrator image
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ghcr.io/jedidiahbowlding/cypheryn-scanner-orchestrator
+          subject-digest: ${{ steps.publish-images.outputs.scanner_orchestrator_digest }}
+          push-to-registry: true
+      - name: Attest trusted egress proxy image
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ghcr.io/jedidiahbowlding/cypheryn-egress-proxy
+          subject-digest: ${{ steps.publish-images.outputs.egress_proxy_digest }}
+          push-to-registry: true
+      - name: Attest protected pilot image
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-name: ghcr.io/jedidiahbowlding/cypheryn-protected-agent-pilot
+          subject-digest: ${{ steps.publish-images.outputs.protected_agent_pilot_digest }}
+          push-to-registry: true
       - name: Prepare release artifacts
-        run: mkdir -p dist
+        run: |
+          mkdir -p dist
+          mv dist-image-digests.txt dist/image-digests.txt
       - name: Generate SBOMs
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:

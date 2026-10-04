@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -60,6 +60,23 @@ from .security_control import (
 router = APIRouter(prefix="/api/v1/security", tags=["agent-security-control-plane"])
 CAPABILITY_PATTERN = re.compile(r"^[a-z][a-z0-9_-]*(?:\.[a-z][a-z0-9_-]*)+$")
 SENSITIVE_METADATA_KEYS = {"authorization", "credential", "password", "secret", "token"}
+
+
+def _serialize_idempotent_evaluation(
+    db: Session, *, security_client_id: str, idempotency_hash: str
+) -> None:
+    """Serialize equal PostgreSQL idempotency keys before checking/inserting them.
+
+    A unique constraint remains the final integrity boundary. The transaction-scoped
+    advisory lock makes concurrent retries deterministic: once the first transaction
+    commits, every waiter observes and returns its receipt instead of racing through
+    the nonce check or the insert path and intermittently returning HTTP 409.
+    """
+    if db.get_bind().dialect.name != "postgresql":
+        return
+    material = f"cypheryn-security-evaluation:{security_client_id}:{idempotency_hash}"
+    lock_key = int.from_bytes(hashlib.sha256(material.encode()).digest()[:8], "big", signed=True)
+    db.execute(text("SELECT pg_advisory_xact_lock(:lock_key)"), {"lock_key": lock_key})
 
 
 def _safe_metadata(value: dict, label: str) -> dict:
@@ -877,6 +894,11 @@ def evaluate_security_request(
         )
     idempotency_hash = _hash(payload.idempotency_key)
     nonce_hash = _hash(payload.nonce)
+    _serialize_idempotent_evaluation(
+        db,
+        security_client_id=client.id,
+        idempotency_hash=idempotency_hash,
+    )
     request_metadata = {
         "agent_id": payload.agent_id,
         "action": payload.action,

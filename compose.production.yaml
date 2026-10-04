@@ -1,5 +1,6 @@
 services:
   api:
+    image: ${CYPHERYN_API_IMAGE:-cypheryn-api}
     environment:
       PLATFORM_ENVIRONMENT: production
       PLATFORM_ALLOW_DEV_IDENTITY: "false"
@@ -11,6 +12,7 @@ services:
       PLATFORM_CORS_ORIGINS: '["https://app.cypheryn.com"]'
 
   frontend:
+    image: ${CYPHERYN_FRONTEND_IMAGE:-cypheryn-frontend}
     build:
       args:
         NEXT_PUBLIC_PLATFORM_API_URL: https://app.cypheryn.com
@@ -51,9 +53,37 @@ services:
     networks: [edge]
 
   worker:
+    image: ${CYPHERYN_WORKER_IMAGE:-cypheryn-worker}
     # Passive providers need outbound DNS/HTTPS, while active scanners are sent
     # to the separately trusted orchestrator and never receive this network.
     networks: [backend, edge]
+
+  taxii:
+    image: ${CYPHERYN_TAXII_IMAGE:-cypheryn-taxii}
+
+  scanner-orchestrator:
+    image: ${CYPHERYN_SCANNER_ORCHESTRATOR_IMAGE:-cypheryn-scanner-orchestrator}
+
+  egress-proxy:
+    image: ${CYPHERYN_EGRESS_PROXY_IMAGE:-cypheryn-egress-proxy}
+    deploy:
+      replicas: ${CYPHERYN_EGRESS_PROXY_REPLICAS:-3}
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+
+  protected-agent-pilot:
+    image: ${CYPHERYN_PROTECTED_AGENT_PILOT_IMAGE:-cypheryn-protected-agent-pilot}
+
+  egress-control-plane:
+    image: ${CYPHERYN_EGRESS_CADDY_IMAGE:-caddy:2.10.2-alpine}
+
+  agent-control-plane:
+    image: ${CYPHERYN_EGRESS_CADDY_IMAGE:-caddy:2.10.2-alpine}
 
   caddy:
     image: caddy:2.11.4-alpine
