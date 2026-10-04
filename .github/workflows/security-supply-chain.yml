@@ -71,7 +71,7 @@ jobs:
             cypheryn-egress-proxy:latest \
             cypheryn-protected-agent-pilot:latest \
             > security-evidence/image-metadata.json
-          printf '%s\n' "$GITHUB_SHA" > security-evidence/build-commit.txt
+          printf '%s\n' "${{ github.event.pull_request.head.sha || github.sha }}" > security-evidence/build-commit.txt
       - name: Scan shipped images
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -157,6 +157,7 @@ jobs:
           ignore-unfixed: true
           scanners: vuln
           format: sarif
+          limit-severities-for-sarif: true
           output: security-evidence/trivy-egress-proxy.sarif
       - name: Generate trusted egress proxy SBOM
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
@@ -173,6 +174,7 @@ jobs:
           ignore-unfixed: true
           scanners: vuln
           format: sarif
+          limit-severities-for-sarif: true
           output: security-evidence/trivy-protected-agent-pilot.sarif
       - name: Generate protected pilot agent SBOM
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
