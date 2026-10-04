@@ -229,6 +229,7 @@ class ProxyReceiptStart(BaseModel):
     correlation_id: str = Field(min_length=8, max_length=128)
     request_body_hash: str = Field(default="", pattern=r"^(?:[0-9a-f]{64})?$")
     request_classifications: list[str] = Field(default_factory=list, max_length=20)
+    proxy_replica_id: str = Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._:-]+$")
 
 
 class ProxyReceiptFinish(BaseModel):
@@ -1318,6 +1319,7 @@ def start_proxy_receipt(
         canonical_destination=authorization.canonical_destination,
         pinned_address=pinned_address,
         method=payload.method,
+        proxy_replica_id=payload.proxy_replica_id,
         outcome="PENDING_VALIDATION",
         security_reason="",
         correlation_id=payload.correlation_id,
@@ -1381,6 +1383,7 @@ def list_proxy_receipts(
             "capability": item.capability,
             "destination": item.canonical_destination,
             "method": item.method,
+            "proxy_replica_id": item.proxy_replica_id,
             "outcome": item.outcome,
             "security_reason": item.security_reason,
             "response_status": item.response_status,

@@ -73,6 +73,10 @@ class Settings(BaseSettings):
         default=5.0, ge=0.1, le=30
     )
     trusted_egress_proxy_max_redirects: int = Field(default=3, ge=0, le=10)
+    trusted_egress_proxy_replica_id: str = Field(default="", max_length=128)
+    trusted_egress_proxy_mtls_ca_file: str = ""
+    trusted_egress_proxy_mtls_cert_file: str = ""
+    trusted_egress_proxy_mtls_key_file: str = ""
 
     @model_validator(mode="after")
     def validate_authentication(self) -> "Settings":
@@ -83,6 +87,17 @@ class Settings(BaseSettings):
                 "PLATFORM_AUTH_PROXY_SECRET must contain at least 32 characters "
                 "when trusted proxy authentication is enabled"
             )
+        if self.trusted_egress_proxy_enabled and self.environment.lower() == "production":
+            if not self.trusted_egress_proxy_control_plane_url.startswith("https://"):
+                raise ValueError("The production trusted egress proxy requires HTTPS control plane")
+            if not all(
+                (
+                    self.trusted_egress_proxy_mtls_ca_file,
+                    self.trusted_egress_proxy_mtls_cert_file,
+                    self.trusted_egress_proxy_mtls_key_file,
+                )
+            ):
+                raise ValueError("The production trusted egress proxy requires mTLS credentials")
         return self
 
 

@@ -104,20 +104,44 @@ metrics = Metrics()
 
 
 class ControlPlane:
-    def __init__(self, base_url: str, token: str, timeout: float):
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, settings: Settings, token: str):
+        self.base_url = settings.trusted_egress_proxy_control_plane_url.rstrip("/")
         self.headers = {"Authorization": token}
-        self.timeout = timeout
+        self.timeout = settings.trusted_egress_proxy_validation_timeout_seconds
+        self.verify: bool | ssl.SSLContext = True
+        if self.base_url.startswith("https://"):
+            if not all(
+                (
+                    settings.trusted_egress_proxy_mtls_ca_file,
+                    settings.trusted_egress_proxy_mtls_cert_file,
+                    settings.trusted_egress_proxy_mtls_key_file,
+                )
+            ):
+                raise ProxySecurityError("DENIED", "MTLS_CONFIGURATION_REQUIRED", 503)
+            context = ssl.create_default_context(
+                cafile=settings.trusted_egress_proxy_mtls_ca_file
+            )
+            context.load_cert_chain(
+                settings.trusted_egress_proxy_mtls_cert_file,
+                settings.trusted_egress_proxy_mtls_key_file,
+            )
+            self.verify = context
 
     def _request(self, method: str, path: str, payload: dict) -> dict:
         try:
-            response = httpx.request(
-                method,
-                f"{self.base_url}{path}",
-                headers=self.headers,
-                json=payload,
+            # A fresh authenticated TLS channel avoids authorization state leaking
+            # across workloads and keeps revocation semantics independent of pooling.
+            with httpx.Client(
+                verify=self.verify,
                 timeout=self.timeout,
-            )
+                trust_env=False,
+            ) as client:
+                response = client.request(
+                    method,
+                    f"{self.base_url}{path}",
+                    headers=self.headers,
+                    json=payload,
+                )
         except httpx.HTTPError as exc:
             raise ProxySecurityError("DENIED", "CONTROL_PLANE_UNAVAILABLE", 503) from exc
         if response.status_code >= 400:
@@ -271,29 +295,36 @@ def execute_proxy_request(
         raise ProxySecurityError("DENIED", "METHOD_CAPABILITY_MISMATCH")
     if payload.resource_scope.get("method") != payload.method:
         raise ProxySecurityError("DENIED", "METHOD_SCOPE_MISMATCH")
+    dns_started = time.monotonic()
     try:
         canonical = canonicalize_destination(payload.url)
     except UnsafeDestination as exc:
         raise ProxySecurityError("UNSAFE_DESTINATION", str(exc)) from exc
+    finally:
+        metrics.add("dns_latency_ms_total", (time.monotonic() - dns_started) * 1000)
     pinned_address = canonical.resolved_addresses[0]
     body, body_hash = _decode_body(payload, settings)
     classifications: list[str] = []
-    cp = control_plane or ControlPlane(
-        settings.trusted_egress_proxy_control_plane_url,
-        authorization,
-        settings.trusted_egress_proxy_validation_timeout_seconds,
-    )
-    receipt_id = cp.start_receipt(
-        payload.decision_id,
-        {
-            "capability": payload.capability,
-            "method": payload.method,
-            "pinned_address": pinned_address,
-            "correlation_id": payload.correlation_id,
-            "request_body_hash": body_hash,
-            "request_classifications": [],
-        },
-    )
+    cp = control_plane or ControlPlane(settings, authorization)
+    replica_id = settings.trusted_egress_proxy_replica_id or socket.gethostname()
+    receipt_started = time.monotonic()
+    try:
+        receipt_id = cp.start_receipt(
+            payload.decision_id,
+            {
+                "capability": payload.capability,
+                "method": payload.method,
+                "pinned_address": pinned_address,
+                "correlation_id": payload.correlation_id,
+                "request_body_hash": body_hash,
+                "request_classifications": [],
+                "proxy_replica_id": replica_id,
+            },
+        )
+    finally:
+        metrics.add(
+            "receipt_start_latency_ms_total", (time.monotonic() - receipt_started) * 1000
+        )
     outcome = "UPSTREAM_ERROR"
     reason = "UNEXPECTED_PROXY_FAILURE"
     response_status = None
@@ -302,18 +333,30 @@ def execute_proxy_request(
     try:
         safe_headers = _inspect_headers(payload.headers, settings)
         classifications = _inspect_body(payload, settings)
-        validation = cp.validate(
-            payload.decision_id,
-            {
-                "action": payload.action,
-                "capability": payload.capability,
-                "destination": payload.url,
-                "environment": payload.environment,
-                "resource_scope": payload.resource_scope,
-                "connected_address": pinned_address,
-                "consume": True,
-            },
-        )
+        approved_body_hash = payload.resource_scope.get("body_sha256", "")
+        if body_hash and approved_body_hash != body_hash:
+            raise ProxySecurityError("DENIED", "BODY_BINDING_MISMATCH")
+        if not body_hash and approved_body_hash:
+            raise ProxySecurityError("DENIED", "BODY_BINDING_MISMATCH")
+        validation_started = time.monotonic()
+        try:
+            validation = cp.validate(
+                payload.decision_id,
+                {
+                    "action": payload.action,
+                    "capability": payload.capability,
+                    "destination": payload.url,
+                    "environment": payload.environment,
+                    "resource_scope": payload.resource_scope,
+                    "connected_address": pinned_address,
+                    "consume": True,
+                },
+            )
+        finally:
+            metrics.add(
+                "final_validation_latency_ms_total",
+                (time.monotonic() - validation_started) * 1000,
+            )
         if not validation.get("valid"):
             reasons = validation.get("reason_codes") or ["FINAL_VALIDATION_DENIED"]
             reason = ",".join(reasons)
@@ -325,9 +368,16 @@ def execute_proxy_request(
         current_url = payload.url
         seen = {current_url}
         while True:
-            result = network.request(
-                canonical, pinned_address, payload.method, current_url, safe_headers, body
-            )
+            socket_started = time.monotonic()
+            try:
+                result = network.request(
+                    canonical, pinned_address, payload.method, current_url, safe_headers, body
+                )
+            finally:
+                metrics.add(
+                    "tls_socket_latency_ms_total",
+                    (time.monotonic() - socket_started) * 1000,
+                )
             response_status = result.status_code
             bytes_received = len(result.body)
             if result.status_code not in {301, 302, 303, 307, 308}:
@@ -380,19 +430,26 @@ def execute_proxy_request(
     finally:
         elapsed = int((time.monotonic() - started) * 1000)
         metrics.add("latency_ms_total", elapsed)
-        cp.finish_receipt(
-            receipt_id,
-            {
-                "outcome": outcome,
-                "security_reason": reason,
-                "response_status": response_status,
-                "bytes_sent": len(body),
-                "bytes_received": bytes_received,
-                "redirect_count": redirects,
-                "latency_ms": elapsed,
-                "request_classifications": classifications,
-            },
-        )
+        finish_started = time.monotonic()
+        try:
+            cp.finish_receipt(
+                receipt_id,
+                {
+                    "outcome": outcome,
+                    "security_reason": reason,
+                    "response_status": response_status,
+                    "bytes_sent": len(body),
+                    "bytes_received": bytes_received,
+                    "redirect_count": redirects,
+                    "latency_ms": elapsed,
+                    "request_classifications": classifications,
+                },
+            )
+        finally:
+            metrics.add(
+                "receipt_finish_latency_ms_total",
+                (time.monotonic() - finish_started) * 1000,
+            )
 
 
 app = FastAPI(title="CYPHERYN Trusted Agent Egress Proxy", version="0.1.0")
@@ -401,7 +458,11 @@ app = FastAPI(title="CYPHERYN Trusted Agent Egress Proxy", version="0.1.0")
 @app.get("/health")
 def health() -> dict:
     settings = get_settings()
-    return {"status": "healthy", "enabled": settings.trusted_egress_proxy_enabled}
+    return {
+        "status": "healthy",
+        "enabled": settings.trusted_egress_proxy_enabled,
+        "replica_id": settings.trusted_egress_proxy_replica_id or socket.gethostname(),
+    }
 
 
 @app.get("/metrics")

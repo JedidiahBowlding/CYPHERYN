@@ -177,7 +177,11 @@ services:
     environment:
       PLATFORM_ENVIRONMENT: ${PLATFORM_ENVIRONMENT:-development}
       PLATFORM_TRUSTED_EGRESS_PROXY_ENABLED: "true"
-      PLATFORM_TRUSTED_EGRESS_PROXY_CONTROL_PLANE_URL: http://api:8000
+      PLATFORM_TRUSTED_EGRESS_PROXY_CONTROL_PLANE_URL: https://egress-control-plane:8443
+      PLATFORM_TRUSTED_EGRESS_PROXY_REPLICA_ID: ""
+      PLATFORM_TRUSTED_EGRESS_PROXY_MTLS_CA_FILE: /run/secrets/egress-mtls/control-plane-ca.pem
+      PLATFORM_TRUSTED_EGRESS_PROXY_MTLS_CERT_FILE: /run/secrets/egress-mtls/${EGRESS_PROXY_CLIENT_CERT_FILE:-proxy-client.crt}
+      PLATFORM_TRUSTED_EGRESS_PROXY_MTLS_KEY_FILE: /run/secrets/egress-mtls/${EGRESS_PROXY_CLIENT_KEY_FILE:-proxy-client.key}
       PLATFORM_TRUSTED_EGRESS_PROXY_MAX_REQUEST_BYTES: ${PLATFORM_TRUSTED_EGRESS_PROXY_MAX_REQUEST_BYTES:-1048576}
       PLATFORM_TRUSTED_EGRESS_PROXY_MAX_RESPONSE_BYTES: ${PLATFORM_TRUSTED_EGRESS_PROXY_MAX_RESPONSE_BYTES:-5242880}
       PLATFORM_TRUSTED_EGRESS_PROXY_MAX_HEADER_BYTES: ${PLATFORM_TRUSTED_EGRESS_PROXY_MAX_HEADER_BYTES:-32768}
@@ -188,6 +192,10 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      egress-control-plane:
+        condition: service_started
+    volumes:
+      - ${PLATFORM_EGRESS_MTLS_DIR:-./platform/.runtime/egress-mtls}:/run/secrets/egress-mtls:ro
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -197,7 +205,70 @@ services:
       interval: 5s
       timeout: 4s
       retries: 20
-    networks: [backend, protected-agents, proxy-egress]
+    networks: [proxy-control, protected-agents, proxy-egress]
+
+  egress-control-plane:
+    profiles: [trusted-egress]
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    user: "10001:10001"
+    volumes:
+      - ./deploy/egress/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${PLATFORM_EGRESS_MTLS_DIR:-./platform/.runtime/egress-mtls}:/pki:ro
+    read_only: true
+    tmpfs: [/data, /config, /tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend, proxy-control]
+
+  agent-control-plane:
+    profiles: [trusted-egress-pilot]
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    user: "10002:10002"
+    volumes:
+      - ./deploy/egress/AgentCaddyfile:/etc/caddy/Caddyfile:ro
+    read_only: true
+    tmpfs: [/data, /config, /tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend, protected-agents]
+
+  protected-agent-pilot:
+    profiles: [trusted-egress-pilot]
+    build:
+      context: ./platform/api
+      dockerfile: Dockerfile.pilot-agent
+    environment:
+      CYPHERYN_API_URL: http://agent-control-plane:8015
+      CYPHERYN_EGRESS_PROXY_URL: http://egress-proxy:8020
+    volumes:
+      - ${PILOT_WORKLOAD_TOKEN_FILE:-./platform/.runtime/pilot-workload-token}:/run/secrets/pilot-workload-token:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      api:
+        condition: service_healthy
+      agent-control-plane:
+        condition: service_started
+      egress-proxy:
+        condition: service_healthy
+    networks: [protected-agents]
 
   frontend:
     build:
@@ -281,6 +352,8 @@ networks:
   backend:
     internal: true
   protected-agents:
+    internal: true
+  proxy-control:
     internal: true
   proxy-egress:
   edge:

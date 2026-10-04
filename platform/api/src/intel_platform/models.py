@@ -364,6 +364,7 @@ class ProxyExecutionReceipt(Base):
     canonical_destination: Mapped[str] = mapped_column(String(500), nullable=False)
     pinned_address: Mapped[str] = mapped_column(String(45), nullable=False)
     method: Mapped[str] = mapped_column(String(12), nullable=False)
+    proxy_replica_id: Mapped[str] = mapped_column(String(128), nullable=False)
     outcome: Mapped[str] = mapped_column(String(80), nullable=False)
     security_reason: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     correlation_id: Mapped[str] = mapped_column(String(128), nullable=False)

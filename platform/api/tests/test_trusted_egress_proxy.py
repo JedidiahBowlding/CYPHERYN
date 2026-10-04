@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import ssl
 from concurrent.futures import ThreadPoolExecutor
 
@@ -177,6 +178,56 @@ def test_request_body_size_is_bounded():
             request(body_base64=body),
             configured=settings(trusted_egress_proxy_max_request_bytes=1024),
         )
+
+
+def test_request_body_is_bound_to_the_approved_resource_scope():
+    approved = b'{"query":"approved"}'
+    modified = b'{"query":"modified"}'
+    scope = {"method": "POST", "body_sha256": hashlib.sha256(approved).hexdigest()}
+    transport = FakeTransport()
+    with pytest.raises(ProxySecurityError, match="BODY_BINDING_MISMATCH"):
+        execute(
+            request(
+                method="POST",
+                capability="web.write",
+                resource_scope=scope,
+                body_base64=base64.b64encode(modified).decode(),
+            ),
+            transport=transport,
+        )
+    assert transport.calls == []
+
+
+def test_approved_request_body_can_execute():
+    body = b'{"query":"approved"}'
+    scope = {"method": "POST", "body_sha256": hashlib.sha256(body).hexdigest()}
+    result = execute(
+        request(
+            method="POST",
+            capability="web.write",
+            resource_scope=scope,
+            body_base64=base64.b64encode(body).decode(),
+        )
+    )
+    assert result["outcome"] == "ALLOWED_AND_EXECUTED"
+
+
+@pytest.mark.parametrize(
+    ("reason", "outcome"),
+    [
+        ("AUTHORIZATION_EXPIRED", "AUTHORITY_EXPIRED"),
+        ("AUTHORIZATION_REVOKED", "AUTHORITY_REVOKED"),
+        ("CAPABILITY_AUTHORITY_CHANGED", "CAPABILITY_REVOKED"),
+        ("POLICY_AUTHORITY_CHANGED", "POLICY_CHANGED"),
+    ],
+)
+def test_final_authority_failures_are_distinct_and_never_open_a_socket(reason, outcome):
+    cp = FakeControlPlane(valid=False, reasons=[reason])
+    transport = FakeTransport()
+    with pytest.raises(ProxySecurityError) as error:
+        execute(cp=cp, transport=transport)
+    assert error.value.outcome == outcome
+    assert transport.calls == []
 
 
 def test_cross_origin_redirect_requires_new_authorization():
@@ -478,6 +529,7 @@ def test_durable_receipt_derives_identity_and_never_returns_sensitive_fields(cli
             "correlation_id": "proxy-correlation-0001",
             "request_body_hash": "",
             "request_classifications": [],
+            "proxy_replica_id": "proxy-test-1",
         },
     )
     assert receipt.status_code == 201

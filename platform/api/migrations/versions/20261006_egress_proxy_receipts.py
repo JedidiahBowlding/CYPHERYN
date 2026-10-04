@@ -28,6 +28,7 @@ def upgrade() -> None:
         sa.Column("canonical_destination", sa.String(500), nullable=False),
         sa.Column("pinned_address", sa.String(45), nullable=False),
         sa.Column("method", sa.String(12), nullable=False),
+        sa.Column("proxy_replica_id", sa.String(128), nullable=False),
         sa.Column("outcome", sa.String(80), nullable=False),
         sa.Column("security_reason", sa.String(500), nullable=False, server_default=""),
         sa.Column("correlation_id", sa.String(128), nullable=False),

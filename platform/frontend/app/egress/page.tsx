@@ -43,6 +43,7 @@ type ProxyReceipt = {
   capability: string;
   destination: string;
   method: string;
+  proxy_replica_id: string;
   outcome: string;
   security_reason: string;
   response_status: number | null;
@@ -147,11 +148,12 @@ export default function EgressPage() {
         </div>
         <div className="egress-table-wrap">
           <table>
-            <thead><tr><th>Time</th><th>Agent</th><th>Operation</th><th>Destination</th><th>Outcome</th><th>Latency</th><th>Trace</th></tr></thead>
+            <thead><tr><th>Time</th><th>Replica</th><th>Agent</th><th>Operation</th><th>Destination</th><th>Outcome</th><th>Latency</th><th>Trace</th></tr></thead>
             <tbody>
               {receipts.map((receipt) => (
                 <tr key={receipt.proxy_request_id}>
                   <td>{new Date(receipt.started_at).toLocaleString()}</td>
+                  <td>{receipt.proxy_replica_id}</td>
                   <td>{receipt.agent_id}</td>
                   <td>{receipt.method} · {receipt.capability}</td>
                   <td>{receipt.destination}</td>
@@ -160,7 +162,7 @@ export default function EgressPage() {
                   <td title={receipt.correlation_id}>{receipt.correlation_id}</td>
                 </tr>
               ))}
-              {!receipts.length && <tr><td colSpan={7}>No trusted proxy executions have been recorded.</td></tr>}
+              {!receipts.length && <tr><td colSpan={8}>No trusted proxy executions have been recorded.</td></tr>}
             </tbody>
           </table>
         </div>

@@ -232,9 +232,13 @@ def test_postgresql_serializes_security_receipts_and_idempotent_races() -> None:
                 except ProxySecurityError as exc:
                     return exc.outcome
 
-            with ThreadPoolExecutor(max_workers=2) as pool:
-                proxy_outcomes = list(pool.map(lambda _: proxy_call(), range(2)))
-            assert sorted(proxy_outcomes) == ["AUTHORITY_CONSUMED", "executed"]
+            with ThreadPoolExecutor(max_workers=3) as pool:
+                proxy_outcomes = list(pool.map(lambda _: proxy_call(), range(3)))
+            assert sorted(proxy_outcomes) == [
+                "AUTHORITY_CONSUMED",
+                "AUTHORITY_CONSUMED",
+                "executed",
+            ]
             assert socket_count == 1
 
             work = [

@@ -1,0 +1,22 @@
+{
+	auto_https off
+	admin off
+}
+
+:8443 {
+	tls /pki/control-plane-server.crt /pki/control-plane-server.key {
+		client_auth {
+			mode require_and_verify
+			trust_pool file {
+				pem_file /pki/proxy-client-ca-bundle.pem
+			}
+		}
+	}
+
+	@proxySecurityOperations {
+		path_regexp proxyOps ^/api/v1/security/(decisions/[^/]+/(validate|proxy-receipts)|proxy-receipts/[^/]+)$
+		method POST PATCH
+	}
+	reverse_proxy @proxySecurityOperations api:8000
+	respond "proxy service identity is not authorized for this operation" 403
+}
