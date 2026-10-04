@@ -33,6 +33,7 @@ THRESHOLDS = {
     "security_control.py": 80,
     "security_contracts.py": 90,
     "destination_security.py": 80,
+    "egress_proxy.py": 70,
     "migration_guard.py": 90,
     "auth.py": 80,
 }

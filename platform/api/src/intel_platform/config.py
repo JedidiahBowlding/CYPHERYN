@@ -56,6 +56,23 @@ class Settings(BaseSettings):
     security_request_clock_skew_seconds: int = 300
     security_authorization_ttl_seconds: int = Field(default=60, ge=5, le=300)
     security_resolution_ttl_seconds: int = Field(default=30, ge=5, le=120)
+    trusted_egress_proxy_enabled: bool = False
+    trusted_egress_proxy_control_plane_url: str = "http://api:8000"
+    trusted_egress_proxy_max_request_bytes: int = Field(
+        default=1024 * 1024, ge=1024, le=10 * 1024 * 1024
+    )
+    trusted_egress_proxy_max_response_bytes: int = Field(
+        default=5 * 1024 * 1024, ge=1024, le=25 * 1024 * 1024
+    )
+    trusted_egress_proxy_max_header_bytes: int = Field(
+        default=32 * 1024, ge=4096, le=128 * 1024
+    )
+    trusted_egress_proxy_connect_timeout_seconds: float = Field(default=5.0, ge=0.1, le=30)
+    trusted_egress_proxy_read_timeout_seconds: float = Field(default=20.0, ge=0.1, le=120)
+    trusted_egress_proxy_validation_timeout_seconds: float = Field(
+        default=5.0, ge=0.1, le=30
+    )
+    trusted_egress_proxy_max_redirects: int = Field(default=3, ge=0, le=10)
 
     @model_validator(mode="after")
     def validate_authentication(self) -> "Settings":

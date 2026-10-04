@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
@@ -11,8 +12,15 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from intel_platform.auth import Principal, WorkloadPrincipal, get_principal, get_workload_principal
+from intel_platform.config import Settings
 from intel_platform.database import Base, get_db
 from intel_platform.egress import verify_event
+from intel_platform.egress_proxy import (
+    ProxyRequest,
+    ProxySecurityError,
+    TransportResult,
+    execute_proxy_request,
+)
 from intel_platform.main import app
 from intel_platform.models import DecisionAuthorization, EgressEvent
 
@@ -157,6 +165,78 @@ def test_postgresql_serializes_security_receipts_and_idempotent_races() -> None:
             assert sum(response.json()["valid"] for response in consumption) == 1
             assert sum(response.json()["consumed"] for response in consumption) == 1
 
+            proxy_decision_id = post(first_client, _payload(first_agent, 100)).json()[
+                "decision_id"
+            ]
+            with testing_session() as db:
+                authority = db.get(DecisionAuthorization, proxy_decision_id)
+                authority.maximum_uses = 1
+                db.commit()
+            socket_count = 0
+            socket_lock = threading.Lock()
+
+            class IntegratedControlPlane:
+                def start_receipt(self, decision_id, payload):
+                    response = client.post(
+                        f"/api/v1/security/decisions/{decision_id}/proxy-receipts",
+                        json=payload,
+                        headers={"X-Test-Workload": first_client},
+                    )
+                    response.raise_for_status()
+                    return response.json()["proxy_request_id"]
+
+                def validate(self, decision_id, payload):
+                    response = client.post(
+                        f"/api/v1/security/decisions/{decision_id}/validate",
+                        json=payload,
+                        headers={"X-Test-Workload": first_client},
+                    )
+                    response.raise_for_status()
+                    return response.json()
+
+                def finish_receipt(self, receipt_id, payload):
+                    response = client.patch(
+                        f"/api/v1/security/proxy-receipts/{receipt_id}",
+                        json=payload,
+                        headers={"X-Test-Workload": first_client},
+                    )
+                    response.raise_for_status()
+
+            class CountingTransport:
+                def request(self, *args):
+                    nonlocal socket_count
+                    with socket_lock:
+                        socket_count += 1
+                    return TransportResult(204, {}, b"", 0)
+
+            proxy_payload = ProxyRequest(
+                decision_id=proxy_decision_id,
+                action="fetch",
+                capability="web.read",
+                url="https://8.8.8.8",
+                method="GET",
+                resource_scope={"method": "GET"},
+                correlation_id="postgres-multi-proxy-0001",
+            )
+
+            def proxy_call():
+                try:
+                    execute_proxy_request(
+                        proxy_payload,
+                        "Bearer test-token",
+                        Settings(trusted_egress_proxy_enabled=True),
+                        control_plane=IntegratedControlPlane(),
+                        transport=CountingTransport(),
+                    )
+                    return "executed"
+                except ProxySecurityError as exc:
+                    return exc.outcome
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                proxy_outcomes = list(pool.map(lambda _: proxy_call(), range(2)))
+            assert sorted(proxy_outcomes) == ["AUTHORITY_CONSUMED", "executed"]
+            assert socket_count == 1
+
             work = [
                 (first_client, _payload(first_agent, number))
                 if number % 2 == 0
@@ -169,7 +249,7 @@ def test_postgresql_serializes_security_receipts_and_idempotent_races() -> None:
             assert {response.json()["decision"] for response in independent} == {"ALLOW"}
 
         with Session(engine) as db:
-            assert db.scalar(select(func.count(EgressEvent.id))) == 13
+            assert db.scalar(select(func.count(EgressEvent.id))) == 14
             first_events = list(
                 db.scalars(
                     select(EgressEvent)

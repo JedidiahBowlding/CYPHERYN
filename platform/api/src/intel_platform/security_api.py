@@ -17,6 +17,7 @@ from .auth import (
     WorkloadPrincipal,
     get_current_user,
     get_workload_principal,
+    membership_for,
     require_organization_admin,
 )
 from .config import Settings, get_settings
@@ -31,6 +32,7 @@ from .models import (
     EgressEvent,
     EgressPolicy,
     ProtectedAgent,
+    ProxyExecutionReceipt,
     SecurityClient,
     SecurityDestination,
     User,
@@ -220,6 +222,26 @@ class DecisionValidationRequest(BaseModel):
         return _safe_metadata(value, "resource_scope")
 
 
+class ProxyReceiptStart(BaseModel):
+    capability: str = Field(min_length=3, max_length=160)
+    method: str = Field(min_length=3, max_length=12, pattern=r"^[A-Z]+$")
+    pinned_address: str = Field(min_length=2, max_length=45)
+    correlation_id: str = Field(min_length=8, max_length=128)
+    request_body_hash: str = Field(default="", pattern=r"^(?:[0-9a-f]{64})?$")
+    request_classifications: list[str] = Field(default_factory=list, max_length=20)
+
+
+class ProxyReceiptFinish(BaseModel):
+    outcome: str = Field(min_length=2, max_length=80, pattern=r"^[A-Z_]+$")
+    security_reason: str = Field(default="", max_length=500)
+    response_status: int | None = Field(default=None, ge=100, le=599)
+    bytes_sent: int = Field(default=0, ge=0)
+    bytes_received: int = Field(default=0, ge=0)
+    redirect_count: int = Field(default=0, ge=0, le=10)
+    latency_ms: int = Field(default=0, ge=0)
+    request_classifications: list[str] | None = Field(default=None, max_length=20)
+
+
 def _hash(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
@@ -359,7 +381,7 @@ def list_security_clients(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[dict]:
-    _admin(db, user, organization_id)
+    membership_for(db, user.id, organization_id)
     clients = db.scalars(
         select(SecurityClient).where(SecurityClient.organization_id == organization_id)
     )
@@ -1255,6 +1277,123 @@ def get_decision(
     ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Security decision not found")
     return _receipt(event, _authorization(db, event.id))
+
+
+@router.post("/decisions/{decision_id}/proxy-receipts", status_code=201)
+def start_proxy_receipt(
+    decision_id: str,
+    payload: ProxyReceiptStart,
+    db: Session = Depends(get_db),
+    client: SecurityClient = Depends(_client_for_principal),
+) -> dict:
+    """Create a safe durable receipt before the proxy attempts final validation."""
+    event = db.get(EgressEvent, decision_id)
+    authorization = db.get(DecisionAuthorization, decision_id)
+    if (
+        event is None
+        or authorization is None
+        or event.organization_id != client.organization_id
+        or event.security_client_id != client.id
+    ):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Security decision not found")
+    try:
+        pinned_address = ipaddress.ip_address(payload.pinned_address).compressed
+    except ValueError as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Invalid pinned address"
+        ) from exc
+    if pinned_address not in set(authorization.resolved_addresses):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Pinned address is not authorized")
+    if payload.capability != event.capability:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Capability does not match decision")
+    expected_capability = "web.read" if payload.method in {"GET", "HEAD"} else "web.write"
+    if payload.capability != expected_capability:
+        raise HTTPException(status.HTTP_409_CONFLICT, "HTTP method is not authorized by capability")
+    receipt = ProxyExecutionReceipt(
+        decision_id=decision_id,
+        organization_id=client.organization_id,
+        security_client_id=client.id,
+        agent_id=authorization.agent_id,
+        capability=event.capability,
+        canonical_destination=authorization.canonical_destination,
+        pinned_address=pinned_address,
+        method=payload.method,
+        outcome="PENDING_VALIDATION",
+        security_reason="",
+        correlation_id=payload.correlation_id,
+        request_body_hash=payload.request_body_hash,
+        request_classifications=sorted(set(payload.request_classifications)),
+        started_at=datetime.now(UTC),
+    )
+    db.add(receipt)
+    db.commit()
+    return {"proxy_request_id": receipt.id, "outcome": receipt.outcome}
+
+
+@router.patch("/proxy-receipts/{receipt_id}")
+def finish_proxy_receipt(
+    receipt_id: str,
+    payload: ProxyReceiptFinish,
+    db: Session = Depends(get_db),
+    client: SecurityClient = Depends(_client_for_principal),
+) -> dict:
+    receipt = db.get(ProxyExecutionReceipt, receipt_id)
+    if (
+        receipt is None
+        or receipt.organization_id != client.organization_id
+        or receipt.security_client_id != client.id
+    ):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Proxy receipt not found")
+    receipt.outcome = payload.outcome
+    receipt.security_reason = payload.security_reason
+    receipt.response_status = payload.response_status
+    receipt.bytes_sent = payload.bytes_sent
+    receipt.bytes_received = payload.bytes_received
+    receipt.redirect_count = payload.redirect_count
+    receipt.latency_ms = payload.latency_ms
+    if payload.request_classifications is not None:
+        receipt.request_classifications = sorted(set(payload.request_classifications))
+    receipt.completed_at = datetime.now(UTC)
+    db.commit()
+    return {"proxy_request_id": receipt.id, "outcome": receipt.outcome}
+
+
+@router.get("/proxy-receipts")
+def list_proxy_receipts(
+    organization_id: str,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[dict]:
+    _admin(db, user, organization_id)
+    bounded_limit = max(1, min(limit, 500))
+    receipts = db.scalars(
+        select(ProxyExecutionReceipt)
+        .where(ProxyExecutionReceipt.organization_id == organization_id)
+        .order_by(ProxyExecutionReceipt.started_at.desc())
+        .limit(bounded_limit)
+    ).all()
+    return [
+        {
+            "proxy_request_id": item.id,
+            "decision_id": item.decision_id,
+            "agent_id": item.agent_id,
+            "capability": item.capability,
+            "destination": item.canonical_destination,
+            "method": item.method,
+            "outcome": item.outcome,
+            "security_reason": item.security_reason,
+            "response_status": item.response_status,
+            "bytes_sent": item.bytes_sent,
+            "bytes_received": item.bytes_received,
+            "redirect_count": item.redirect_count,
+            "latency_ms": item.latency_ms,
+            "correlation_id": item.correlation_id,
+            "started_at": item.started_at.isoformat(),
+            "completed_at": item.completed_at.isoformat() if item.completed_at else None,
+        }
+        for item in receipts
+    ]
 
 
 @router.get("/decisions")

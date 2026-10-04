@@ -168,6 +168,37 @@ services:
       retries: 20
     networks: [backend]
 
+  egress-proxy:
+    profiles: [trusted-egress]
+    build:
+      context: ./platform/api
+      dockerfile: Dockerfile.egress-proxy
+    restart: unless-stopped
+    environment:
+      PLATFORM_ENVIRONMENT: ${PLATFORM_ENVIRONMENT:-development}
+      PLATFORM_TRUSTED_EGRESS_PROXY_ENABLED: "true"
+      PLATFORM_TRUSTED_EGRESS_PROXY_CONTROL_PLANE_URL: http://api:8000
+      PLATFORM_TRUSTED_EGRESS_PROXY_MAX_REQUEST_BYTES: ${PLATFORM_TRUSTED_EGRESS_PROXY_MAX_REQUEST_BYTES:-1048576}
+      PLATFORM_TRUSTED_EGRESS_PROXY_MAX_RESPONSE_BYTES: ${PLATFORM_TRUSTED_EGRESS_PROXY_MAX_RESPONSE_BYTES:-5242880}
+      PLATFORM_TRUSTED_EGRESS_PROXY_MAX_HEADER_BYTES: ${PLATFORM_TRUSTED_EGRESS_PROXY_MAX_HEADER_BYTES:-32768}
+      PLATFORM_TRUSTED_EGRESS_PROXY_CONNECT_TIMEOUT_SECONDS: ${PLATFORM_TRUSTED_EGRESS_PROXY_CONNECT_TIMEOUT_SECONDS:-5}
+      PLATFORM_TRUSTED_EGRESS_PROXY_READ_TIMEOUT_SECONDS: ${PLATFORM_TRUSTED_EGRESS_PROXY_READ_TIMEOUT_SECONDS:-20}
+      PLATFORM_TRUSTED_EGRESS_PROXY_VALIDATION_TIMEOUT_SECONDS: ${PLATFORM_TRUSTED_EGRESS_PROXY_VALIDATION_TIMEOUT_SECONDS:-5}
+      PLATFORM_TRUSTED_EGRESS_PROXY_MAX_REDIRECTS: ${PLATFORM_TRUSTED_EGRESS_PROXY_MAX_REDIRECTS:-3}
+    depends_on:
+      api:
+        condition: service_healthy
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+    networks: [backend, protected-agents, proxy-egress]
+
   frontend:
     build:
       context: ./platform/frontend
@@ -249,4 +280,7 @@ volumes:
 networks:
   backend:
     internal: true
+  protected-agents:
+    internal: true
+  proxy-egress:
   edge:

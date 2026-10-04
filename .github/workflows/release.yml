@@ -38,10 +38,10 @@ jobs:
       - name: Build shipped images
         run: |
           python scripts/setup.py --check
-          docker compose build api worker frontend taxii scanner-orchestrator
+          docker compose build api worker frontend taxii scanner-orchestrator egress-proxy
       - name: Scan shipped images
         run: |
-          for image in cypheryn-api:latest cypheryn-worker:latest cypheryn-frontend:latest cypheryn-taxii:latest cypheryn-scanner-orchestrator:latest; do
+          for image in cypheryn-api:latest cypheryn-worker:latest cypheryn-frontend:latest cypheryn-taxii:latest cypheryn-scanner-orchestrator:latest cypheryn-egress-proxy:latest; do
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
               -v "$PWD:/workspace" aquasec/trivy:0.68.2 image \
               --severity HIGH,CRITICAL --ignore-unfixed --ignorefile /workspace/.trivyignore \
@@ -74,6 +74,11 @@ jobs:
         with:
           image: cypheryn-scanner-orchestrator:latest
           output-file: dist/cypheryn-scanner-orchestrator.spdx.json
+      - name: Generate trusted egress proxy SBOM
+        uses: anchore/sbom-action@v0.24.2
+        with:
+          image: cypheryn-egress-proxy:latest
+          output-file: dist/cypheryn-egress-proxy.spdx.json
       - name: Package source and checksums
         run: |
           git archive --format=tar.gz --prefix="CYPHERYN-${GITHUB_REF_NAME}/" \

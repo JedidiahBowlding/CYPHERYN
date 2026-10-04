@@ -36,12 +36,27 @@ type EgressEvent = {
   integrity_valid: boolean;
   created_at: string;
 };
+type ProxyReceipt = {
+  proxy_request_id: string;
+  decision_id: string;
+  agent_id: string;
+  capability: string;
+  destination: string;
+  method: string;
+  outcome: string;
+  security_reason: string;
+  response_status: number | null;
+  latency_ms: number;
+  correlation_id: string;
+  started_at: string;
+};
 
 export default function EgressPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organizationId, setOrganizationId] = useState("");
   const [overview, setOverview] = useState<Overview | null>(null);
   const [events, setEvents] = useState<EgressEvent[]>([]);
+  const [receipts, setReceipts] = useState<ProxyReceipt[]>([]);
   const [decision, setDecision] = useState("");
   const [selected, setSelected] = useState<EgressEvent | null>(null);
   const [error, setError] = useState("");
@@ -62,10 +77,12 @@ export default function EgressPage() {
     Promise.all([
       fetch(`${API}/api/v1/egress/overview?organization_id=${encodeURIComponent(organizationId)}`, { headers }),
       fetch(`${API}/api/v1/egress/events?organization_id=${encodeURIComponent(organizationId)}&limit=200`, { headers }),
-    ]).then(async ([summary, activity]) => {
-      if (!summary.ok || !activity.ok) throw new Error("Egress telemetry is unavailable");
+      fetch(`${API}/api/v1/security/proxy-receipts?organization_id=${encodeURIComponent(organizationId)}&limit=100`, { headers }),
+    ]).then(async ([summary, activity, proxyActivity]) => {
+      if (!summary.ok || !activity.ok || !proxyActivity.ok) throw new Error("Egress telemetry is unavailable");
       setOverview(await summary.json());
       setEvents(await activity.json());
+      setReceipts(await proxyActivity.json());
     }).catch((caught) => setError(caught.message));
   }, [organizationId]);
 
@@ -120,6 +137,30 @@ export default function EgressPage() {
                 </tr>
               ))}
               {!visibleEvents.length && <tr><td colSpan={5}>No egress events have been recorded for this organization.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="egress-panel">
+        <div className="egress-panel-heading">
+          <div><p className="eyebrow">Trusted boundary</p><h2>Recent proxy executions</h2></div>
+        </div>
+        <div className="egress-table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>Agent</th><th>Operation</th><th>Destination</th><th>Outcome</th><th>Latency</th><th>Trace</th></tr></thead>
+            <tbody>
+              {receipts.map((receipt) => (
+                <tr key={receipt.proxy_request_id}>
+                  <td>{new Date(receipt.started_at).toLocaleString()}</td>
+                  <td>{receipt.agent_id}</td>
+                  <td>{receipt.method} · {receipt.capability}</td>
+                  <td>{receipt.destination}</td>
+                  <td title={receipt.security_reason}>{receipt.outcome.replaceAll("_", " ")}</td>
+                  <td>{receipt.latency_ms} ms</td>
+                  <td title={receipt.correlation_id}>{receipt.correlation_id}</td>
+                </tr>
+              ))}
+              {!receipts.length && <tr><td colSpan={7}>No trusted proxy executions have been recorded.</td></tr>}
             </tbody>
           </table>
         </div>

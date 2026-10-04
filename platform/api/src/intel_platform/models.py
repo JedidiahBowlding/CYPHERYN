@@ -348,6 +348,36 @@ class DecisionAuthorization(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class ProxyExecutionReceipt(Base):
+    __tablename__ = "proxy_execution_receipts"
+    __table_args__ = (
+        Index("ix_proxy_receipt_org_started", "organization_id", "started_at"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    decision_id: Mapped[str] = mapped_column(ForeignKey("egress_events.id"), nullable=False)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    security_client_id: Mapped[str] = mapped_column(
+        ForeignKey("security_clients.id"), nullable=False
+    )
+    agent_id: Mapped[str] = mapped_column(ForeignKey("protected_agents.id"), nullable=False)
+    capability: Mapped[str] = mapped_column(String(160), nullable=False)
+    canonical_destination: Mapped[str] = mapped_column(String(500), nullable=False)
+    pinned_address: Mapped[str] = mapped_column(String(45), nullable=False)
+    method: Mapped[str] = mapped_column(String(12), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(80), nullable=False)
+    security_reason: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    correlation_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    request_body_hash: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    request_classifications: Mapped[list] = mapped_column(JSON, default=list)
+    response_status: Mapped[int | None] = mapped_column(Integer)
+    bytes_sent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    bytes_received: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    redirect_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class EgressArtifact(Base):
     __tablename__ = "egress_artifacts"
     __table_args__ = (Index("ix_egress_artifact_event", "event_id"),)
