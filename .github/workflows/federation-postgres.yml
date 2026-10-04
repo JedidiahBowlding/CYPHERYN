@@ -27,8 +27,8 @@ jobs:
           --health-timeout 3s
           --health-retries 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.13"
           cache: pip
@@ -40,4 +40,12 @@ jobs:
         working-directory: platform/api
         env:
           FEDERATION_TEST_DATABASE_URL: postgresql+psycopg://federation_test:federation_test@127.0.0.1:5432/federation_test
-        run: python -m pytest tests/test_federation_postgres.py -q
+        run: python -m pytest tests/test_federation_postgres.py -q --junitxml=federation-postgres.xml
+      - name: Upload PostgreSQL federation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: federation-postgres-results
+          path: platform/api/federation-postgres.xml
+          if-no-files-found: warn
+          retention-days: 14

@@ -52,3 +52,16 @@ The production rollback strategy is application rollback while retaining additiv
 columns, security decisions and audit evidence. The migration includes a development
 downgrade, but it drops Phase 1 control-plane tables and must not be used against
 production without a verified backup and explicit data-loss approval.
+
+## Hosted verification
+
+The `Protected Agent Review / PostgreSQL authority and migrations` check uses a
+disposable PostgreSQL 17 service. It creates the schema from the pull request's
+previous baseline, stamps the non-mutating Alembic baseline, upgrades to `head`,
+downgrades to the baseline, and re-upgrades. It separately verifies the clean
+development path (`Base.metadata.create_all` followed by `alembic stamp head`) and
+runs the PostgreSQL single-use execution-authority concurrency certification.
+
+This CI path uses synthetic, job-local credentials only. It neither connects to nor
+modifies a deployed database, and its XML/revision artifacts contain no production
+connection material.
