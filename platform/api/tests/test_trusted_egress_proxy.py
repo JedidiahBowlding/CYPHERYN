@@ -316,9 +316,11 @@ def test_pinned_transport_preserves_hostname_for_sni_and_certificate_validation(
     class Context:
         check_hostname = True
         verify_mode = ssl.CERT_REQUIRED
+        minimum_version = None
 
         def wrap_socket(self, raw, *, server_hostname):
             observed["server_hostname"] = server_hostname
+            observed["minimum_version"] = self.minimum_version
             return TLS()
 
     class Incoming:
@@ -350,6 +352,7 @@ def test_pinned_transport_preserves_hostname_for_sni_and_certificate_validation(
         canonical, "8.8.8.8", "GET", "https://example.com/path", {}, b""
     )
     assert observed["server_hostname"] == "example.com"
+    assert observed["minimum_version"] is ssl.TLSVersion.TLSv1_2
     assert b"Host: example.com\r\n" in observed["wire"]
 
 

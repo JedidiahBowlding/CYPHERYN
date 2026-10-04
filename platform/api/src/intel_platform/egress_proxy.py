@@ -190,6 +190,7 @@ class PinnedHttpsTransport:
         tls = None
         try:
             context = ssl.create_default_context()
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
             tls = context.wrap_socket(raw, server_hostname=canonical.hostname)
             tls.settimeout(self.settings.trusted_egress_proxy_read_timeout_seconds)
             outbound = {
