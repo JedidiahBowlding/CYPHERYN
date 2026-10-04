@@ -137,6 +137,7 @@ class ProtectedAgent(Base):
         ForeignKey("security_clients.id"), index=True
     )
     credential_state: Mapped[str] = mapped_column(String(30), default="managed", nullable=False)
+    authorization_generation: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
@@ -158,6 +159,7 @@ class SecurityClient(Base):
     status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
     credential_reference: Mapped[str] = mapped_column(String(300), default="", nullable=False)
     credential_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    authorization_generation: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -195,6 +197,7 @@ class AgentCapabilityGrant(Base):
     resource_scope: Mapped[dict] = mapped_column(JSON, default=dict)
     resource_scope_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    authorization_generation: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -218,6 +221,7 @@ class SecurityDestination(Base):
     service_identity: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     environment: Mapped[str] = mapped_column(String(80), default="production", nullable=False)
     trust_state: Mapped[str] = mapped_column(String(30), default="unknown", nullable=False)
+    authorization_generation: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     reputation_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
     created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -241,6 +245,7 @@ class EgressPolicy(Base):
     enforcement_mode: Mapped[str] = mapped_column(String(30), default="enforce")
     policy_type: Mapped[str] = mapped_column(String(50), default="egress", nullable=False)
     priority: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+    authorization_generation: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     state: Mapped[str] = mapped_column(String(30), default="draft")
     integrity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_by_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -298,6 +303,49 @@ class EgressEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DecisionAuthorization(Base):
+    __tablename__ = "decision_authorizations"
+    __table_args__ = (
+        Index("ix_decision_authorization_org_expiry", "organization_id", "expires_at"),
+    )
+    decision_id: Mapped[str] = mapped_column(
+        ForeignKey("egress_events.id"), primary_key=True
+    )
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    security_client_id: Mapped[str] = mapped_column(
+        ForeignKey("security_clients.id"), nullable=False
+    )
+    agent_id: Mapped[str] = mapped_column(ForeignKey("protected_agents.id"), nullable=False)
+    grant_id: Mapped[str] = mapped_column(
+        ForeignKey("agent_capability_grants.id"), nullable=False
+    )
+    destination_id: Mapped[str] = mapped_column(
+        ForeignKey("security_destinations.id"), nullable=False
+    )
+    policy_id: Mapped[str] = mapped_column(ForeignKey("egress_policies.id"), nullable=False)
+    client_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    agent_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    grant_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    destination_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    policy_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    operation_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_destination: Mapped[str] = mapped_column(String(500), nullable=False)
+    scheme: Mapped[str] = mapped_column(String(20), nullable=False)
+    hostname: Mapped[str] = mapped_column(String(255), nullable=False)
+    port: Mapped[int] = mapped_column(Integer, nullable=False)
+    resolved_addresses: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    resolution_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    resolution_expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    maximum_uses: Mapped[int | None] = mapped_column(Integer)
+    use_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class EgressArtifact(Base):

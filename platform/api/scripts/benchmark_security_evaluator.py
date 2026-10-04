@@ -125,18 +125,43 @@ def main() -> None:
                     response = client.post("/api/v1/security/evaluate", json=payload)
                     elapsed_ms = (time.perf_counter() - started) * 1000
                     require_status(response, 201)
-                    return elapsed_ms
+                    return elapsed_ms, response.json()["decision_id"]
 
                 sequential_count = 50
-                latencies = [evaluate(number) for number in range(sequential_count)]
+                sequential_results = [evaluate(number) for number in range(sequential_count)]
+                latencies = [item[0] for item in sequential_results]
                 sequential_queries = query_count
+
+                query_count = 0
+                validation_latencies = []
+                validation_payload = {
+                    "action": "fetch",
+                    "capability": "web.read",
+                    "destination": "https://8.8.8.8",
+                    "environment": "production",
+                    "resource_scope": {"method": "GET"},
+                    "connected_address": "8.8.8.8",
+                    "consume": False,
+                }
+                for _elapsed, decision_id in sequential_results:
+                    started = time.perf_counter()
+                    response = client.post(
+                        f"/api/v1/security/decisions/{decision_id}/validate",
+                        json=validation_payload,
+                    )
+                    validation_latencies.append((time.perf_counter() - started) * 1000)
+                    require_status(response, 200)
+                    if not response.json()["valid"]:
+                        raise RuntimeError(response.text)
+                validation_queries = query_count
 
                 query_count = 0
                 concurrent_started = time.perf_counter()
                 with ThreadPoolExecutor(max_workers=8) as pool:
-                    concurrent_latencies = list(
+                    concurrent_results = list(
                         pool.map(evaluate, range(sequential_count, sequential_count + 32))
                     )
+                concurrent_latencies = [item[0] for item in concurrent_results]
                 concurrent_elapsed_ms = (time.perf_counter() - concurrent_started) * 1000
                 result = {
                     "engine": "sqlite-local-deterministic-baseline",
@@ -149,6 +174,15 @@ def main() -> None:
                     },
                     "queries_per_sequential_decision": round(
                         sequential_queries / sequential_count, 2
+                    ),
+                    "validation_latency_ms": {
+                        "mean": round(statistics.mean(validation_latencies), 3),
+                        "p50": round(percentile(validation_latencies, 50), 3),
+                        "p95": round(percentile(validation_latencies, 95), 3),
+                        "max": round(max(validation_latencies), 3),
+                    },
+                    "queries_per_final_validation": round(
+                        validation_queries / sequential_count, 2
                     ),
                     "concurrent_requests": len(concurrent_latencies),
                     "concurrent_workers": 8,

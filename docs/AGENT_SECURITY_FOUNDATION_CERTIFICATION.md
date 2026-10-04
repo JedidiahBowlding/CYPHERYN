@@ -1,5 +1,8 @@
 # Agent Security Control-Plane Foundation Certification
 
+> Historical certified baseline. The subsequent authorization-lease and DNS-binding results are
+> recorded in `POST_CERTIFICATION_HARDENING_REPORT.md`.
+
 Date: 2026-10-04
 
 Branch: `feature/agent-security-foundation`

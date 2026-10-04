@@ -14,7 +14,7 @@ from intel_platform.auth import Principal, WorkloadPrincipal, get_principal, get
 from intel_platform.database import Base, get_db
 from intel_platform.egress import verify_event
 from intel_platform.main import app
-from intel_platform.models import EgressEvent
+from intel_platform.models import DecisionAuthorization, EgressEvent
 
 DATABASE_URL = os.getenv("AGENT_SECURITY_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -124,7 +124,38 @@ def test_postgresql_serializes_security_receipts_and_idempotent_races() -> None:
                     )
                 )
             assert {response.status_code for response in identical} == {201}
-            assert len({response.json()["decision_id"] for response in identical}) == 1
+            shared_decision_id = identical[0].json()["decision_id"]
+            assert {response.json()["decision_id"] for response in identical} == {
+                shared_decision_id
+            }
+
+            with testing_session() as db:
+                authority = db.get(DecisionAuthorization, shared_decision_id)
+                authority.maximum_uses = 1
+                db.commit()
+            validation_payload = {
+                "action": "fetch",
+                "capability": "web.read",
+                "destination": "https://8.8.8.8",
+                "environment": "production",
+                "resource_scope": {"method": "GET"},
+                "connected_address": "8.8.8.8",
+                "consume": True,
+            }
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                consumption = list(
+                    pool.map(
+                        lambda _: client.post(
+                            f"/api/v1/security/decisions/{shared_decision_id}/validate",
+                            json=validation_payload,
+                            headers={"X-Test-Workload": first_client},
+                        ),
+                        range(8),
+                    )
+                )
+            assert {response.status_code for response in consumption} == {200}
+            assert sum(response.json()["valid"] for response in consumption) == 1
+            assert sum(response.json()["consumed"] for response in consumption) == 1
 
             work = [
                 (first_client, _payload(first_agent, number))

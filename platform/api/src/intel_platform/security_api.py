@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
@@ -25,6 +26,7 @@ from .egress import digest, seal_event, status_for, verify_event
 from .models import (
     AgentCapability,
     AgentCapabilityGrant,
+    DecisionAuthorization,
     EgressDecision,
     EgressEvent,
     EgressPolicy,
@@ -50,6 +52,7 @@ from .security_control import (
     default_policy,
     ensure_default_capabilities,
     evaluate_generic_policy,
+    policy_integrity,
 )
 
 router = APIRouter(prefix="/api/v1/security", tags=["agent-security-control-plane"])
@@ -202,6 +205,21 @@ class SecurityEvaluationRequest(BaseModel):
         return _safe_metadata(value, info.field_name)
 
 
+class DecisionValidationRequest(BaseModel):
+    action: str = Field(min_length=1, max_length=160)
+    capability: str = Field(min_length=3, max_length=160)
+    destination: str = Field(min_length=1, max_length=2048)
+    environment: str = Field(default="production", max_length=80)
+    resource_scope: dict = Field(default_factory=dict, max_length=100)
+    connected_address: str = Field(min_length=2, max_length=45)
+    consume: bool = False
+
+    @field_validator("resource_scope")
+    @classmethod
+    def safe_validation_scope(cls, value: dict) -> dict:
+        return _safe_metadata(value, "resource_scope")
+
+
 def _hash(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
@@ -224,7 +242,52 @@ def _client_for_principal(
     return client
 
 
-def _receipt(event: EgressEvent) -> dict:
+def _operation_fingerprint(
+    *,
+    agent_id: str,
+    action: str,
+    capability: str,
+    canonical_destination: str,
+    environment: str,
+    resource_scope: dict,
+    classifications: list[str],
+) -> str:
+    return digest(
+        {
+            "agent_id": agent_id,
+            "action": action,
+            "capability": capability,
+            "destination": canonical_destination,
+            "environment": environment,
+            "resource_scope": resource_scope,
+            "data_classifications": classifications,
+        }
+    )
+
+
+def _authorization(db: Session, decision_id: str) -> DecisionAuthorization | None:
+    return db.get(DecisionAuthorization, decision_id)
+
+
+def _receipt(
+    event: EgressEvent, authorization: DecisionAuthorization | None = None
+) -> dict:
+    destination_binding = {
+        "canonical_identifier": event.destination,
+        "resolved_addresses": event.normalized_request.get("resolved_addresses", []),
+        "redirects_require_reevaluation": True,
+    }
+    if authorization:
+        destination_binding.update(
+            {
+                "scheme": authorization.scheme,
+                "hostname": authorization.hostname,
+                "port": authorization.port,
+                "resolution_time": authorization.resolution_time.isoformat(),
+                "resolution_expires_at": authorization.resolution_expires_at.isoformat(),
+                "connection_contract": "pin_connected_address_and_validate_before_execution",
+            }
+        )
     return {
         "decision_id": event.id,
         "decision": public_decision(event.effective_decision),
@@ -240,12 +303,20 @@ def _receipt(event: EgressEvent) -> dict:
         "required_approval": public_decision(event.evaluated_decision) == "REQUIRE_APPROVAL",
         "correlation_id": event.correlation_id,
         "request_id": event.request_id,
-        "destination_binding": {
-            "canonical_identifier": event.destination,
-            "resolved_addresses": event.normalized_request.get("resolved_addresses", []),
-            "redirects_require_reevaluation": True,
-        },
-        "expires_at": None,
+        "destination_binding": destination_binding,
+        "authorization": (
+            {
+                "issued_at": authorization.issued_at.isoformat(),
+                "expires_at": authorization.expires_at.isoformat(),
+                "maximum_uses": authorization.maximum_uses,
+                "use_count": authorization.use_count,
+                "single_use": authorization.maximum_uses == 1,
+                "operation_fingerprint": authorization.operation_fingerprint,
+            }
+            if authorization
+            else None
+        ),
+        "expires_at": authorization.expires_at.isoformat() if authorization else None,
         "integrity": {"valid": verify_event(event), "event_hash": event.event_hash},
         "created_at": event.created_at.isoformat(),
     }
@@ -321,6 +392,8 @@ def update_client_status(
         new_status = ClientStatus(payload.status.upper())
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Invalid client status") from exc
+    if client.status != new_status.value.lower():
+        client.authorization_generation += 1
     client.status = new_status.value.lower()
     client.revoked_at = datetime.now(UTC) if new_status == ClientStatus.REVOKED else None
     record_audit(
@@ -348,6 +421,7 @@ def rotate_client_credential(
     _admin(db, user, client.organization_id)
     client.credential_reference = payload.credential_reference
     client.credential_version += 1
+    client.authorization_generation += 1
     client.updated_at = datetime.now(UTC)
     record_audit(
         db,
@@ -430,9 +504,12 @@ def update_agent_status(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Protected agent not found")
     _admin(db, user, agent.organization_id)
     try:
-        agent.status = AgentStatus(payload.status.upper()).value.lower()
+        new_status = AgentStatus(payload.status.upper()).value.lower()
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Invalid agent status") from exc
+    if agent.status != new_status:
+        agent.authorization_generation += 1
+    agent.status = new_status
     agent.updated_at = datetime.now(UTC)
     record_audit(
         db,
@@ -537,6 +614,8 @@ def revoke_capability_grant(
     if grant is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Capability grant not found")
     _admin(db, user, grant.organization_id)
+    if grant.status != GrantStatus.REVOKED.value.lower():
+        grant.authorization_generation += 1
     grant.status = GrantStatus.REVOKED.value.lower()
     grant.revoked_at = datetime.now(UTC)
     record_audit(
@@ -656,6 +735,8 @@ def update_destination_trust(
     if destination is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Security destination not found")
     _admin(db, user, destination.organization_id)
+    if destination.trust_state != payload.trust_state.value.lower():
+        destination.authorization_generation += 1
     destination.trust_state = payload.trust_state.value.lower()
     destination.updated_at = datetime.now(UTC)
     record_audit(
@@ -684,14 +765,21 @@ def create_policy(
     if policy.version == payload.version and policy.enforcement_mode != payload.mode.value.lower():
         raise HTTPException(status.HTTP_409_CONFLICT, "Activated policy versions are immutable")
     if policy.version != payload.version:
-        for active in db.scalars(
-            select(EgressPolicy).where(
-                EgressPolicy.organization_id == payload.organization_id,
-                EgressPolicy.name == "agent-security-default",
-                EgressPolicy.state == "active",
+        prior_policies = list(
+            db.scalars(
+                select(EgressPolicy).where(
+                    EgressPolicy.organization_id == payload.organization_id,
+                    EgressPolicy.name == "agent-security-default",
+                )
             )
-        ):
-            active.state = "retired"
+        )
+        next_generation = max(
+            (item.authorization_generation for item in prior_policies), default=0
+        ) + 1
+        for existing_policy in prior_policies:
+            if existing_policy.state == "active":
+                existing_policy.state = "retired"
+                existing_policy.authorization_generation += 1
         policy = EgressPolicy(
             organization_id=payload.organization_id,
             name="agent-security-default",
@@ -701,6 +789,7 @@ def create_policy(
             enforcement_mode=payload.mode.value.lower(),
             policy_type="agent_security",
             priority=payload.priority,
+            authorization_generation=next_generation,
             state="active",
             integrity_hash="",
             created_by_id=user.id,
@@ -799,7 +888,7 @@ def evaluate_security_request(
                 status.HTTP_409_CONFLICT,
                 "Idempotency key was reused for a different request",
             )
-        return _receipt(existing)
+        return _receipt(existing, _authorization(db, existing.id))
     replay = db.scalar(
         select(EgressEvent.id).where(
             EgressEvent.security_client_id == client.id,
@@ -908,8 +997,59 @@ def evaluate_security_request(
             )
         )
         if concurrent and concurrent.normalized_request.get("input_hash") == input_hash:
-            return _receipt(concurrent)
+            return _receipt(concurrent, _authorization(db, concurrent.id))
         raise HTTPException(status.HTTP_409_CONFLICT, "Duplicate security request") from exc
+    authorization = None
+    if (
+        result.evaluated_decision == PublicSecurityDecision.ALLOW.value
+        and result.effective_decision == PublicSecurityDecision.ALLOW.value
+        and grant is not None
+        and destination is not None
+    ):
+        issued_at = datetime.now(UTC)
+        high_consequence = payload.capability in {
+            "commerce.purchase",
+            "email.send",
+            "database.write",
+            "code.execute",
+        }
+        authorization = DecisionAuthorization(
+            decision_id=event.id,
+            organization_id=client.organization_id,
+            security_client_id=client.id,
+            agent_id=agent.id,
+            grant_id=grant.id,
+            destination_id=destination.id,
+            policy_id=policy.id,
+            client_generation=client.authorization_generation,
+            agent_generation=agent.authorization_generation,
+            grant_generation=grant.authorization_generation,
+            destination_generation=destination.authorization_generation,
+            policy_generation=policy.authorization_generation,
+            operation_fingerprint=_operation_fingerprint(
+                agent_id=agent.id,
+                action=payload.action,
+                capability=payload.capability,
+                canonical_destination=canonical.canonical_identifier,
+                environment=payload.environment,
+                resource_scope=payload.resource_scope,
+                classifications=classifications,
+            ),
+            canonical_destination=canonical.canonical_identifier,
+            scheme=canonical.scheme,
+            hostname=canonical.hostname,
+            port=canonical.port,
+            resolved_addresses=list(canonical.resolved_addresses),
+            resolution_time=issued_at,
+            resolution_expires_at=issued_at
+            + timedelta(seconds=settings.security_resolution_ttl_seconds),
+            issued_at=issued_at,
+            expires_at=issued_at
+            + timedelta(seconds=settings.security_authorization_ttl_seconds),
+            maximum_uses=1 if high_consequence else None,
+        )
+        db.add(authorization)
+        db.flush()
     seal_event(db, event)
     client.last_authenticated_at = now
     agent.last_seen_at = now
@@ -935,9 +1075,170 @@ def evaluate_security_request(
             )
         )
         if concurrent and concurrent.normalized_request.get("input_hash") == input_hash:
-            return _receipt(concurrent)
+            return _receipt(concurrent, _authorization(db, concurrent.id))
         raise HTTPException(status.HTTP_409_CONFLICT, "Duplicate security request") from exc
-    return _receipt(event)
+    return _receipt(event, authorization)
+
+
+@router.post("/decisions/{decision_id}/validate")
+def validate_decision_authorization(
+    decision_id: str,
+    payload: DecisionValidationRequest,
+    db: Session = Depends(get_db),
+    client: SecurityClient = Depends(_client_for_principal),
+) -> dict:
+    event = db.get(EgressEvent, decision_id)
+    if (
+        event is None
+        or event.organization_id != client.organization_id
+        or event.security_client_id != client.id
+    ):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Security decision not found")
+    authorization = db.scalar(
+        select(DecisionAuthorization)
+        .where(DecisionAuthorization.decision_id == decision_id)
+        .with_for_update()
+    )
+    if authorization is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Decision does not carry execution authority"
+        )
+
+    now = datetime.now(UTC)
+    reasons: list[str] = []
+    agent = db.get(ProtectedAgent, authorization.agent_id)
+    grant = db.get(AgentCapabilityGrant, authorization.grant_id)
+    destination = db.get(SecurityDestination, authorization.destination_id)
+    policy = db.get(EgressPolicy, authorization.policy_id)
+    if event.evaluated_decision != "ALLOW" or event.enforced_decision != "ALLOW":
+        reasons.append("DECISION_NOT_ALLOW")
+    if authorization.revoked_at is not None:
+        reasons.append("AUTHORIZATION_REVOKED")
+    expires_at = authorization.expires_at.replace(
+        tzinfo=authorization.expires_at.tzinfo or UTC
+    )
+    if expires_at <= now:
+        reasons.append("AUTHORIZATION_EXPIRED")
+    resolution_expires_at = authorization.resolution_expires_at.replace(
+        tzinfo=authorization.resolution_expires_at.tzinfo or UTC
+    )
+    if resolution_expires_at <= now:
+        reasons.append("RESOLUTION_EXPIRED")
+    if client.authorization_generation != authorization.client_generation:
+        reasons.append("CLIENT_AUTHORITY_CHANGED")
+    if agent is None or agent.organization_id != client.organization_id:
+        reasons.append("AGENT_NOT_FOUND")
+    elif (
+        agent.status != "active"
+        or agent.authorization_generation != authorization.agent_generation
+    ):
+        reasons.append("AGENT_AUTHORITY_CHANGED")
+    if grant is None or grant.organization_id != client.organization_id:
+        reasons.append("CAPABILITY_GRANT_NOT_FOUND")
+    else:
+        grant_expires_at = grant.expires_at
+        if grant_expires_at is not None and grant_expires_at.tzinfo is None:
+            grant_expires_at = grant_expires_at.replace(tzinfo=UTC)
+        if (
+            grant.status != "active"
+            or grant.authorization_generation != authorization.grant_generation
+            or (grant_expires_at is not None and grant_expires_at <= now)
+        ):
+            reasons.append("CAPABILITY_AUTHORITY_CHANGED")
+    if destination is None or destination.organization_id != client.organization_id:
+        reasons.append("DESTINATION_NOT_FOUND")
+    elif (
+        destination.trust_state not in {"trusted", "approved"}
+        or destination.authorization_generation != authorization.destination_generation
+    ):
+        reasons.append("DESTINATION_AUTHORITY_CHANGED")
+    if policy is None or policy.organization_id != client.organization_id:
+        reasons.append("POLICY_NOT_FOUND")
+    elif (
+        policy.state != "active"
+        or policy.authorization_generation != authorization.policy_generation
+        or policy.integrity_hash != policy_integrity(policy)
+    ):
+        reasons.append("POLICY_AUTHORITY_CHANGED")
+
+    try:
+        canonical = canonicalize_destination(payload.destination)
+        connected_address = ipaddress.ip_address(payload.connected_address).compressed
+        if not ipaddress.ip_address(connected_address).is_global:
+            raise UnsafeDestination("Connected address is not public")
+    except (UnsafeDestination, ValueError):
+        canonical = None
+        connected_address = ""
+        reasons.append("DESTINATION_BINDING_INVALID")
+    if canonical is not None:
+        if (
+            canonical.canonical_identifier != authorization.canonical_destination
+            or canonical.scheme != authorization.scheme
+            or canonical.port != authorization.port
+        ):
+            reasons.append("DESTINATION_BINDING_MISMATCH")
+        bound_addresses = set(authorization.resolved_addresses)
+        current_addresses = set(canonical.resolved_addresses)
+        if current_addresses != bound_addresses:
+            reasons.append("RESOLUTION_BINDING_CHANGED")
+        if connected_address not in bound_addresses:
+            reasons.append("CONNECTED_ADDRESS_NOT_AUTHORIZED")
+    fingerprint = _operation_fingerprint(
+        agent_id=event.agent_id,
+        action=payload.action,
+        capability=payload.capability,
+        canonical_destination=(
+            canonical.canonical_identifier if canonical else payload.destination
+        ),
+        environment=payload.environment,
+        resource_scope=payload.resource_scope,
+        classifications=event.data_classifications,
+    )
+    if fingerprint != authorization.operation_fingerprint:
+        reasons.append("OPERATION_BINDING_MISMATCH")
+    if (
+        authorization.maximum_uses is not None
+        and authorization.use_count >= authorization.maximum_uses
+    ):
+        reasons.append("AUTHORIZATION_EXHAUSTED")
+
+    valid = not reasons
+    consumed = False
+    if valid and payload.consume:
+        authorization.use_count += 1
+        consumed = True
+    record_audit(
+        db,
+        organization_id=client.organization_id,
+        actor_id=None,
+        security_client_id=client.id,
+        action="security.authorization.validated" if valid else "security.authorization.denied",
+        object_type="decision_authorization",
+        object_id=decision_id,
+        decision="allowed" if valid else "denied",
+        reason_code="VALID" if valid else ",".join(sorted(set(reasons))),
+    )
+    db.commit()
+    return {
+        "decision_id": decision_id,
+        "valid": valid,
+        "decision": "ALLOW" if valid else "DENY",
+        "reason_codes": sorted(set(reasons)),
+        "consumed": consumed,
+        "use_count": authorization.use_count,
+        "maximum_uses": authorization.maximum_uses,
+        "expires_at": authorization.expires_at.isoformat(),
+        "resolution_expires_at": authorization.resolution_expires_at.isoformat(),
+        "connection": {
+            "canonical_destination": authorization.canonical_destination,
+            "scheme": authorization.scheme,
+            "hostname": authorization.hostname,
+            "port": authorization.port,
+            "approved_addresses": authorization.resolved_addresses,
+            "connected_address": connected_address,
+            "redirects_require_new_evaluation": True,
+        },
+    }
 
 
 @router.get("/decisions/{decision_id}")
@@ -953,7 +1254,7 @@ def get_decision(
         or event.security_client_id != client.id
     ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Security decision not found")
-    return _receipt(event)
+    return _receipt(event, _authorization(db, event.id))
 
 
 @router.get("/decisions")
@@ -973,4 +1274,4 @@ def list_decisions(
         .order_by(EgressEvent.created_at.desc())
         .limit(min(max(limit, 1), 500))
     )
-    return [_receipt(event) for event in events]
+    return [_receipt(event, _authorization(db, event.id)) for event in events]
